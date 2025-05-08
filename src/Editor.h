@@ -2,6 +2,7 @@
 #define EDITOR_H
 
 #include "TextBuffer.h"
+#include "CommandManager.h"
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <limits> // For std::numeric_limits
@@ -11,7 +12,7 @@ public:
     Editor();
 
     // Cursor management
-    void setCursor(size_t line, size_t col);
+    virtual void setCursor(size_t line, size_t col);
     size_t getCursorLine() const;
     size_t getCursorCol() const;
 
@@ -66,8 +67,20 @@ public:
     // Word operations
     void deleteWord();
     void selectWord();
+    
+    // Undo/Redo operations
+    bool undo();
+    bool redo();
+    bool canUndo() const;
+    bool canRedo() const;
+    
+    // Search operations
+    bool search(const std::string& searchTerm, bool caseSensitive = true);
+    bool searchNext();
+    bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
+    bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
 
-private:
+protected:
     TextBuffer buffer_;
     size_t cursorLine_;
     size_t cursorCol_;
@@ -81,12 +94,26 @@ private:
     
     // Clipboard
     std::string clipboard_;
+    
+    // Command manager for undo/redo
+    CommandManager commandManager_;
+    
+    // Search state
+    std::string currentSearchTerm_;
+    bool currentSearchCaseSensitive_ = true;
+    size_t lastSearchLine_ = 0;
+    size_t lastSearchCol_ = 0;
+    bool searchWrapped_ = false;
 
     // Helper to validate and clamp cursor position
     void validateAndClampCursor();
     
     // Helper for word boundaries
     bool isWordChar(char c) const;
+    
+    // Helper for search operations
+    bool findMatchInLine(const std::string& line, const std::string& term, 
+                        size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength);
 };
 
 #endif // EDITOR_H 

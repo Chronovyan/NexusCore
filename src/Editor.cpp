@@ -1,4 +1,5 @@
 #include "Editor.h"
+#include "EditorCommands.h"
 #include <iostream> // For std::cout, std::cerr (used in printView, and potentially by TextBuffer methods if they still print errors)
 #include <algorithm> // For std::min, std::max
 #include <cctype>    // For isalnum, isspace
@@ -6,7 +7,9 @@
 Editor::Editor()
     : buffer_(), cursorLine_(0), cursorCol_(0), 
       hasSelection_(false), selectionStartLine_(0), selectionStartCol_(0),
-      selectionEndLine_(0), selectionEndCol_(0), clipboard_("") {
+      selectionEndLine_(0), selectionEndCol_(0), clipboard_(""),
+      currentSearchTerm_(""), currentSearchCaseSensitive_(true),
+      lastSearchLine_(0), lastSearchCol_(0), searchWrapped_(false) {
     // Ensure buffer starts non-empty for initial cursor validation, or handle empty buffer case.
     if (buffer_.isEmpty()) {
         buffer_.addLine(""); // Start with one empty line so cursor at (0,0) is valid.
@@ -78,80 +81,69 @@ const TextBuffer& Editor::getBuffer() const {
 
 // --- Editor-level operations (pass-through for now, but can add cursor logic) ---
 void Editor::addLine(const std::string& text) {
-    buffer_.addLine(text);
-    // Potentially move cursor to the start of the new line or end of buffer
-    setCursor(buffer_.lineCount() > 0 ? buffer_.lineCount() - 1 : 0, 0);
+    auto command = std::make_unique<AddLineCommand>(text);
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::insertLine(size_t lineIndex, const std::string& text) {
-    buffer_.insertLine(lineIndex, text);
-    // Adjust cursor if it was on or after the inserted line
-    if (cursorLine_ >= lineIndex) {
-        // setCursor(cursorLine_ + 1, cursorCol_); // or move to start of inserted line
-        setCursor(lineIndex, 0); // Move to start of newly inserted line
-    }
-    validateAndClampCursor();
+    auto command = std::make_unique<InsertLineCommand>(lineIndex, text);
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::deleteLine(size_t lineIndex) {
-    buffer_.deleteLine(lineIndex);
-    // Adjust cursor if it was on or after the deleted line
-    // or if it was on the line that got deleted.
-    if (cursorLine_ >= lineIndex) {
-        if (buffer_.isEmpty()) { // If buffer becomes empty
-             buffer_.addLine(""); // Add an empty line to keep a valid cursor pos
-             setCursor(0,0);
-        } else if (cursorLine_ > 0 && cursorLine_ >= buffer_.lineCount()) {
-             setCursor(buffer_.lineCount() -1 , 0); // Move to start of previous line if last was deleted
-        } else {
-             setCursor(cursorLine_ > lineIndex ? cursorLine_ -1 : lineIndex, 0); // Try to stay or move to start of current/next line
-        }
-    }
-    validateAndClampCursor();
+    auto command = std::make_unique<DeleteLineCommand>(lineIndex);
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::replaceLine(size_t lineIndex, const std::string& text) {
-    buffer_.replaceLine(lineIndex, text);
-    // Cursor line doesn't change, but column might become invalid
-    setCursor(lineIndex, 0); // Move to start of replaced line for simplicity
-    validateAndClampCursor(); 
+    auto command = std::make_unique<ReplaceLineCommand>(lineIndex, text);
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::typeText(const std::string& textToInsert) {
-    if (buffer_.isEmpty()) { // Should not happen if constructor ensures a line
+    if (textToInsert.empty()) {
+        return;
+    }
+
+    if (buffer_.isEmpty()) {
         validateAndClampCursor(); // Will add an empty line if needed.
     }
-    for (char ch : textToInsert) {
-        // For simplicity, newline characters in typed text are not specially handled here.
-        // A more advanced editor might split the line or insert multiple lines.
-        // For now, they will be inserted as regular characters if present.
-        if (ch == '\n') { 
-            // Option 1: Insert newline as a character (might look weird)
-            // buffer_.insertChar(cursorLine_, cursorCol_, ch);
-            // cursorCol_++;
 
-            // Option 2: Split line (more complex, involves new TextBuffer methods)
-            // std::string restOfLine = buffer_.getLine(cursorLine_).substr(cursorCol_);
-            // buffer_.replaceLine(cursorLine_, buffer_.getLine(cursorLine_).substr(0, cursorCol_));
-            // insertLine(cursorLine_ + 1, restOfLine); // insertLine already handles cursor
-            // setCursor(cursorLine_ + 1, 0);
+    // Check if there's a selection that needs to be deleted first
+    if (hasSelection_) {
+        deleteSelectedText();
+    }
 
-            // Option 3: For now, just treat as a normal character or skip. Let's skip for simplicity now.
-            // Or, for a basic interpretation, let's just add a new line and move cursor
-            std::string currentLineText = buffer_.getLine(cursorLine_);
-            std::string textAfterCursor = "";
-            if(cursorCol_ < currentLineText.length()){
-                textAfterCursor = currentLineText.substr(cursorCol_);
+    // For single character or simple text, create and execute a command
+    if (textToInsert.find('\n') == std::string::npos) {
+        // Create and execute an InsertTextCommand
+        auto command = std::make_unique<InsertTextCommand>(textToInsert);
+        commandManager_.executeCommand(std::move(command), *this);
+    } else {
+        // For text with newlines, handle each segment separately
+        std::string segment;
+        for (size_t i = 0; i < textToInsert.length(); ++i) {
+            if (textToInsert[i] == '\n') {
+                if (!segment.empty()) {
+                    // Insert text before newline
+                    auto textCommand = std::make_unique<InsertTextCommand>(segment);
+                    commandManager_.executeCommand(std::move(textCommand), *this);
+                    segment.clear();
+                }
+                // Handle newline as a separate command
+                auto newLineCommand = std::make_unique<NewLineCommand>();
+                commandManager_.executeCommand(std::move(newLineCommand), *this);
+            } else {
+                segment += textToInsert[i];
             }
-            buffer_.replaceLine(cursorLine_, currentLineText.substr(0, cursorCol_));
-            insertLine(cursorLine_ + 1, textAfterCursor); // insertLine moves cursor to start of new line
-                                                      // which is cursorLine_+1, col 0
-        } else {
-            buffer_.insertChar(cursorLine_, cursorCol_, ch);
-            cursorCol_++;
+        }
+        
+        // Insert any remaining text after the last newline
+        if (!segment.empty()) {
+            auto textCommand = std::make_unique<InsertTextCommand>(segment);
+            commandManager_.executeCommand(std::move(textCommand), *this);
         }
     }
-    validateAndClampCursor();
 }
 
 // --- Cursor Movement ---
@@ -294,13 +286,16 @@ void Editor::typeChar(char ch) {
         deleteSelectedText();
     }
     
-    if (buffer_.isEmpty()) {
-        buffer_.addLine("");
+    if (ch == '\n') {
+        // For newline, use NewLineCommand
+        auto command = std::make_unique<NewLineCommand>();
+        commandManager_.executeCommand(std::move(command), *this);
+    } else {
+        // For regular character, use InsertTextCommand with single char
+        std::string charStr(1, ch);
+        auto command = std::make_unique<InsertTextCommand>(charStr);
+        commandManager_.executeCommand(std::move(command), *this);
     }
-    
-    buffer_.insertChar(cursorLine_, cursorCol_, ch);
-    cursorCol_++;
-    validateAndClampCursor();
 }
 
 void Editor::backspace() {
@@ -309,22 +304,12 @@ void Editor::backspace() {
         return;
     }
     
-    if (buffer_.isEmpty()) return;
-    
-    // If at beginning of line, join with previous line
-    if (cursorCol_ == 0) {
-        if (cursorLine_ > 0) {
-            size_t prevLineLength = buffer_.getLine(cursorLine_ - 1).length();
-            buffer_.deleteChar(cursorLine_, cursorCol_); // This joins with previous line
-            cursorLine_--;
-            cursorCol_ = prevLineLength;
-        }
-    } else {
-        buffer_.deleteChar(cursorLine_, cursorCol_);
-        cursorCol_--;
+    if (cursorLine_ == 0 && cursorCol_ == 0) {
+        return; // Already at the start of the buffer
     }
-    
-    validateAndClampCursor();
+
+    auto command = std::make_unique<DeleteTextCommand>();
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::deleteForward() {
@@ -333,20 +318,17 @@ void Editor::deleteForward() {
         return;
     }
     
-    if (buffer_.isEmpty()) return;
-    
-    const std::string& line = buffer_.getLine(cursorLine_);
-    
-    // If at end of line, join with next line
-    if (cursorCol_ >= line.length()) {
-        if (cursorLine_ < buffer_.lineCount() - 1) {
-            buffer_.deleteCharForward(cursorLine_, cursorCol_); // This joins with next line
-        }
-    } else {
-        buffer_.deleteCharForward(cursorLine_, cursorCol_);
+    if (buffer_.isEmpty()) {
+        return;
     }
-    
-    validateAndClampCursor();
+
+    const auto& line = buffer_.getLine(cursorLine_);
+    if (cursorCol_ >= line.length() && cursorLine_ >= buffer_.lineCount() - 1) {
+        return; // Already at the end of the buffer
+    }
+
+    auto command = std::make_unique<DeleteForwardCommand>();
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::newLine() {
@@ -354,24 +336,20 @@ void Editor::newLine() {
         deleteSelectedText();
     }
     
-    if (buffer_.isEmpty()) {
-        buffer_.addLine("");
-        buffer_.addLine("");
-        cursorLine_ = 1;
-        cursorCol_ = 0;
-    } else {
-        buffer_.splitLine(cursorLine_, cursorCol_);
-        cursorLine_++;
-        cursorCol_ = 0;
-    }
-    
-    validateAndClampCursor();
+    auto command = std::make_unique<NewLineCommand>();
+    commandManager_.executeCommand(std::move(command), *this);
 }
 
 void Editor::joinWithNextLine() {
     if (cursorLine_ >= buffer_.lineCount() - 1) return; // Can't join if last line
     
+    // Store the line length for cursor positioning
+    size_t firstLineLength = buffer_.lineLength(cursorLine_);
+    
     buffer_.joinLines(cursorLine_);
+    
+    // Set cursor at the join point
+    cursorCol_ = firstLineLength;
     validateAndClampCursor();
 }
 
@@ -613,4 +591,230 @@ void Editor::validateAndClampCursor() {
     if (cursorCol_ > currentLineContent.length()) {
         cursorCol_ = currentLineContent.length(); // Allow cursor at one position past the end of the line
     }
+}
+
+// Add implementations for the undo/redo methods
+bool Editor::undo() {
+    return commandManager_.undo(*this);
+}
+
+bool Editor::redo() {
+    return commandManager_.redo(*this);
+}
+
+bool Editor::canUndo() const {
+    return commandManager_.canUndo();
+}
+
+bool Editor::canRedo() const {
+    return commandManager_.canRedo();
+}
+
+// Search operations implementation
+bool Editor::findMatchInLine(const std::string& line, const std::string& term, 
+                           size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength) {
+    if (term.empty() || line.empty() || startPos >= line.length()) {
+        return false;
+    }
+
+    // For case-insensitive search, convert both strings to lowercase for comparison
+    if (!caseSensitive) {
+        std::string lowerLine = line;
+        std::string lowerTerm = term;
+        std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(), 
+                      [](unsigned char c) { return std::tolower(c); });
+        std::transform(lowerTerm.begin(), lowerTerm.end(), lowerTerm.begin(), 
+                      [](unsigned char c) { return std::tolower(c); });
+        
+        matchPos = lowerLine.find(lowerTerm, startPos);
+        if (matchPos == std::string::npos) {
+            return false;
+        }
+        matchLength = term.length();
+        return true;
+    } else {
+        // Case-sensitive search
+        matchPos = line.find(term, startPos);
+        if (matchPos == std::string::npos) {
+            return false;
+        }
+        matchLength = term.length();
+        return true;
+    }
+}
+
+bool Editor::search(const std::string& searchTerm, bool caseSensitive) {
+    if (searchTerm.empty() || buffer_.isEmpty()) {
+        return false;
+    }
+
+    // Save search parameters for searchNext
+    currentSearchTerm_ = searchTerm;
+    currentSearchCaseSensitive_ = caseSensitive;
+    
+    // Start from current cursor position
+    lastSearchLine_ = cursorLine_;
+    lastSearchCol_ = cursorCol_;
+    searchWrapped_ = false;
+    
+    // Try to find the term starting from current position
+    return searchNext();
+}
+
+bool Editor::searchNext() {
+    if (currentSearchTerm_.empty() || buffer_.isEmpty()) {
+        return false;
+    }
+
+    // Start from current cursor position
+    size_t line = lastSearchLine_;
+    size_t col = lastSearchCol_ + 1; // Start after the last match
+    bool found = false;
+    searchWrapped_ = false;
+    
+    // First pass: search from current position to end of buffer
+    while (line < buffer_.lineCount() && !found) {
+        const std::string& lineText = buffer_.getLine(line);
+        
+        // If this is the line we're starting on, use the specified column
+        // Otherwise start from beginning of line
+        size_t startCol = (line == lastSearchLine_) ? col : 0;
+        
+        size_t matchPos = 0;
+        size_t matchLength = 0;
+        
+        if (findMatchInLine(lineText, currentSearchTerm_, startCol, 
+                           currentSearchCaseSensitive_, matchPos, matchLength)) {
+            // Match found, move cursor to start of match
+            cursorLine_ = line;
+            cursorCol_ = matchPos;
+            
+            // Set selection to highlight the match
+            hasSelection_ = true;
+            selectionStartLine_ = line;
+            selectionStartCol_ = matchPos;
+            selectionEndLine_ = line;
+            selectionEndCol_ = matchPos + matchLength;
+            
+            // Store last search position
+            lastSearchLine_ = line;
+            lastSearchCol_ = matchPos;
+            
+            found = true;
+            break;
+        }
+        
+        // Move to next line
+        line++;
+    }
+    
+    // If not found, wrap around to start of buffer (if not already wrapped)
+    if (!found && !searchWrapped_) {
+        searchWrapped_ = true;
+        line = 0;
+        col = 0;
+        
+        while (line <= lastSearchLine_ && !found) {
+            const std::string& lineText = buffer_.getLine(line);
+            
+            // For the last line, only search up to the original column
+            size_t endCol = (line == lastSearchLine_) ? lastSearchCol_ : std::string::npos;
+            
+            size_t matchPos = 0;
+            size_t matchLength = 0;
+            
+            if (findMatchInLine(lineText, currentSearchTerm_, 0, 
+                               currentSearchCaseSensitive_, matchPos, matchLength) && 
+                (endCol == std::string::npos || matchPos < endCol)) {
+                // Match found, move cursor to start of match
+                cursorLine_ = line;
+                cursorCol_ = matchPos;
+                
+                // Set selection to highlight the match
+                hasSelection_ = true;
+                selectionStartLine_ = line;
+                selectionStartCol_ = matchPos;
+                selectionEndLine_ = line;
+                selectionEndCol_ = matchPos + matchLength;
+                
+                // Store last search position
+                lastSearchLine_ = line;
+                lastSearchCol_ = matchPos;
+                
+                found = true;
+                break;
+            }
+            
+            // Move to next line
+            line++;
+        }
+    }
+    
+    // Always validate cursor position
+    validateAndClampCursor();
+    return found;
+}
+
+bool Editor::replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive) {
+    // First search for the term
+    if (!search(searchTerm, caseSensitive)) {
+        return false;
+    }
+    
+    // If found, selection is set, so replace the selection with new text
+    auto command = std::make_unique<ReplaceSelectionCommand>(replacementText);
+    commandManager_.executeCommand(std::move(command), *this);
+    
+    return true;
+}
+
+bool Editor::replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive) {
+    if (searchTerm.empty() || buffer_.isEmpty()) {
+        return false;
+    }
+    
+    // Save current cursor position
+    size_t originalLine = cursorLine_;
+    size_t originalCol = cursorCol_;
+    
+    // Start from beginning of buffer
+    cursorLine_ = 0;
+    cursorCol_ = 0;
+    validateAndClampCursor();
+    
+    // Reset search state
+    currentSearchTerm_ = searchTerm;
+    currentSearchCaseSensitive_ = caseSensitive;
+    lastSearchLine_ = 0;
+    lastSearchCol_ = 0;
+    searchWrapped_ = false;
+    
+    // Create a compound command for undo/redo
+    auto compoundCommand = std::make_unique<CompoundCommand>();
+    bool replacementMade = false;
+    
+    // Keep replacing until no more matches are found
+    while (searchNext()) {
+        // Replace the selected text
+        auto replaceCommand = std::make_unique<ReplaceSelectionCommand>(replacementText);
+        replaceCommand->execute(*this);
+        compoundCommand->addCommand(std::move(replaceCommand));
+        replacementMade = true;
+        
+        // Update search position to after the replacement
+        lastSearchCol_ = cursorCol_;
+    }
+    
+    // Add the compound command to the command manager if any replacements were made
+    if (replacementMade) {
+        commandManager_.addCommand(std::move(compoundCommand));
+    }
+    
+    // Clear selection and restore cursor position
+    clearSelection();
+    cursorLine_ = originalLine;
+    cursorCol_ = originalCol;
+    validateAndClampCursor();
+    
+    return replacementMade;
 } 

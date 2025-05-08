@@ -9,6 +9,7 @@ A C++17 text editor implementation with support for basic text editing operation
 - Text insertion, deletion, and manipulation
 - Selection support with clipboard operations (copy, cut, paste)
 - Word-based operations
+- Search and replace functionality
 - File I/O (save/load)
 - Command-line interface
 - Automated testing framework
@@ -20,9 +21,9 @@ A C++17 text editor implementation with support for basic text editing operation
 - ✅ Advanced cursor movement (line start/end, word jumping)
 - ✅ Text selection and clipboard operations
 - ✅ File I/O operations
+- ✅ Search and replace functionality
 - ✅ Automated testing
 - ⏳ Syntax highlighting (planned)
-- ⏳ Search and replace (planned)
 - ⏳ Graphical UI (planned)
 
 ## Building from Source
@@ -101,6 +102,14 @@ The text editor currently provides a command-line interface with the following c
 | `copy` | Copies selected text to clipboard |
 | `paste` | Pastes clipboard content at cursor position |
 
+### Search and Replace
+| Command | Description |
+|---------|-------------|
+| `search <text>` or `find <text>` | Search for text in the document |
+| `searchnext` or `findnext` | Move to the next occurrence of the search term |
+| `replace <search_term> <replacement_text>` | Find and replace the first occurrence |
+| `replaceall <search_term> <replacement_text>` | Replace all occurrences in the document |
+
 ### File Operations
 | Command | Description |
 |---------|-------------|
@@ -130,6 +139,13 @@ The project includes a simple testing framework that can be used to verify the f
 - Cursor movement (navigation, positioning)
 - Text editing (typing, deletion, line manipulation)
 - Selection and clipboard operations (copy, cut, paste)
+- Search and replace operations (find, replace, replace all)
+
+## Documentation
+
+Additional documentation is available in the `docs` directory:
+
+- [Search and Replace Feature](docs/SearchFeature.md)
 
 ## License
 

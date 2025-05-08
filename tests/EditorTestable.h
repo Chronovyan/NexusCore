@@ -6,17 +6,17 @@
 #include <sstream>
 #include <vector>
 #include <functional>
-#include "../src/Editor.h"
+#include "TestEditor.h"
 
 // Callback function type for inspecting editor state during tests
-using EditorCheckpoint = std::function<void(const Editor&)>;
+using EditorCheckpoint = std::function<void(TestEditor&)>;
 
 // Testable editor interface that wraps the main loop
 class EditorTestable {
 public:
     // Run the editor with predefined inputs and return the result
     static bool runWithInputs(const std::vector<std::string>& inputs, std::string& output) {
-        Editor editor;
+        TestEditor editor;
         std::stringstream outputStream;
         
         outputStream << "--- Mini C++ Text Editor --- (type 'help' for commands)" << '\n';
@@ -34,17 +34,17 @@ public:
             ss >> command;
             
             try {
+                // Check for quit command first
+                if (command == "quit" || command == "exit") {
+                    outputStream << "Exiting editor." << '\n';
+                    break; // Stop processing more commands
+                }
+
                 processCommand(editor, command, ss, outputStream);
             } catch (const std::out_of_range& e) {
                 outputStream << "Error: " << e.what() << '\n';
             } catch (const std::exception& e) {
                 outputStream << "An unexpected error occurred: " << e.what() << '\n';
-            }
-            
-            // Check for quit command
-            if (command == "quit" || command == "exit") {
-                outputStream << "Exiting editor." << '\n';
-                break;
             }
         }
         
@@ -58,7 +58,7 @@ public:
         const std::vector<std::pair<size_t, EditorCheckpoint>>& checkpoints,
         std::string& output) 
     {
-        Editor editor;
+        TestEditor editor;
         std::stringstream outputStream;
         
         outputStream << "--- Mini C++ Text Editor --- (type 'help' for commands)" << '\n';
@@ -77,6 +77,12 @@ public:
             ss >> command;
             
             try {
+                // Check for quit command first
+                if (command == "quit" || command == "exit") {
+                    outputStream << "Exiting editor." << '\n';
+                    break; // Stop processing more commands
+                }
+
                 processCommand(editor, command, ss, outputStream);
             } catch (const std::out_of_range& e) {
                 outputStream << "Error: " << e.what() << '\n';
@@ -89,12 +95,6 @@ public:
                 if (checkpoint.first == i) {
                     checkpoint.second(editor);
                 }
-            }
-            
-            // Check for quit command
-            if (command == "quit" || command == "exit") {
-                outputStream << "Exiting editor." << '\n';
-                break;
             }
         }
         
@@ -115,7 +115,7 @@ private:
     }
     
     // Process a single command (copied from main.cpp with modifications for testing)
-    static void processCommand(Editor& editor, const std::string& command, 
+    static void processCommand(TestEditor& editor, const std::string& command, 
                                std::stringstream& ss, std::stringstream& out) 
     {
         if (command == "add") {
@@ -142,15 +142,45 @@ private:
             editor.deleteLine(index);
             out << "Line " << index << " deleted." << '\n';
         } else if (command == "replace") {
+            // Try to parse as a line index first
             size_t index;
-            if (!(ss >> index)) {
-                out << "Error: Missing index for replace." << '\n';
-                out << "Usage: replace <index> <text>" << '\n';
-                return;
+            if (ss >> index) {
+                // This is a line replace command: replace <index> <text>
+                std::string text_to_replace = getRestOfLine(ss);
+                editor.replaceLine(index, text_to_replace);
+                out << "Line " << index << " replaced." << '\n';
+            } else {
+                // This is a search-replace command: replace <search_term> <replacement_text>
+                ss.clear(); // Clear error state
+                ss.seekg(0); // Rewind to start of stream
+                
+                // Skip over the "replace" command
+                std::string dummy;
+                ss >> dummy;
+                
+                std::string searchTerm;
+                if (!(ss >> searchTerm)) {
+                    out << "Error: Missing search term." << '\n';
+                    out << "Usage: replace <index> <text> or replace <search_term> <replacement_text>" << '\n';
+                    return;
+                }
+                
+                std::string replacementText = getRestOfLine(ss);
+                if (replacementText.empty() || replacementText[0] != ' ') {
+                    out << "Error: Missing replacement text." << '\n';
+                    out << "Usage: replace <search_term> <replacement_text>" << '\n';
+                    return;
+                }
+                // Remove leading space
+                replacementText = replacementText.substr(1);
+                
+                bool replaced = editor.replace(searchTerm, replacementText);
+                if (replaced) {
+                    out << "Replaced text. Cursor at: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
+                } else {
+                    out << "No matches found for \"" << searchTerm << "\"" << '\n';
+                }
             }
-            std::string text_to_replace = getRestOfLine(ss);
-            editor.replaceLine(index, text_to_replace);
-            out << "Line " << index << " replaced." << '\n';
         } else if (command == "view") {
             out << "--- Buffer View ---" << '\n';
             editor.printView(out);
@@ -193,7 +223,7 @@ private:
                 return;
             }
             editor.setCursor(r_line, r_col);
-            out << "Cursor set to: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "] (clamped if necessary)" << '\n';
+            out << "Cursor set to: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
         } else if (command == "cu") {
             editor.moveCursorUp();
             out << "Cursor at: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
@@ -287,8 +317,87 @@ private:
             } else {
                 out << "No word at cursor position to select." << '\n';
             }
+        } else if (command == "undo") {
+            if (editor.undo()) {
+                out << "Action undone." << '\n';
+            } else {
+                out << "Nothing to undo." << '\n';
+            }
+        } else if (command == "redo") {
+            if (editor.redo()) {
+                out << "Action redone." << '\n';
+            } else {
+                out << "Nothing to redo." << '\n';
+            }
+        } else if (command == "search" || command == "find") {
+            std::string searchTerm = getRestOfLine(ss);
+            if (searchTerm.empty()) {
+                out << "Error: Missing search term." << '\n';
+                out << "Usage: search <text>" << '\n';
+                return;
+            }
+            bool found = editor.search(searchTerm);
+            if (found) {
+                out << "Found match. Cursor at: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
+            } else {
+                out << "No matches found for \"" << searchTerm << "\"" << '\n';
+            }
+        } else if (command == "findnext" || command == "searchnext") {
+            bool found = editor.searchNext();
+            if (found) {
+                out << "Found next match. Cursor at: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
+            } else {
+                out << "No more matches found." << '\n';
+            }
+        } else if (command == "replace") {
+            std::string searchTerm;
+            if (!(ss >> searchTerm)) {
+                out << "Error: Missing search term for replace." << '\n';
+                out << "Usage: replace <search_term> <replacement_text>" << '\n';
+                return;
+            }
+            std::string replacementText = getRestOfLine(ss);
+            if (replacementText.empty() || replacementText[0] != ' ') {
+                out << "Error: Missing replacement text." << '\n';
+                out << "Usage: replace <search_term> <replacement_text>" << '\n';
+                return;
+            }
+            // Remove leading space
+            replacementText = replacementText.substr(1);
+            
+            bool replaced = editor.replace(searchTerm, replacementText);
+            if (replaced) {
+                out << "Replaced text. Cursor at: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << '\n';
+            } else {
+                out << "No matches found for \"" << searchTerm << "\"" << '\n';
+            }
+        } else if (command == "replaceall") {
+            std::string searchTerm;
+            if (!(ss >> searchTerm)) {
+                out << "Error: Missing search term for replaceall." << '\n';
+                out << "Usage: replaceall <search_term> <replacement_text>" << '\n';
+                return;
+            }
+            std::string replacementText = getRestOfLine(ss);
+            if (replacementText.empty() || replacementText[0] != ' ') {
+                out << "Error: Missing replacement text." << '\n';
+                out << "Usage: replaceall <search_term> <replacement_text>" << '\n';
+                return;
+            }
+            // Remove leading space
+            replacementText = replacementText.substr(1);
+            
+            bool replaced = editor.replaceAll(searchTerm, replacementText);
+            if (replaced) {
+                out << "Replaced all occurrences." << '\n';
+            } else {
+                out << "No matches found for \"" << searchTerm << "\"" << '\n';
+            }
         } else if (command == "help") {
             out << "[Help message displayed - truncated for tests]" << '\n';
+        } else if (command == "quit" || command == "exit") {
+            // Handle these directly in runWithInputs and runWithCheckpoints instead
+            out << "Exiting editor..." << '\n';
         } else {
             out << "Unknown command: " << command << ". Type 'help' for a list of commands." << '\n';
         }
