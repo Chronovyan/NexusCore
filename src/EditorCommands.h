@@ -5,6 +5,7 @@
 #include "Editor.h"
 #include <string>
 #include <utility>
+#include <iostream>
 
 // InsertTextCommand - Handles insertion of text at current cursor position
 class InsertTextCommand : public Command {
@@ -479,6 +480,259 @@ private:
     std::string originalText_;
     size_t originalCursorLine_;
     size_t originalCursorCol_;
+};
+
+// SearchCommand - Handles searching for text and updating cursor position and selection
+class SearchCommand : public Command {
+public:
+    SearchCommand(const std::string& searchTerm, bool caseSensitive = true)
+        : searchTerm_(searchTerm), caseSensitive_(caseSensitive) {}
+    
+    void execute(Editor& editor) override {
+        // Store cursor position and selection state before search
+        originalCursorLine_ = editor.getCursorLine();
+        originalCursorCol_ = editor.getCursorCol();
+        originalHasSelection_ = editor.hasSelection();
+        
+        if (originalHasSelection_) {
+            originalSelection_ = editor.getSelectedText();
+        }
+        
+        // Execute the search
+        searchSuccessful_ = editor.search(searchTerm_, caseSensitive_);
+        
+        // After search, store new cursor position and selection if search was successful
+        if (searchSuccessful_) {
+            foundCursorLine_ = editor.getCursorLine();
+            foundCursorCol_ = editor.getCursorCol();
+            // Assuming search creates a selection
+            foundSelection_ = editor.getSelectedText();
+        }
+    }
+    
+    void undo(Editor& editor) override {
+        // Restore cursor position
+        editor.setCursor(originalCursorLine_, originalCursorCol_);
+        
+        // Restore selection state
+        if (originalHasSelection_) {
+            // We need to recreate the selection
+            editor.setSelectionStart();
+            // Move cursor to create the proper selection
+            editor.setCursor(originalCursorLine_, originalCursorCol_ + originalSelection_.length());
+            editor.setSelectionEnd();
+        } else {
+            // Clear any selection
+            editor.clearSelection();
+        }
+    }
+    
+    std::string getDescription() const override {
+        return "Search for: " + searchTerm_ + (caseSensitive_ ? " (case-sensitive)" : " (case-insensitive)");
+    }
+    
+    bool wasSuccessful() const {
+        return searchSuccessful_;
+    }
+    
+private:
+    std::string searchTerm_;
+    bool caseSensitive_;
+    bool searchSuccessful_ = false;
+    
+    // Original state
+    size_t originalCursorLine_;
+    size_t originalCursorCol_;
+    bool originalHasSelection_;
+    std::string originalSelection_;
+    
+    // State after search
+    size_t foundCursorLine_;
+    size_t foundCursorCol_;
+    std::string foundSelection_;
+};
+
+// ReplaceCommand - Handles replacing found text
+class ReplaceCommand : public Command {
+public:
+    ReplaceCommand(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true)
+        : searchTerm_(searchTerm), replacementText_(replacementText), caseSensitive_(caseSensitive) {}
+    
+    void execute(Editor& editor) override {
+        // Store cursor position and buffer state before replacement
+        originalCursorLine_ = editor.getCursorLine();
+        originalCursorCol_ = editor.getCursorCol();
+        
+        // Execute the replacement
+        replaceSuccessful_ = editor.replace(searchTerm_, replacementText_, caseSensitive_);
+        
+        if (replaceSuccessful_) {
+            // After replacement, store new cursor position
+            newCursorLine_ = editor.getCursorLine();
+            newCursorCol_ = editor.getCursorCol();
+        }
+    }
+    
+    void undo(Editor& editor) override {
+        if (replaceSuccessful_) {
+            // Restore cursor to position after replacement
+            editor.setCursor(newCursorLine_, newCursorCol_);
+            
+            // Delete the replacement text (uses backspace or selection delete)
+            editor.setSelectionStart();
+            editor.setCursor(newCursorLine_, newCursorCol_ - replacementText_.length());
+            editor.setSelectionEnd();
+            editor.deleteSelectedText();
+            
+            // Insert the original search term
+            editor.typeText(searchTerm_);
+            
+            // Restore original cursor position
+            editor.setCursor(originalCursorLine_, originalCursorCol_);
+        }
+    }
+    
+    std::string getDescription() const override {
+        return "Replace \"" + searchTerm_ + "\" with \"" + replacementText_ + "\"";
+    }
+    
+    bool wasSuccessful() const {
+        return replaceSuccessful_;
+    }
+    
+private:
+    std::string searchTerm_;
+    std::string replacementText_;
+    bool caseSensitive_;
+    bool replaceSuccessful_ = false;
+    
+    // Original state
+    size_t originalCursorLine_;
+    size_t originalCursorCol_;
+    
+    // State after replacement
+    size_t newCursorLine_;
+    size_t newCursorCol_;
+};
+
+// ReplaceAllCommand - Handles replacing all occurrences of found text
+class ReplaceAllCommand : public Command {
+public:
+    ReplaceAllCommand(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true)
+        : searchTerm_(searchTerm), replacementText_(replacementText), caseSensitive_(caseSensitive) {}
+    
+    void execute(Editor& editor) override {
+        try {
+            // Store cursor position before replacement
+            originalCursorLine_ = editor.getCursorLine();
+            originalCursorCol_ = editor.getCursorCol();
+            
+            // Create a backup of the entire buffer for undoing
+            const TextBuffer& buffer = editor.getBuffer();
+            for (size_t i = 0; i < buffer.lineCount(); ++i) {
+                originalLines_.push_back(buffer.getLine(i));
+            }
+            
+            // Perform search and replace throughout the buffer
+            int replacementCount = 0;
+            
+            // Start from beginning of file
+            editor.setCursor(0, 0);
+            editor.clearSelection();
+            
+            // Find first occurrence
+            if (editor.search(searchTerm_, caseSensitive_)) {
+                do {
+                    // Get the selected text (which should be the found term)
+                    std::string selectedText = editor.getSelectedText();
+                    
+                    // Delete the selected text
+                    editor.deleteSelectedText();
+                    
+                    // Insert the replacement text
+                    editor.typeText(replacementText_);
+                    
+                    // Increment replacement count
+                    replacementCount++;
+                    
+                } while (editor.searchNext());
+            }
+            
+            // Store new buffer state
+            const TextBuffer& updatedBuffer = editor.getBuffer();
+            for (size_t i = 0; i < updatedBuffer.lineCount(); ++i) {
+                newLines_.push_back(updatedBuffer.getLine(i));
+            }
+            
+            // Store new cursor position
+            newCursorLine_ = editor.getCursorLine();
+            newCursorCol_ = editor.getCursorCol();
+            
+            // Store replacement count for description
+            replacementCount_ = std::to_string(replacementCount);
+            replaceSuccessful_ = true;
+        } catch (const std::exception& e) {
+            std::cerr << "Error in ReplaceAllCommand::execute: " << e.what() << std::endl;
+            replaceSuccessful_ = false;
+        } catch (...) {
+            std::cerr << "Unknown error in ReplaceAllCommand::execute" << std::endl;
+            replaceSuccessful_ = false;
+        }
+    }
+    
+    void undo(Editor& editor) override {
+        if (!replaceSuccessful_) {
+            return;
+        }
+        
+        try {
+            // Restore the entire buffer state
+            TextBuffer& buffer = editor.getBuffer();
+            
+            // Clear current buffer
+            while (buffer.lineCount() > 0) {
+                buffer.deleteLine(buffer.lineCount() - 1);
+            }
+            
+            // Restore original lines
+            for (const std::string& line : originalLines_) {
+                buffer.addLine(line);
+            }
+            
+            // Restore original cursor position
+            editor.setCursor(originalCursorLine_, originalCursorCol_);
+        } catch (const std::exception& e) {
+            std::cerr << "Error in ReplaceAllCommand::undo: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "Unknown error in ReplaceAllCommand::undo" << std::endl;
+        }
+    }
+    
+    std::string getDescription() const override {
+        return "Replace all \"" + searchTerm_ + "\" with \"" + replacementText_ + "\"" + 
+               (replacementCount_.empty() ? "" : " (" + replacementCount_ + " replacements)");
+    }
+    
+    bool wasSuccessful() const {
+        return replaceSuccessful_;
+    }
+    
+private:
+    std::string searchTerm_;
+    std::string replacementText_;
+    bool caseSensitive_;
+    bool replaceSuccessful_ = false;
+    std::string replacementCount_;
+    
+    // Original state
+    size_t originalCursorLine_;
+    size_t originalCursorCol_;
+    std::vector<std::string> originalLines_;
+    
+    // State after replacement
+    size_t newCursorLine_;
+    size_t newCursorCol_;
+    std::vector<std::string> newLines_;
 };
 
 #endif // EDITOR_COMMANDS_H 
