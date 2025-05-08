@@ -11,6 +11,7 @@ A C++17 text editor implementation with support for basic text editing operation
 - Word-based operations
 - File I/O (save/load)
 - Command-line interface
+- Automated testing framework
 
 ## Current Implementation Status
 
@@ -19,6 +20,7 @@ A C++17 text editor implementation with support for basic text editing operation
 - ✅ Advanced cursor movement (line start/end, word jumping)
 - ✅ Text selection and clipboard operations
 - ✅ File I/O operations
+- ✅ Automated testing
 - ⏳ Syntax highlighting (planned)
 - ⏳ Search and replace (planned)
 - ⏳ Graphical UI (planned)
@@ -35,6 +37,15 @@ Using the included batch build system:
 
 ```
 build.bat
+```
+
+### Running Tests
+
+The project includes an automated test suite to verify functionality:
+
+```
+cd tests
+build_and_run_tests.bat
 ```
 
 ## Usage
@@ -101,6 +112,24 @@ The text editor currently provides a command-line interface with the following c
 |---------|-------------|
 | `help` | Shows help message |
 | `quit` or `exit` | Exits the editor |
+
+## Testing
+
+The project includes a simple testing framework that can be used to verify the functionality of the editor:
+
+### Test Framework Features
+
+- Automated test execution for all editor operations
+- Input/output simulation to test command behavior
+- Editor state checkpoints for comprehensive validation
+- Detailed test reporting
+
+### Implemented Tests
+
+- Basic line operations (add, insert, delete, replace)
+- Cursor movement (navigation, positioning)
+- Text editing (typing, deletion, line manipulation)
+- Selection and clipboard operations (copy, cut, paste)
 
 ## License
 
