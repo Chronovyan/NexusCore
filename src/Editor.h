@@ -3,6 +3,7 @@
 
 #include "TextBuffer.h"
 #include "CommandManager.h"
+#include "SyntaxHighlighter.h"
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <limits> // For std::numeric_limits
@@ -79,6 +80,15 @@ public:
     bool searchNext();
     bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
     bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
+    
+    // Syntax highlighting operations
+    void enableSyntaxHighlighting(bool enable = true);
+    bool isSyntaxHighlightingEnabled() const;
+    void setFilename(const std::string& filename);
+    std::string getFilename() const;
+    void detectAndSetHighlighter();
+    SyntaxHighlighter* getCurrentHighlighter() const;
+    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const;
 
 protected:
     TextBuffer buffer_;
@@ -104,6 +114,13 @@ protected:
     size_t lastSearchLine_ = 0;
     size_t lastSearchCol_ = 0;
     bool searchWrapped_ = false;
+    
+    // Syntax highlighting state
+    bool syntaxHighlightingEnabled_ = false;
+    std::string filename_;
+    SyntaxHighlighter* currentHighlighter_ = nullptr;
+    mutable std::vector<std::vector<SyntaxStyle>> cachedHighlightStyles_;
+    mutable bool highlightingStylesCacheValid_ = false;
 
     // Helper to validate and clamp cursor position
     void validateAndClampCursor();
@@ -114,6 +131,10 @@ protected:
     // Helper for search operations
     bool findMatchInLine(const std::string& line, const std::string& term, 
                         size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength);
+                        
+    // Helper for syntax highlighting
+    void invalidateHighlightingCache();
+    void updateHighlightingCache() const;
 };
 
 #endif // EDITOR_H 

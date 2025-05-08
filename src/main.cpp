@@ -43,6 +43,8 @@ void printHelp() {
     std::cout << "  paste                     - Pastes clipboard content at cursor position." << '\n';
     std::cout << "  delword                   - Deletes word at cursor position." << '\n';
     std::cout << "  selword                   - Selects word at cursor position." << '\n';
+    std::cout << "  undo                      - Undoes the last action." << '\n';
+    std::cout << "  redo                      - Redoes the last undone action." << '\n';
     std::cout << "  help                      - Shows this help message." << '\n';
     std::cout << "  quit / exit               - Exits the editor." << '\n';
     std::cout << "---------------------------------------------------------------------" << '\n';
@@ -268,10 +270,22 @@ int main() {
                 } else {
                     std::cout << "No word at cursor position to select." << '\n';
                 }
+            } else if (command == "undo") {
+                if (editor.undo()) {
+                    std::cout << "Action undone." << '\n';
+                } else {
+                    std::cout << "Nothing to undo." << '\n';
+                }
+            } else if (command == "redo") {
+                if (editor.redo()) {
+                    std::cout << "Action redone." << '\n';
+                } else {
+                    std::cout << "Nothing to redo." << '\n';
+                }
             } else if (command == "help") {
                 printHelp();
             } else if (command == "quit" || command == "exit") {
-                std::cout << "Exiting editor." << '\n';
+                std::cout << "Exiting editor..." << '\n';
                 running = false;
             } else {
                 std::cerr << "Unknown command: " << command << ". Type 'help' for a list of commands." << '\n';

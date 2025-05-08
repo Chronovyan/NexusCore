@@ -135,7 +135,7 @@ void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
     if (colIndex == 0) {
         // Backspace at start of line - join with previous line if possible
         if (lineIndex > 0) {
-            size_t prevLineLen = lines_[lineIndex - 1].length();
+            // Join current line with previous line
             lines_[lineIndex - 1] += line;
             lines_.erase(lines_.begin() + lineIndex);
             // Caller might need to adjust cursor to previous line, last column
