@@ -39,9 +39,13 @@ REM Source files and output
 set "MAIN_SRC=src\main.cpp"
 set "BUFFER_SRC=src\TextBuffer.cpp"
 set "EDITOR_SRC=src\Editor.cpp"
+set "SYNTAX_SRC=src\SyntaxHighlighter.cpp"
+set "SYNTAX_MGR_SRC=src\SyntaxHighlightingManager.cpp"
 set "MAIN_OBJ=obj\main.obj"
 set "BUFFER_OBJ=obj\TextBuffer.obj"
 set "EDITOR_OBJ=obj\Editor.obj"
+set "SYNTAX_OBJ=obj\SyntaxHighlighter.obj"
+set "SYNTAX_MGR_OBJ=obj\SyntaxHighlightingManager.obj"
 set "OUTPUT_EXE=bin\CustomTextEditor.exe"
 
 REM Compiler options: /EHsc (exception handling), /std:c++17, /W4 (warnings), /Zi (debug info), /nologo
@@ -72,9 +76,25 @@ if errorlevel 1 (
     goto :eof
 )
 
+REM Compile SyntaxHighlighter.cpp
+echo Compiling %SYNTAX_SRC%...
+cl.exe %COMPILE_FLAGS% /c %SYNTAX_SRC% /Fo%SYNTAX_OBJ%
+if errorlevel 1 (
+    echo ERROR: Compilation of %SYNTAX_SRC% failed with error code %ERRORLEVEL%
+    goto :eof
+)
+
+REM Compile SyntaxHighlightingManager.cpp
+echo Compiling %SYNTAX_MGR_SRC%...
+cl.exe %COMPILE_FLAGS% /c %SYNTAX_MGR_SRC% /Fo%SYNTAX_MGR_OBJ%
+if errorlevel 1 (
+    echo ERROR: Compilation of %SYNTAX_MGR_SRC% failed with error code %ERRORLEVEL%
+    goto :eof
+)
+
 REM Link object files
 echo Linking to create %OUTPUT_EXE%...
-link.exe /NOLOGO /OUT:%OUTPUT_EXE% %MAIN_OBJ% %BUFFER_OBJ% %EDITOR_OBJ% /DEBUG
+link.exe /NOLOGO /OUT:%OUTPUT_EXE% %MAIN_OBJ% %BUFFER_OBJ% %EDITOR_OBJ% %SYNTAX_OBJ% %SYNTAX_MGR_OBJ% /DEBUG
 if errorlevel 1 (
     echo ERROR: Linking failed with error code %ERRORLEVEL%
     goto :eof

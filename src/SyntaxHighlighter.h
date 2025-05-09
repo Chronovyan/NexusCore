@@ -7,6 +7,8 @@
 #include <memory>
 #include <regex>
 #include <algorithm>
+#include <mutex>
+#include <iostream>
 
 // Forward declaration
 class TextBuffer;
@@ -169,45 +171,83 @@ public:
 class SyntaxHighlighterRegistry {
 public:
     static SyntaxHighlighterRegistry& getInstance() {
+        // Using Meyers Singleton pattern for thread-safety
         static SyntaxHighlighterRegistry instance;
         return instance;
     }
     
     void registerHighlighter(std::unique_ptr<SyntaxHighlighter> highlighter) {
-        // Add the highlighter's supported extensions to our extension map
-        for (const auto& ext : highlighter->getSupportedExtensions()) {
-            extensionMap_[ext] = highlighters_.size();
+        if (!highlighter) {
+            return; // Silently ignore null highlighters
         }
         
-        // Store the highlighter
-        highlighters_.push_back(std::move(highlighter));
+        try {
+            std::lock_guard<std::mutex> lock(registry_mutex_);
+            
+            // Store the highlighter's extensions
+            auto extensions = highlighter->getSupportedExtensions();
+            size_t highlighter_index = highlighters_.size();
+            
+            // Add the highlighter's supported extensions to our extension map
+            for (const auto& ext : extensions) {
+                extensionMap_[ext] = highlighter_index;
+            }
+            
+            // Store the highlighter
+            highlighters_.push_back(std::move(highlighter));
+        } catch (const std::exception& ex) {
+            // Log error but don't propagate exception during static init
+            std::cerr << "Error in registerHighlighter: " << ex.what() << std::endl;
+        } catch (...) {
+            std::cerr << "Unknown error in registerHighlighter" << std::endl;
+        }
     }
     
     SyntaxHighlighter* getHighlighterForExtension(const std::string& extension) {
-        // Extract extension from path if needed
-        std::string ext = extension;
-        size_t pos = extension.find_last_of('.');
-        if (pos != std::string::npos) {
-            ext = extension.substr(pos + 1);
+        try {
+            std::lock_guard<std::mutex> lock(registry_mutex_);
+            
+            if (highlighters_.empty()) {
+                return nullptr;
+            }
+            
+            // Extract extension from path if needed
+            std::string ext = extension;
+            size_t pos = extension.find_last_of('.');
+            if (pos != std::string::npos) {
+                ext = extension.substr(pos + 1);
+            }
+            
+            // Convert to lowercase for comparison
+            std::transform(ext.begin(), ext.end(), ext.begin(), 
+                          [](unsigned char c) { return std::tolower(c); });
+            
+            // Find the highlighter
+            auto it = extensionMap_.find(ext);
+            if (it != extensionMap_.end() && it->second < highlighters_.size()) {
+                return highlighters_[it->second].get();
+            }
+            
+            return nullptr; // No highlighter found
+        } catch (const std::exception& ex) {
+            std::cerr << "Error in getHighlighterForExtension: " << ex.what() << std::endl;
+            return nullptr;
+        } catch (...) {
+            std::cerr << "Unknown error in getHighlighterForExtension" << std::endl;
+            return nullptr;
         }
-        
-        // Convert to lowercase for comparison
-        std::transform(ext.begin(), ext.end(), ext.begin(), 
-                      [](unsigned char c) { return std::tolower(c); });
-        
-        // Find the highlighter
-        auto it = extensionMap_.find(ext);
-        if (it != extensionMap_.end() && it->second < highlighters_.size()) {
-            return highlighters_[it->second].get();
-        }
-        
-        return nullptr; // No highlighter found
     }
     
 private:
     SyntaxHighlighterRegistry() {
-        // Register built-in highlighters
-        registerHighlighter(std::make_unique<CppHighlighter>());
+        try {
+            // Register built-in highlighters
+            registerHighlighter(std::make_unique<CppHighlighter>());
+        } catch (const std::exception& ex) {
+            std::cerr << "Error initializing SyntaxHighlighterRegistry: " << ex.what() << std::endl;
+        } catch (...) {
+            std::cerr << "Unknown error initializing SyntaxHighlighterRegistry" << std::endl;
+        }
     }
     
     ~SyntaxHighlighterRegistry() = default;
@@ -218,6 +258,8 @@ private:
     SyntaxHighlighterRegistry(SyntaxHighlighterRegistry&&) = delete;
     SyntaxHighlighterRegistry& operator=(SyntaxHighlighterRegistry&&) = delete;
     
+    // Thread-safe registry access
+    std::mutex registry_mutex_;
     std::vector<std::unique_ptr<SyntaxHighlighter>> highlighters_;
     std::map<std::string, size_t> extensionMap_;
 };
