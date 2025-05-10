@@ -62,6 +62,7 @@ private:
 };
 
 // NewLineCommand - Handles line splitting (Enter key)
+// This is the preferred command for adding new lines and splitting lines.
 class NewLineCommand : public Command {
 public:
     NewLineCommand() = default;
@@ -78,6 +79,7 @@ private:
 };
 
 // AddLineCommand - Handles adding a new line at the end of the buffer
+// @deprecated - Use NewLineCommand for splitting lines. This class is being phased out.
 class AddLineCommand : public Command {
 public:
     // Default constructor - Split line at cursor
