@@ -442,7 +442,7 @@ void Editor::backspace() {
         return; // Already at the start of the buffer
     }
 
-    auto command = std::make_unique<DeleteTextCommand>();
+    auto command = std::make_unique<DeleteCharCommand>(true); // isBackspace = true
     commandManager_.executeCommand(std::move(command), *this);
 }
 
@@ -461,7 +461,7 @@ void Editor::deleteForward() {
         return; // Already at the end of the buffer
     }
 
-    auto command = std::make_unique<DeleteForwardCommand>();
+    auto command = std::make_unique<DeleteCharCommand>(false); // isBackspace = false
     commandManager_.executeCommand(std::move(command), *this);
 }
 
