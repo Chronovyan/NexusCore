@@ -7,6 +7,13 @@
 #include "../src/Editor.h"
 #include <map>
 
+#ifndef _WIN32
+#include <sys/resource.h> // For getrusage on Unix
+#else
+#include <windows.h> // For Windows memory usage APIs
+#include <psapi.h>    // For GetProcessMemoryInfo
+#endif
+
 // Generate a large text file with given number of lines
 void generateLargeFile(const std::string& filename, size_t lineCount, size_t avgLineLength) {
     std::ofstream outFile(filename);
@@ -31,6 +38,35 @@ void generateLargeFile(const std::string& filename, size_t lineCount, size_t avg
     
     outFile.close();
     std::cout << "Generated file " << filename << " with " << lineCount << " lines" << std::endl;
+}
+
+// Get current process memory usage in KB
+size_t getMemoryUsageKB() {
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return pmc.WorkingSetSize / 1024;
+    }
+    return 0;
+#else
+    struct rusage rusage;
+    getrusage(RUSAGE_SELF, &rusage);
+    return rusage.ru_maxrss;
+#endif
+}
+
+// Print memory usage delta in a formatted way
+void printMemoryDelta(size_t before, size_t after) {
+    long delta = static_cast<long>(after) - static_cast<long>(before);
+    std::cout << "  Memory usage: " << before << " KB -> " << after << " KB";
+    if (delta > 0) {
+        std::cout << " (+" << delta << " KB)";
+    } else if (delta < 0) {
+        std::cout << " (" << delta << " KB)";
+    } else {
+        std::cout << " (no change)";
+    }
+    std::cout << std::endl;
 }
 
 // Benchmark file loading
@@ -364,6 +400,232 @@ void benchmarkSyntaxHighlighting(Editor& editor) {
         "ms" << std::endl;
 }
 
+// Benchmark long-running stability
+void benchmarkLongRunningStability(Editor& editor, size_t iterations) {
+    // Create a log file to track memory usage over time
+    std::ofstream memoryLog("memory_usage_log.csv");
+    memoryLog << "Iteration,Operation,MemoryBefore(KB),MemoryAfter(KB),Delta(KB),Duration(ms)" << std::endl;
+    
+    std::cout << "Long-running stability benchmark:" << std::endl;
+    std::cout << "  Iterations: " << iterations << std::endl;
+    
+    size_t initialMemory = getMemoryUsageKB();
+    std::cout << "  Initial memory usage: " << initialMemory << " KB" << std::endl;
+    
+    size_t before, after;
+    std::chrono::milliseconds duration;
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    for (size_t i = 0; i < iterations; ++i) {
+        if (i % 100 == 0) {
+            std::cout << "  Completed " << i << " iterations..." << std::endl;
+        }
+        
+        // 1. Typing test
+        before = getMemoryUsageKB();
+        auto opStart = std::chrono::high_resolution_clock::now();
+        editor.typeText("Line of text for iteration " + std::to_string(i));
+        editor.newLine();
+        auto opEnd = std::chrono::high_resolution_clock::now();
+        after = getMemoryUsageKB();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(opEnd - opStart);
+        memoryLog << i << ",TypeText," << before << "," << after << "," 
+                  << (static_cast<long>(after) - static_cast<long>(before)) << ","
+                  << duration.count() << std::endl;
+        
+        // 2. Delete operations
+        before = getMemoryUsageKB();
+        opStart = std::chrono::high_resolution_clock::now();
+        for (int j = 0; j < 5; ++j) {
+            editor.backspace();
+        }
+        opEnd = std::chrono::high_resolution_clock::now();
+        after = getMemoryUsageKB();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(opEnd - opStart);
+        memoryLog << i << ",Backspace," << before << "," << after << "," 
+                  << (static_cast<long>(after) - static_cast<long>(before)) << ","
+                  << duration.count() << std::endl;
+        
+        // 3. Undo/Redo test
+        before = getMemoryUsageKB();
+        opStart = std::chrono::high_resolution_clock::now();
+        editor.undo();
+        editor.undo();
+        editor.redo();
+        opEnd = std::chrono::high_resolution_clock::now();
+        after = getMemoryUsageKB();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(opEnd - opStart);
+        memoryLog << i << ",UndoRedo," << before << "," << after << "," 
+                  << (static_cast<long>(after) - static_cast<long>(before)) << ","
+                  << duration.count() << std::endl;
+        
+        // 4. Cursor movement and selection
+        before = getMemoryUsageKB();
+        opStart = std::chrono::high_resolution_clock::now();
+        editor.setCursor(i % editor.getBuffer().lineCount(), 0);
+        editor.setSelectionStart();
+        editor.moveCursorRight();
+        editor.moveCursorRight();
+        editor.moveCursorRight();
+        editor.setSelectionEnd();
+        opEnd = std::chrono::high_resolution_clock::now();
+        after = getMemoryUsageKB();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(opEnd - opStart);
+        memoryLog << i << ",Selection," << before << "," << after << "," 
+                  << (static_cast<long>(after) - static_cast<long>(before)) << ","
+                  << duration.count() << std::endl;
+        
+        // 5. Syntax highlighting operation (if enabled)
+        if (editor.isSyntaxHighlightingEnabled() && editor.getCurrentHighlighter() != nullptr) {
+            before = getMemoryUsageKB();
+            opStart = std::chrono::high_resolution_clock::now();
+            editor.getHighlightingStyles(); // Force highlight calculation
+            opEnd = std::chrono::high_resolution_clock::now();
+            after = getMemoryUsageKB();
+            duration = std::chrono::duration_cast<std::chrono::milliseconds>(opEnd - opStart);
+            memoryLog << i << ",Highlighting," << before << "," << after << "," 
+                      << (static_cast<long>(after) - static_cast<long>(before)) << ","
+                      << duration.count() << std::endl;
+        }
+    }
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto totalDuration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime);
+    
+    size_t finalMemory = getMemoryUsageKB();
+    std::cout << "  Final memory usage: " << finalMemory << " KB" << std::endl;
+    printMemoryDelta(initialMemory, finalMemory);
+    std::cout << "  Total run time: " << totalDuration.count() << " seconds" << std::endl;
+    std::cout << "  Memory usage log written to memory_usage_log.csv" << std::endl;
+    
+    memoryLog.close();
+}
+
+// Modified functions to include memory usage tracking
+void benchmarkFileLoading_withMemory(const std::string& filename) {
+    Editor editor;
+    
+    // Measure memory before loading
+    size_t memoryBefore = getMemoryUsageKB();
+    std::cout << "  Memory before loading: " << memoryBefore << " KB" << std::endl;
+    
+    // Measure time to load file
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    // Load file line by line
+    std::ifstream file(filename);
+    if (!file) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return;
+    }
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        editor.addLine(line);
+    }
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    
+    // Measure memory after loading
+    size_t memoryAfter = getMemoryUsageKB();
+    
+    std::cout << "File loading benchmark (with memory):" << std::endl;
+    std::cout << "  File size: " << editor.getBuffer().lineCount() << " lines" << std::endl;
+    std::cout << "  Loading time: " << duration.count() << "ms" << std::endl;
+    printMemoryDelta(memoryBefore, memoryAfter);
+}
+
+// Stress test with multiple large edit operations
+void stressTestLargeEdits(Editor& editor, size_t operationCount) {
+    size_t memoryBefore = getMemoryUsageKB();
+    std::cout << "Large edits stress test:" << std::endl;
+    std::cout << "  Initial lines: " << editor.getBuffer().lineCount() << std::endl;
+    std::cout << "  Operations: " << operationCount << std::endl;
+    std::cout << "  Memory before: " << memoryBefore << " KB" << std::endl;
+    
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    // Random operations on a large scale
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> opDist(0, 4); // 5 operations
+    
+    for (size_t i = 0; i < operationCount; ++i) {
+        if (i % 100 == 0) {
+            std::cout << "  Operation " << i << "..." << std::endl;
+        }
+        
+        int operation = opDist(gen);
+        switch (operation) {
+            case 0: {
+                // Insert a large block of text
+                std::string largeText;
+                for (int j = 0; j < 100; ++j) {
+                    largeText += "Large text insertion line " + std::to_string(j) + " of stress test.\n";
+                }
+                editor.typeText(largeText);
+                break;
+            }
+            case 1: {
+                // Delete multiple lines
+                size_t lineCount = editor.getBuffer().lineCount();
+                if (lineCount > 10) {
+                    size_t lineToDelete = lineCount / 2; // Delete from middle
+                    for (int j = 0; j < 10 && lineToDelete < lineCount; ++j, ++lineToDelete) {
+                        editor.deleteLine(lineToDelete);
+                        lineCount--;
+                    }
+                }
+                break;
+            }
+            case 2: {
+                // Multiple consecutive undo operations
+                for (int j = 0; j < 5; ++j) {
+                    if (editor.canUndo()) {
+                        editor.undo();
+                    }
+                }
+                break;
+            }
+            case 3: {
+                // Multiple consecutive redo operations
+                for (int j = 0; j < 5; ++j) {
+                    if (editor.canRedo()) {
+                        editor.redo();
+                    }
+                }
+                break;
+            }
+            case 4: {
+                // Replace lines with large content
+                size_t lineCount = editor.getBuffer().lineCount();
+                if (lineCount > 5) {
+                    std::uniform_int_distribution<> lineDist(0, lineCount - 1);
+                    for (int j = 0; j < 5; ++j) {
+                        size_t lineIndex = lineDist(gen);
+                        std::string replacementText = "Replacement text for line " + 
+                                                     std::to_string(lineIndex) + 
+                                                     " in stress test iteration " + 
+                                                     std::to_string(i) + 
+                                                     " with extra padding to make it long.";
+                        editor.replaceLine(lineIndex, replacementText);
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    
+    size_t memoryAfter = getMemoryUsageKB();
+    std::cout << "  Final lines: " << editor.getBuffer().lineCount() << std::endl;
+    std::cout << "  Execution time: " << duration.count() << "ms" << std::endl;
+    printMemoryDelta(memoryBefore, memoryAfter);
+}
+
 int main(int argc, char* argv[]) {
     const std::string testFilename = "benchmark_test_file.txt";
     size_t lineCount = 1000;  // Default size
@@ -546,6 +808,12 @@ int main(int argc, char* argv[]) {
         } else {
             std::cout << "\nSkipping syntax highlighting benchmark (disabled)" << std::endl;
         }
+        
+        // Run long-running stability benchmark
+        benchmarkLongRunningStability(editor, iterations);
+        
+        // Run stress test with large edits
+        stressTestLargeEdits(editor, iterations);
         
         std::cout << "\nBenchmarks complete!" << std::endl;
         
