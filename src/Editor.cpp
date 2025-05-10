@@ -23,36 +23,26 @@ Editor::Editor()
     syntaxHighlightingManager_.setBuffer(&buffer_);
     syntaxHighlightingManager_.setEnabled(syntaxHighlightingEnabled_);
 
-    // Get actual terminal dimensions and calculate display properties
-    int termWidth = getTerminalWidth();
-    int termHeight = getTerminalHeight();
-
+    // Constants for minimum dimensions
     const int MIN_DISPLAY_WIDTH = 10;
     const int MIN_DISPLAY_HEIGHT = 5; 
     const int MIN_VIEWABLE_LINES = 1;
 
+    // Get actual terminal dimensions with safe defaults
+    int termWidth = std::max(MIN_DISPLAY_WIDTH, getTerminalWidth());
+    int termHeight = std::max(MIN_DISPLAY_HEIGHT, getTerminalHeight());
+
     // Calculate actual displayWidth based on terminal width
-    displayWidth_ = termWidth; // Simplification, add offsets if needed
-    if (displayWidth_ < MIN_DISPLAY_WIDTH) {
-        displayWidth_ = MIN_DISPLAY_WIDTH;
-    }
+    displayWidth_ = termWidth;
 
     // Calculate actual displayHeight based on terminal height, considering command/status lines
-    // This is the total height available for the editor area (text + cmd + status)
-    displayHeight_ = termHeight; 
-    if (displayHeight_ < (commandLineHeight_ + statusLineHeight_ + MIN_VIEWABLE_LINES)) {
-        displayHeight_ = commandLineHeight_ + statusLineHeight_ + MIN_VIEWABLE_LINES;
-    }
+    displayHeight_ = termHeight;
 
-    // Calculate viewableLines_ (lines for text content)
+    // Calculate viewableLines_ (lines for text content) with bounds checks
     if (displayHeight_ > (commandLineHeight_ + statusLineHeight_)) {
         viewableLines_ = displayHeight_ - commandLineHeight_ - statusLineHeight_;
     } else {
         viewableLines_ = MIN_VIEWABLE_LINES; 
-    }
-    // Ensure viewableLines_ is at least MIN_VIEWABLE_LINES, even if calculated to 0 or less
-    if (viewableLines_ < MIN_VIEWABLE_LINES) {
-         viewableLines_ = MIN_VIEWABLE_LINES;
     }
 }
 
