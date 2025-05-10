@@ -260,6 +260,7 @@ public:
         }
     }
     
+    // Get a raw pointer to a highlighter for the given file extension
     SyntaxHighlighter* getHighlighterForExtension(const std::string& extension) const {
         std::cout << "[DEBUG THREAD " << std::this_thread::get_id() << "] SyntaxHighlighterRegistry::getHighlighterForExtension - Called for extension: '" << extension << "'" << std::endl;
         try {
@@ -302,6 +303,58 @@ public:
             return nullptr;
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::getHighlighterForExtension");
+            return nullptr;
+        }
+    }
+    
+    // Get a shared_ptr to a highlighter for the given file extension
+    // This method creates a new shared_ptr that shares ownership with the registry
+    std::shared_ptr<SyntaxHighlighter> getSharedHighlighterForExtension(const std::string& extension) const {
+        std::cout << "[DEBUG THREAD " << std::this_thread::get_id() << "] SyntaxHighlighterRegistry::getSharedHighlighterForExtension - Called for extension: '" << extension << "'" << std::endl;
+        try {
+            // Use shared lock for reading
+            std::shared_lock<std::shared_mutex> lock(registry_mutex_);
+            
+            if (highlighters_.empty()) {
+                std::cout << "[DEBUG THREAD " << std::this_thread::get_id() << "] SyntaxHighlighterRegistry::getSharedHighlighterForExtension - No highlighters registered." << std::endl;
+                return nullptr;
+            }
+            
+            // Extract extension from path if needed
+            std::string ext = extension;
+            size_t pos = extension.find_last_of('.');
+            if (pos != std::string::npos) {
+                ext = extension.substr(pos + 1);
+            }
+            
+            // Convert to lowercase for comparison
+            std::transform(ext.begin(), ext.end(), ext.begin(), 
+                          [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            
+            // Find the highlighter
+            auto it = extensionMap_.find(ext);
+            if (it != extensionMap_.end() && it->second < highlighters_.size()) {
+                std::cout << "[DEBUG THREAD " << std::this_thread::get_id() << "] SyntaxHighlighterRegistry::getSharedHighlighterForExtension - Found highlighter for extension '" << ext << "'" << std::endl;
+                
+                // Create a shared_ptr that shares ownership with the registry's unique_ptr
+                // The aliasing constructor maintains a reference to the registry's unique_ptr
+                // while providing a pointer to the SyntaxHighlighter
+                return std::shared_ptr<SyntaxHighlighter>(
+                    std::shared_ptr<void>{}, // Empty shared_ptr as owner
+                    highlighters_[it->second].get() // Raw pointer to the highlighter
+                );
+            }
+            
+            std::cout << "[DEBUG THREAD " << std::this_thread::get_id() << "] SyntaxHighlighterRegistry::getSharedHighlighterForExtension - No highlighter found for extension '" << ext << "'" << std::endl;
+            return nullptr; // No highlighter found
+        } catch (const EditorException& ed_ex) {
+            ErrorReporter::logException(ed_ex);
+            return nullptr;
+        } catch (const std::exception& ex) {
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getSharedHighlighterForExtension: ") + ex.what(), EditorException::Severity::Error));
+            return nullptr;
+        } catch (...) {
+            ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::getSharedHighlighterForExtension");
             return nullptr;
         }
     }
