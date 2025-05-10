@@ -71,7 +71,6 @@ void Editor::printView(std::ostream& os) const {
             if (useHighlighting && i < styles.size()) {
                 // Print line with syntax highlighting and cursor
                 const auto& lineStyles = styles[i];
-                size_t currentPos = 0;
                 
                 // Keep track of currently active color
                 std::string currentColor = resetColor;
@@ -132,7 +131,6 @@ void Editor::printView(std::ostream& os) const {
             if (useHighlighting && i < styles.size()) {
                 // Print line with syntax highlighting
                 const auto& lineStyles = styles[i];
-                size_t currentPos = 0;
                 
                 // Keep track of currently active color
                 std::string currentColor = resetColor;
@@ -762,9 +760,9 @@ bool Editor::findMatchInLine(const std::string& line, const std::string& term,
             std::string lowerLine = line;
             std::string lowerTerm = term;
             std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(),
-                          [](unsigned char c) { return std::tolower(c); });
+                          [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
             std::transform(lowerTerm.begin(), lowerTerm.end(), lowerTerm.begin(),
-                          [](unsigned char c) { return std::tolower(c); });
+                          [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
             matchPos = lowerLine.find(lowerTerm, startPos);
 
@@ -877,7 +875,7 @@ bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitiv
             const std::string& lineText = buffer_.getLine(line);
             
             // Determine how far to search in this line
-            size_t endCol = (line == lastSearchLine_) ? lastSearchCol_ : lineText.length();
+            // size_t endCol = (line == lastSearchLine_) ? lastSearchCol_ : lineText.length();
             
             if (findMatchInLine(lineText, currentSearchTerm_, 0, currentSearchCaseSensitive_, matchPos, matchLength)) {
                 // If this line is the original start line, make sure we're not finding beyond our start col
@@ -1033,7 +1031,7 @@ bool Editor::performReplaceLogic(
         return false;
     }
 
-    size_t matchStartLine, matchStartCol, matchEndLine, matchEndCol;
+    size_t matchStartLine = 0, matchStartCol = 0, matchEndLine = 0, matchEndCol = 0;
     std::string matchedTextContent;
     bool matchFound = false;
 
@@ -1045,9 +1043,9 @@ bool Editor::performReplaceLogic(
 
         if (!caseSensitive) {
             std::transform(tempSearchTerm.begin(), tempSearchTerm.end(), tempSearchTerm.begin(), 
-                           [](unsigned char c){ return std::tolower(c); });
+                           [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
             std::transform(tempSelectedText.begin(), tempSelectedText.end(), tempSelectedText.begin(), 
-                           [](unsigned char c){ return std::tolower(c); });
+                           [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
         }
 
         if (tempSelectedText == tempSearchTerm) {

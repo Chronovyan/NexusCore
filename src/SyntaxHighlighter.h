@@ -113,7 +113,7 @@ class PatternBasedHighlighter : public SyntaxHighlighter {
 public:
     PatternBasedHighlighter(const std::string& name) : languageName_(name) {}
     
-    std::vector<SyntaxStyle> highlightLine(const std::string& line, size_t lineIndex) const override {
+    std::vector<SyntaxStyle> highlightLine(const std::string& line, [[maybe_unused]] size_t lineIndex) const override {
         std::vector<SyntaxStyle> styles;
         
         // Apply each pattern to the line
@@ -280,7 +280,7 @@ public:
             
             // Convert to lowercase for comparison
             std::transform(ext.begin(), ext.end(), ext.begin(), 
-                          [](unsigned char c) { return std::tolower(c); });
+                          [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
             
             // Find the highlighter
             auto it = extensionMap_.find(ext);
