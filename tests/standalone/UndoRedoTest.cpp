@@ -3,8 +3,8 @@
 #include <vector>
 #include "EditorTestable.h"
 
-// Renamed to avoid conflict
-int test_main() {
+// Renamed to main for compatibility with build_run_test.bat
+int main() {
     std::cout << "=== Undo/Redo Functionality Test ===" << std::endl;
     
     // Create vectors for each test case
@@ -79,17 +79,8 @@ int test_main() {
     return 0;
 }
 
-// Original test functions can be removed or kept
-TestResult testBasicUndoRedo() {
-    test_main(); // Use our manual test instead
-    return TestResult(true, "Manual verification required");
-}
+// Removed TestResult testBasicUndoRedo() function
 
-// Use the same simplified test for the other test functions
-TestResult testTextEditingUndoRedo() {
-    return TestResult(true, "Manual verification required");
-}
+// Removed TestResult testTextEditingUndoRedo() function
 
-TestResult testLineOperationsUndoRedo() {
-    return TestResult(true, "Manual verification required");
-} 
+// Removed TestResult testLineOperationsUndoRedo() function 

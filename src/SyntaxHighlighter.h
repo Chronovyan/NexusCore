@@ -115,11 +115,10 @@ public:
     
     std::vector<SyntaxStyle> highlightLine(const std::string& line, [[maybe_unused]] size_t lineIndex) const override {
         std::vector<SyntaxStyle> styles;
-        
         // Apply each pattern to the line
-        for (const auto& pattern : patterns_) {
-            const auto& regex = pattern.first;
-            const SyntaxColor color = pattern.second;
+        for (const auto& pattern_pair : patterns_) {
+            const auto& regex = pattern_pair.first;
+            const SyntaxColor color = pattern_pair.second;
             
             std::sregex_iterator it(line.begin(), line.end(), regex);
             std::sregex_iterator end;
@@ -127,11 +126,8 @@ public:
             while (it != end) {
                 const std::smatch& match = *it;
                 if (match.size() > 0) {
-                    // Add a style for the match
                     size_t startCol = match.position();
                     size_t endCol = startCol + match.length();
-                    
-                    // Only add if this match adds value - could be more sophisticated
                     styles.push_back(SyntaxStyle(startCol, endCol, color));
                 }
                 ++it;

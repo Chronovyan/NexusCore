@@ -1,0 +1,102 @@
+Running search functionality tests...
+Basic search test passed!
+DEBUG: Cursor at [2, 14]
+DEBUG: Has selection: true
+DEBUG: Selected text: "test"
+DEBUG OUTPUT:
+--- Mini C++ Text Editor --- (type 'help' for commands)
+> add Hello, world!
+Line added.
+> add This is a test with multiple words.
+Line added.
+> add Another line with the Test in it.
+Line added.
+> search test
+Found match. Cursor at: [2, 14]
+
+Case-sensitive search test passed!
+DEBUG OUTPUT (Search and Replace):
+--- Mini C++ Text Editor --- (type 'help' for commands)
+> add Hello, world!
+Line added.
+> add This is a test with multiple words.
+Line added.
+> add Another line with the test in it.
+Line added.
+> search test
+Found match. Cursor at: [3, 26]
+> sreplace example
+Unknown command: sreplace. Type 'help' for a list of commands.
+> view
+--- Buffer View ---
+
+Hello, world!
+This is a test with multiple words.
+Another line with the example| in it.  <-- Cursor Line (3, 29)
+-------------------
+> undo
+Action undone.
+> view
+--- Buffer View ---
+
+Hello, world!
+This is a test with multiple words.
+Another line with the | in it.  <-- Cursor Line (3, 22)
+-------------------
+> search nonexistent
+No matches found for "nonexistent"
+> sreplace something
+Unknown command: sreplace. Type 'help' for a list of commands.
+
+Search and replace test passed!
+DEBUG: Buffer contents:
+  Line 0: 
+  Line 1: Hello, world!
+  Line 2: This is a test with multiple words.
+  Line 3: Another line with the test in it.
+DEBUG: Buffer after replaceAll:
+  Line 0: 
+  Line 1: Hello, world!
+  Line 2: This is a example with multiple words.
+  Line 3: Another line with the example in it.
+DEBUG: Buffer after undo:
+  Line 0: 
+  Line 1: Hello, world!
+  Line 2: This is a test with multiple words.
+  Line 3: Another line with the test in it.
+DEBUG OUTPUT (Replace All):
+--- Mini C++ Text Editor --- (type 'help' for commands)
+> add Hello, world!
+Line added.
+> add This is a test with multiple words.
+Line added.
+> add Another line with the test in it.
+Line added.
+> search test
+Found match. Cursor at: [3, 26]
+> view
+--- Buffer View ---
+
+Hello, world!
+This is a test with multiple words.
+Another line with the test| in it.  <-- Cursor Line (3, 26)
+-------------------
+
+Replace all test passed!
+DEBUG: Cursor at [3, 26]
+DEBUG: Has selection: true
+DEBUG: Selection: [3, 22] to [3, 26]
+DEBUG: Selected text: "test"
+DEBUG OUTPUT:
+--- Mini C++ Text Editor --- (type 'help' for commands)
+> add Hello, world!
+Line added.
+> add This is a test with multiple words.
+Line added.
+> add Another line with the test in it.
+Line added.
+> search test
+Found match. Cursor at: [3, 26]
+
+Search selection test passed!
+All search functionality tests passed!

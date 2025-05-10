@@ -14,7 +14,8 @@ std::vector<std::vector<SyntaxStyle>> PatternBasedHighlighter::highlightBuffer(
     
     for (size_t i = 0; i < buffer.lineCount(); ++i) {
         const std::string& line = buffer.getLine(i);
-        result.push_back(this->highlightLine(line, i));
+        auto lineStyles = this->highlightLine(line, i);
+        result.push_back(lineStyles);
     }
     
     return result;
