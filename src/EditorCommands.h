@@ -26,6 +26,7 @@ private:
 };
 
 // DeleteTextCommand - Handles deletion of text (backspace)
+// @deprecated - Use DeleteCharCommand(true) instead. This class is being phased out.
 class DeleteTextCommand : public Command {
 public:
     DeleteTextCommand() = default;
@@ -43,6 +44,7 @@ private:
 };
 
 // DeleteForwardCommand - Handles forward deletion (delete key)
+// @deprecated - Use DeleteCharCommand(false) instead. This class is being phased out.
 class DeleteForwardCommand : public Command {
 public:
     DeleteForwardCommand() = default;
@@ -336,6 +338,8 @@ private:
 };
 
 // DeleteCharCommand - Deletes a character (handles backspace or forward delete)
+// This is the consolidated replacement for DeleteTextCommand and DeleteForwardCommand.
+// Use this with isBackspace=true for backspace and isBackspace=false for forward delete.
 class DeleteCharCommand : public Command {
 public:
     DeleteCharCommand(bool isBackspace)
