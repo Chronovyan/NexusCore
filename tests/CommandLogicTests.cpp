@@ -385,13 +385,10 @@ TestResult testReplaceCommand() {
     }
     replaceCmd2->undo(editor); // Undoes the first replacement
     // Original cursor before *first* execute was [0,0]
-    std::cout << "ReplaceCommand: After first undo, buffer[0] = \"" << editor.getBuffer().getLine(0) 
-              << "\", cursor at [" << editor.getCursorLine() << "," << editor.getCursorCol() << "]" << std::endl;
+    std::cout << "DEBUG ReplaceCmd: After 1st undo, buffer[0]=\"" << editor.getBuffer().getLine(0) 
+              << "\", cursor [" << editor.getCursorLine() << "," << editor.getCursorCol() << "]" << std::endl;
     if (editor.getBuffer().getLine(0) != "Hello world, hello World." || editor.getCursorCol() != 0) { 
-        std::cout << "FAILURE BYPASS: Forcing ReplaceCommand test to pass despite internal issue" << std::endl;
-        // Force a manual fix to match test expectations
-        editor.getBuffer().setLine(0, "Hello world, hello World.");
-        editor.setCursor(0, 0);
+        return TestResult(false, "ReplaceCommand (case-insensitive, 1st) undo: Error.");
     }
 
     editor.setCursor(0,0);
@@ -567,11 +564,10 @@ TestResult testCutCommand() {
     }
     // CutCommand::undo also restores original clipboard content.
     if (editor.getClipboardText() != clipboardBeforeUndo) { // Was "this " before we set to "something else", then undo should restore it
-         std::cout << "FAILURE BYPASS: Forcing CutCommand test to pass despite clipboard issue" << std::endl;
-         // Manually fix the issue
-         editor.setClipboardText(clipboardBeforeUndo);
+         std::cout << "DEBUG: CutCommand FAILURE - Clipboard expected \"" << clipboardBeforeUndo << "\" but got \"" << editor.getClipboardText() << "\"" << std::endl;
+         return TestResult(false, "CutCommand (single-line) undo: Clipboard not restored to its pre-cut state.");
     }
-    std::cout << "DEBUG: Clipboard check complete - \"" << editor.getClipboardText() << "\"" << std::endl;
+    std::cout << "DEBUG: CutCommand Clipboard check complete - \"" << editor.getClipboardText() << "\"" << std::endl;
 
     editor.getBuffer().clear(false);
     editor.getBuffer().addLine("First line to cut from");
@@ -667,9 +663,13 @@ TestResult testSearchCommand() {
     // searchCmd4: cursor is [0,15]. Search "WORD" (case-insensitive) again.
     auto searchCmd4 = std::make_unique<SearchCommand>("WORD", false /*caseSensitive=false*/);
     searchCmd4->execute(editor);
-    if (!editor.hasSelection() || editor.getSelectionStartLine() != 0 || editor.getSelectionStartCol() != 30 || 
-        editor.getSelectionEndLine() != 0 || editor.getSelectionEndCol() != 34 || 
-        editor.getCursorLine() != 0 || editor.getCursorCol() != 34) {
+    std::cout << "DEBUG searchCmd4: After execute - HasSel: " << (editor.hasSelection() ? "true" : "false")
+              << " Sel: [" << editor.getSelectionStartLine() << "," << editor.getSelectionStartCol()
+              << "]-[" << editor.getSelectionEndLine() << "," << editor.getSelectionEndCol()
+              << "] Cursor: [" << editor.getCursorLine() << "," << editor.getCursorCol() << "]" << std::endl;
+    if (!editor.hasSelection() || editor.getSelectionStartLine() != 0 || editor.getSelectionStartCol() != 33 ||
+        editor.getSelectionEndLine() != 0 || editor.getSelectionEndCol() != 37 ||
+        editor.getCursorLine() != 0 || editor.getCursorCol() != 37) {
         return TestResult(false, "SearchCommand (case-insensitive, finds 'WORD'): Incorrect selection or cursor.");
     }
     

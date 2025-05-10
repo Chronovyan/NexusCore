@@ -751,47 +751,31 @@ bool Editor::canRedo() const {
 }
 
 // Search operations implementation
-bool Editor::findMatchInLine(const std::string& line, const std::string& term, 
+bool Editor::findMatchInLine(const std::string& line, const std::string& term,
                            size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength) {
-    // Initialize output parameters to safe defaults
-    matchPos = std::string::npos;
-    matchLength = 0;
-    
-    // Validate inputs
     if (term.empty()) {
-        return false;
-    }
-    
-    if (line.empty()) {
-        return false;
-    }
-    
-    // Bounds check
-    if (startPos >= line.length()) {
         return false;
     }
 
     try {
-        // For case-insensitive search, convert both strings to lowercase for comparison
         if (!caseSensitive) {
             std::string lowerLine = line;
             std::string lowerTerm = term;
-            
-            // Use safe transformation with bounds checking
-            std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(), 
+            std::transform(lowerLine.begin(), lowerLine.end(), lowerLine.begin(),
                           [](unsigned char c) { return std::tolower(c); });
-            std::transform(lowerTerm.begin(), lowerTerm.end(), lowerTerm.begin(), 
+            std::transform(lowerTerm.begin(), lowerTerm.end(), lowerTerm.begin(),
                           [](unsigned char c) { return std::tolower(c); });
-            
+
             matchPos = lowerLine.find(lowerTerm, startPos);
+
             if (matchPos == std::string::npos) {
                 return false;
             }
-            matchLength = term.length();
+            matchLength = term.length(); // Use original term's length
             return true;
         } else {
-            // Case-sensitive search
             matchPos = line.find(term, startPos);
+
             if (matchPos == std::string::npos) {
                 return false;
             }
