@@ -1,8 +1,9 @@
 #include "TextBuffer.h"
-#include <stdexcept> // For std::out_of_range
-#include <ostream>   // For std::ostream (needed for printToStream)
-#include <iostream>  // For std::cout, std::endl (if used directly here for debugging, though printToStream is better)
-#include <fstream>   // For std::ofstream and std::ifstream
+#include "EditorError.h" // Include EditorError.h for exception types
+#include <stdexcept>     // For std::out_of_range (can be removed later)
+#include <ostream>       // For std::ostream (needed for printToStream)
+#include <iostream>      // For std::cout, std::endl
+#include <fstream>       // For std::ofstream and std::ifstream
 
 TextBuffer::TextBuffer() {
     clear(true); // Start with one empty line
@@ -21,14 +22,14 @@ void TextBuffer::addLine(const std::string& line) {
 
 void TextBuffer::insertLine(size_t index, const std::string& line) {
     if (index > lines_.size()) {
-        throw std::out_of_range("Index out of range for insertLine");
+        throw TextBufferException("Index out of range for insertLine", EditorException::Severity::Error);
     }
     lines_.insert(lines_.begin() + index, line);
 }
 
 void TextBuffer::deleteLine(size_t index) {
     if (index >= lines_.size()) {
-        throw std::out_of_range("Index out of range for deleteLine");
+        throw TextBufferException("Index out of range for deleteLine", EditorException::Severity::Error);
     }
     
     if (lines_.size() == 1 && index == 0) { // If it's the only line and we're deleting it
@@ -41,14 +42,14 @@ void TextBuffer::deleteLine(size_t index) {
 
 void TextBuffer::replaceLine(size_t index, const std::string& newLine) {
     if (index >= lines_.size()) {
-        throw std::out_of_range("Index out of range for replaceLine");
+        throw TextBufferException("Index out of range for replaceLine", EditorException::Severity::Error);
     }
     lines_[index] = newLine;
 }
 
 const std::string& TextBuffer::getLine(size_t index) const {
     if (index >= lines_.size()) {
-        throw std::out_of_range("Index out of range for getLine");
+        throw TextBufferException("Index out of range for getLine", EditorException::Severity::Error);
     }
     return lines_[index];
 }
@@ -76,9 +77,7 @@ void TextBuffer::printToStream(std::ostream& os) const {
 bool TextBuffer::saveToFile(const std::string& filename) const {
     std::ofstream outfile(filename);
     if (!outfile.is_open()) {
-        // Optional: Could throw an exception or return a more detailed error object.
-        // For now, printing to std::cerr and returning false.
-        std::cerr << "Error: Could not open file for saving: " << filename << std::endl;
+        ErrorReporter::logError("Could not open file for saving: " + filename);
         return false;
     }
 
@@ -87,7 +86,7 @@ bool TextBuffer::saveToFile(const std::string& filename) const {
     }
 
     if (outfile.fail()) {
-        std::cerr << "Error: Failed while writing to file: " << filename << std::endl;
+        ErrorReporter::logError("Failed while writing to file: " + filename);
         outfile.close(); // Attempt to close even on failure
         return false;
     }
@@ -99,7 +98,7 @@ bool TextBuffer::saveToFile(const std::string& filename) const {
 bool TextBuffer::loadFromFile(const std::string& filename) {
     std::ifstream infile(filename);
     if (!infile.is_open()) {
-        std::cerr << "Error: Could not open file for loading: " << filename << std::endl;
+        ErrorReporter::logError("Could not open file for loading: " + filename);
         return false;
     }
 
@@ -110,7 +109,7 @@ bool TextBuffer::loadFromFile(const std::string& filename) {
     }
 
     if (infile.bad()) { // I/O error during read
-        std::cerr << "Error: An I/O error occurred while reading file: " << filename << std::endl;
+        ErrorReporter::logError("An I/O error occurred while reading file: " + filename);
         infile.close();
         // lines_.clear(); // Optionally clear partially loaded data on error
         return false;
@@ -125,18 +124,18 @@ bool TextBuffer::loadFromFile(const std::string& filename) {
 // Character level operations
 void TextBuffer::insertChar(size_t lineIndex, size_t colIndex, char ch) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for insertChar");
+        throw TextBufferException("Line index out of range for insertChar", EditorException::Severity::Error);
     }
     std::string& line = lines_[lineIndex];
     if (colIndex > line.length()) { // Allow inserting at the very end (colIndex == length)
-        throw std::out_of_range("Column index out of range for insertChar");
+        throw TextBufferException("Column index out of range for insertChar", EditorException::Severity::Error);
     }
     line.insert(colIndex, 1, ch);
 }
 
 void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for deleteChar");
+        throw TextBufferException("Line index out of range for deleteChar", EditorException::Severity::Error);
     }
     
     std::string& line = lines_[lineIndex];
@@ -167,7 +166,7 @@ void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
 
 void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for deleteCharForward");
+        throw TextBufferException("Line index out of range for deleteCharForward", EditorException::Severity::Error);
     }
     
     std::string& line = lines_[lineIndex];
@@ -192,65 +191,79 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
 
 void TextBuffer::splitLine(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for splitLine");
+        throw TextBufferException("Line index out of range for splitLine", EditorException::Severity::Error);
     }
     
     std::string& line = lines_[lineIndex];
     
     if (colIndex > line.length()) {
-        throw std::out_of_range("Column index out of range for splitLine");
+        throw TextBufferException("Column index out of range for splitLine", EditorException::Severity::Error);
     }
     
     // Extract the part of the line after the split point
     std::string newLine = line.substr(colIndex);
-    // Trim the current line at the split point
+    // Keep only the part before the split point in the original line
     line.erase(colIndex);
     
-    // Insert the new line after the current one
-    insertLine(lineIndex + 1, newLine);
+    // Insert the new line after the current line
+    lines_.insert(lines_.begin() + lineIndex + 1, newLine);
 }
 
 void TextBuffer::joinLines(size_t lineIndex) {
     if (lineIndex >= lines_.size() - 1) {
-        // Nothing to join if this is the last line
-        throw std::out_of_range("Cannot join last line with next line");
+        throw TextBufferException("Cannot join last line with next line", EditorException::Severity::Error);
     }
     
+    // Append the next line to the current line
     lines_[lineIndex] += lines_[lineIndex + 1];
+    // Remove the next line
     lines_.erase(lines_.begin() + lineIndex + 1);
 }
 
 void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::string& text) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for insertString");
+        throw TextBufferException("Line index out of range for insertString", EditorException::Severity::Error);
     }
     
     std::string& line = lines_[lineIndex];
     
+    // Allow inserting at the very end of the line (colIndex == line.length())
     if (colIndex > line.length()) {
-        colIndex = line.length();  // Limit to end of line
+        // Instead of throwing, we could optionally extend the line with spaces
+        // line.append(colIndex - line.length(), ' ');
+        throw TextBufferException("Column index out of range for insertString", EditorException::Severity::Error);
     }
     
+    // Simple insertion of a string without newlines
     line.insert(colIndex, text);
+    
+    // Note: This simplified version doesn't handle newlines in the inserted text
+    // For multi-line insertions, a more complex implementation would be needed
+    // That would involve splitting the insert text at each newline and creating new lines
 }
 
 std::string TextBuffer::getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for getLineSegment");
+        throw TextBufferException("Line index out of range for getLineSegment", EditorException::Severity::Error);
     }
     
     const std::string& line = lines_[lineIndex];
     
-    if (startCol > line.length() || endCol > line.length() || startCol > endCol) {
-        throw std::out_of_range("Invalid column range for getLineSegment");
+    // Validate column indices
+    if (startCol > endCol || startCol > line.length()) {
+        throw TextBufferException("Invalid column range for getLineSegment", EditorException::Severity::Error);
     }
     
+    // Clamp endCol to line length
+    endCol = std::min(endCol, line.length());
+    
+    // Return the segment (substr handles the case of zero-length segment correctly)
     return line.substr(startCol, endCol - startCol);
 }
 
 size_t TextBuffer::lineLength(size_t lineIndex) const {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Line index out of range for lineLength");
+        throw TextBufferException("Line index out of range for lineLength", EditorException::Severity::Error);
     }
     
     return lines_[lineIndex].length();
@@ -258,19 +271,18 @@ size_t TextBuffer::lineLength(size_t lineIndex) const {
 
 std::string& TextBuffer::getLine(size_t lineIndex) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("TextBuffer::getLine non-const: lineIndex out of bounds");
+        throw TextBufferException("Line index out of range for getLine", EditorException::Severity::Error);
     }
+    
     return lines_[lineIndex];
 }
 
 void TextBuffer::setLine(size_t lineIndex, const std::string& text) {
-    if (lineIndex < lines_.size()) {
-        lines_[lineIndex] = text;
-    } else {
-        // Or throw std::out_of_range or handle error appropriately
-        // For now, if lineIndex is out of bounds, this does nothing.
-        // Consider adding lines if lineIndex == lines_.size()
+    if (lineIndex >= lines_.size()) {
+        throw TextBufferException("Line index out of range for setLine", EditorException::Severity::Error);
     }
+    
+    lines_[lineIndex] = text;
 }
 
 // Optional: Implementation for a friend ostream operator if you prefer `std::cout << buffer;`

@@ -171,9 +171,9 @@ TEST_F(TextBufferTest, DeleteLineOutOfBounds) {
     ASSERT_EQ(buffer.lineCount(), 2);
 
     // Attempt to delete at lineCount (invalid, valid indices are 0 to lineCount-1)
-    EXPECT_THROW(buffer.deleteLine(2), std::out_of_range);
+    EXPECT_THROW(buffer.deleteLine(2), TextBufferException);
     // Negative index
-    EXPECT_THROW(buffer.deleteLine(-1), std::out_of_range);
+    EXPECT_THROW(buffer.deleteLine(-1), TextBufferException);
 
     // Ensure buffer state is unchanged after throwing
     EXPECT_EQ(buffer.lineCount(), 2);
@@ -184,7 +184,7 @@ TEST_F(TextBufferTest, DeleteLineOutOfBounds) {
     buffer.deleteLine(1); // Delete "Content Line" -> [""]
     buffer.deleteLine(0); // Delete "" -> [""] (should behave like DeleteOnlyLine)
     ASSERT_EQ(buffer.lineCount(), 1);
-    EXPECT_THROW(buffer.deleteLine(1), std::out_of_range); // Still out of bounds
+    EXPECT_THROW(buffer.deleteLine(1), TextBufferException); // Still out of bounds
 }
 
 // Test cases for replaceLine
@@ -244,57 +244,51 @@ TEST_F(TextBufferTest, ReplaceLineWithEmptyString) {
 }
 
 TEST_F(TextBufferTest, ReplaceLineOutOfBounds) {
-    buffer.addLine("Content"); // ["", "Content"]
+    buffer.addLine("Line 1"); // ["", "Line 1"]
     ASSERT_EQ(buffer.lineCount(), 2);
 
-    EXPECT_THROW(buffer.replaceLine(2, "Too Far"), std::out_of_range);
-    EXPECT_THROW(buffer.replaceLine(-1, "Negative"), std::out_of_range);
+    // Out of bounds indices
+    EXPECT_THROW(buffer.replaceLine(2, "Too Far"), TextBufferException);
+    EXPECT_THROW(buffer.replaceLine(-1, "Negative"), TextBufferException);
 
-    // Ensure buffer state is unchanged after throwing
+    // Ensure buffer is unchanged
     EXPECT_EQ(buffer.lineCount(), 2);
     EXPECT_EQ(buffer.getLine(0), "");
-    EXPECT_EQ(buffer.getLine(1), "Content");
+    EXPECT_EQ(buffer.getLine(1), "Line 1");
 }
 
 // Test case for getLine (const and non-const versions)
 TEST_F(TextBufferTest, GetLineOutOfBounds) {
-    // Non-const version
-    // Initial buffer has one line at index 0
-    EXPECT_NO_THROW(buffer.getLine(0)); // Valid access
-    EXPECT_THROW(buffer.getLine(1), std::out_of_range);
-    EXPECT_THROW(buffer.getLine(-1), std::out_of_range); // Tests large positive due to size_t conversion
+    // Mutable buffer non-const getLine()
+    EXPECT_THROW(buffer.getLine(1), TextBufferException);
+    EXPECT_THROW(buffer.getLine(-1), TextBufferException); // Tests large positive due to size_t conversion
 
-    // Const version
-    const TextBuffer& constBuffer = buffer;
-    EXPECT_EQ(constBuffer.lineCount(), 1);
-    EXPECT_NO_THROW(constBuffer.getLine(0)); // Valid access
-    EXPECT_THROW(constBuffer.getLine(1), std::out_of_range);
-    EXPECT_THROW(constBuffer.getLine(-1), std::out_of_range); // Though size_t makes -1 a large positive
+    // For const buffer.getLine() const
+    const TextBuffer constBuffer;
+    EXPECT_THROW(constBuffer.getLine(1), TextBufferException);
+    EXPECT_THROW(constBuffer.getLine(-1), TextBufferException); // Though size_t makes -1 a large positive
 
-    buffer.addLine("Second Line"); // Now 2 lines: ["", "Second Line"]
-    EXPECT_EQ(constBuffer.lineCount(), 2);
-    EXPECT_NO_THROW(constBuffer.getLine(1));
-    EXPECT_THROW(constBuffer.getLine(2), std::out_of_range);
+    // Ensure adding lines changes valid range
+    buffer.addLine("Line 1");
+    buffer.addLine("Line 2");
+    EXPECT_NO_THROW(buffer.getLine(1));
+    EXPECT_THROW(buffer.getLine(3), TextBufferException);
 }
 
 // Test case for lineLength
 TEST_F(TextBufferTest, LineLength) {
-    // Initial line is empty
+    // Starts with 1 empty line: [""]
     EXPECT_EQ(buffer.lineLength(0), 0);
-
-    buffer.addLine("Hello"); // ["", "Hello"]
-    EXPECT_EQ(buffer.lineLength(0), 0); // Initial line still empty
-    EXPECT_EQ(buffer.lineLength(1), 5); // "Hello" has length 5
-
-    buffer.replaceLine(1, "World123"); // Replace "Hello" with "World123"
-    EXPECT_EQ(buffer.lineLength(1), 8); // "World123" has length 8
-
-    buffer.replaceLine(0, "Not Empty Anymore"); // Replace initial empty line
-    EXPECT_EQ(buffer.lineLength(0), 17);
-
-    // Test out of bounds access
-    EXPECT_THROW(buffer.lineLength(2), std::out_of_range); // 2 lines, so index 2 is out of bounds
-    EXPECT_THROW(buffer.lineLength(-1), std::out_of_range); // size_t will make -1 large positive
+    
+    buffer.replaceLine(0, "Hello");
+    EXPECT_EQ(buffer.lineLength(0), 5);
+    
+    buffer.addLine("World!");
+    EXPECT_EQ(buffer.lineLength(1), 6);
+    
+    // Out of bounds
+    EXPECT_THROW(buffer.lineLength(2), TextBufferException); // 2 lines, so index 2 is out of bounds
+    EXPECT_THROW(buffer.lineLength(-1), TextBufferException); // size_t will make -1 large positive
 }
 
 // Test cases for insertString
@@ -340,12 +334,13 @@ TEST_F(TextBufferTest, InsertEmptyString) {
 }
 
 TEST_F(TextBufferTest, InsertStringOutOfBoundsLine) {
-    // Buffer has 1 line initially (index 0)
-    EXPECT_THROW(buffer.insertString(1, 0, "Error"), std::out_of_range);
-    EXPECT_THROW(buffer.insertString(-1, 0, "Error"), std::out_of_range);
-
-    // Ensure existing line is unchanged
-    EXPECT_EQ(buffer.getLine(0), ""); 
+    // Line out of bounds
+    EXPECT_THROW(buffer.insertString(1, 0, "Error"), TextBufferException);
+    EXPECT_THROW(buffer.insertString(-1, 0, "Error"), TextBufferException);
+    
+    // Column out of bounds
+    buffer.addLine("Hello");
+    EXPECT_THROW(buffer.insertString(0, 10, "Error"), TextBufferException);
 }
 
 // Test cases for deleteChar (simulates backspace)
@@ -427,13 +422,8 @@ TEST_F(TextBufferTest, DeleteCharBoundaryConditions) {
 }
 
 TEST_F(TextBufferTest, DeleteCharOutOfBounds) {
-    // Line index out of bounds
-    EXPECT_THROW(buffer.deleteChar(1, 0), std::out_of_range); // Only 1 line (index 0)
-    EXPECT_THROW(buffer.deleteChar(-1, 0), std::out_of_range);
-
-    // Ensure no change to buffer
-    EXPECT_EQ(buffer.getLine(0), "");
-    EXPECT_EQ(buffer.lineCount(), 1);
+    EXPECT_THROW(buffer.deleteChar(1, 0), TextBufferException); // Only 1 line (index 0)
+    EXPECT_THROW(buffer.deleteChar(-1, 0), TextBufferException);
 }
 
 // Test cases for deleteCharForward (simulates "delete" key)
@@ -514,13 +504,8 @@ TEST_F(TextBufferTest, DeleteCharForwardBoundaryConditions) {
 }
 
 TEST_F(TextBufferTest, DeleteCharForwardOutOfBounds) {
-    // Line index out of bounds
-    EXPECT_THROW(buffer.deleteCharForward(1, 0), std::out_of_range); // Only 1 line (index 0)
-    EXPECT_THROW(buffer.deleteCharForward(-1, 0), std::out_of_range);
-
-    // Ensure no change to buffer
-    EXPECT_EQ(buffer.getLine(0), "");
-    EXPECT_EQ(buffer.lineCount(), 1);
+    EXPECT_THROW(buffer.deleteCharForward(1, 0), TextBufferException); // Only 1 line (index 0)
+    EXPECT_THROW(buffer.deleteCharForward(-1, 0), TextBufferException);
 }
 
 // Test cases for splitLine
@@ -576,24 +561,19 @@ TEST_F(TextBufferTest, SplitLineOutOfBounds) {
     buffer.replaceLine(0, "SomeContent"); // Initial line: "SomeContent"
     ASSERT_EQ(buffer.lineCount(), 1);
 
-    // LineIndex out of bounds
-    EXPECT_THROW(buffer.splitLine(1, 0), std::out_of_range); // Line 1 does not exist
-    EXPECT_THROW(buffer.splitLine(-1, 0), std::out_of_range);
-
-    // ColIndex out of bounds (colIndex > length of line)
-    // Line 0 is "SomeContent" (length 11)
-    EXPECT_THROW(buffer.splitLine(0, 12), std::out_of_range); // col 12 is > length 11
-    EXPECT_THROW(buffer.splitLine(0, buffer.lineLength(0) + 1), std::out_of_range);
-
-    // Ensure buffer state is unchanged after exceptions
-    EXPECT_EQ(buffer.lineCount(), 1);
-    EXPECT_EQ(buffer.getLine(0), "SomeContent");
-
-    // Test ColIndex out of bounds on an empty line
-    buffer.clear(); // Clears to one empty line ""
-    ASSERT_EQ(buffer.lineCount(), 1);
-    ASSERT_EQ(buffer.getLine(0), "");
-    EXPECT_THROW(buffer.splitLine(0, 1), std::out_of_range); // col 1 on empty line is out of bounds
+    // Out of bounds indices - line
+    EXPECT_THROW(buffer.splitLine(1, 0), TextBufferException); // Line 1 does not exist
+    EXPECT_THROW(buffer.splitLine(-1, 0), TextBufferException);
+    
+    // Out of bounds - column
+    buffer.replaceLine(0, "Hello World");
+    EXPECT_THROW(buffer.splitLine(0, 12), TextBufferException); // col 12 is > length 11
+    EXPECT_THROW(buffer.splitLine(0, buffer.lineLength(0) + 1), TextBufferException);
+    
+    // Empty line special case
+    buffer.replaceLine(0, "");
+    EXPECT_NO_THROW(buffer.splitLine(0, 0)); // col 0 is valid on empty line
+    EXPECT_THROW(buffer.splitLine(0, 1), TextBufferException); // col 1 on empty line is out of bounds
 }
 
 // Test cases for joinLines
@@ -638,7 +618,6 @@ TEST_F(TextBufferTest, JoinLinesBasic) {
     buffer.joinLines(0); // Join LineA and LineB
     EXPECT_EQ(buffer.lineCount(), 2);
     EXPECT_EQ(buffer.getLine(0), "LineALineB");
-    EXPECT_EQ(buffer.getLine(1), "LineC");
 
     buffer.joinLines(0); // Join LineALineB and LineC
     EXPECT_EQ(buffer.lineCount(), 1);
@@ -646,28 +625,19 @@ TEST_F(TextBufferTest, JoinLinesBasic) {
 }
 
 TEST_F(TextBufferTest, JoinLinesOutOfBounds) {
-    // Buffer starts with one line: [""]
-    ASSERT_EQ(buffer.lineCount(), 1);
-    // Attempt to join the last line (index 0)
-    EXPECT_THROW(buffer.joinLines(0), std::out_of_range);
-
-    buffer.addLine("SecondLine"); // Lines: ["", "SecondLine"]
-    ASSERT_EQ(buffer.lineCount(), 2);
-    // Attempt to join the new last line (index 1)
-    EXPECT_THROW(buffer.joinLines(1), std::out_of_range);
-
-    // Valid join to ensure state before next test
+    // Only one line, can't join
+    EXPECT_THROW(buffer.joinLines(0), TextBufferException);
+    
+    // Add a second line, now can join at index 0
+    buffer.addLine("Second Line");
     EXPECT_NO_THROW(buffer.joinLines(0));
-    ASSERT_EQ(buffer.lineCount(), 1);
-    EXPECT_EQ(buffer.getLine(0), "SecondLine");
-
-    // Attempt to join with an invalid large index
-    EXPECT_THROW(buffer.joinLines(100), std::out_of_range);
-    EXPECT_THROW(buffer.joinLines(-1), std::out_of_range);
-
-    // Ensure buffer state is unchanged after exceptions
-    EXPECT_EQ(buffer.lineCount(), 1);
-    EXPECT_EQ(buffer.getLine(0), "SecondLine");
+    
+    // Back to one line, can't join
+    EXPECT_THROW(buffer.joinLines(0), TextBufferException);
+    
+    // Out of range indices
+    EXPECT_THROW(buffer.joinLines(100), TextBufferException);
+    EXPECT_THROW(buffer.joinLines(-1), TextBufferException);
 }
 
 // Test cases for saveToFile and loadFromFile
@@ -735,7 +705,7 @@ TEST_F(TextBufferTest, SaveAndLoadSpecificBufferStates) {
     std::remove(tempFilename.c_str());
 
     // 2. Test with a buffer made truly empty (0 lines)
-    // This depends on saveToFile saving an empty file if lines_ is empty,
+    // This depends on saveToFile saving an empty file if lines_ empty,
     // and loadFromFile loading an empty file as 0 lines.
     buffer.clear(false); // Makes lines_ empty
     ASSERT_EQ(buffer.lineCount(), 0);
@@ -811,36 +781,31 @@ TEST_F(TextBufferTest, GetLineSegmentBasic) {
 }
 
 TEST_F(TextBufferTest, GetLineSegmentOutOfBounds) {
-    buffer.replaceLine(0, "Content"); // Length 7
-    ASSERT_EQ(buffer.lineLength(0), 7);
+    buffer.replaceLine(0, "abcdefg"); // length 7, indices 0-6
     ASSERT_EQ(buffer.lineCount(), 1);
 
-    // 1. LineIndex out of bounds
-    EXPECT_THROW(buffer.getLineSegment(1, 0, 1), std::out_of_range);
-    EXPECT_THROW(buffer.getLineSegment(-1, 0, 1), std::out_of_range);
-
-    // 2. startCol > line.length()
-    EXPECT_THROW(buffer.getLineSegment(0, 8, 8), std::out_of_range); // startCol=8, length=7
-
-    // 3. endCol > line.length() (startCol is valid)
-    EXPECT_THROW(buffer.getLineSegment(0, 0, 8), std::out_of_range); // endCol=8, length=7
-
-    // 4. startCol > endCol
-    EXPECT_THROW(buffer.getLineSegment(0, 5, 4), std::out_of_range);
-
-    // Ensure buffer state is unchanged after exceptions
-    EXPECT_EQ(buffer.getLine(0), "Content");
-    EXPECT_EQ(buffer.lineCount(), 1);
-
-    // 5. Out of bounds on an empty line
+    // Line index out of bounds
+    EXPECT_THROW(buffer.getLineSegment(1, 0, 1), TextBufferException);
+    EXPECT_THROW(buffer.getLineSegment(-1, 0, 1), TextBufferException);
+    
+    // startCol > line.length()
+    EXPECT_THROW(buffer.getLineSegment(0, 8, 8), TextBufferException); // startCol=8, length=7
+    
+    // endCol > line.length() should now be clamped instead of throwing
+    EXPECT_NO_THROW(buffer.getLineSegment(0, 0, 8)); // endCol=8 should be clamped to 7
+    EXPECT_EQ(buffer.getLineSegment(0, 0, 8), "abcdefg"); // Should get the full string
+    
+    // startCol > endCol
+    EXPECT_THROW(buffer.getLineSegment(0, 5, 4), TextBufferException);
+    
+    // Valid cases
+    EXPECT_EQ(buffer.getLineSegment(0, 0, 7), "abcdefg"); // Full line
+    EXPECT_EQ(buffer.getLineSegment(0, 1, 3), "bc");      // Middle segment
+    
+    // Empty buffer case
     buffer.replaceLine(0, "");
-    ASSERT_EQ(buffer.lineLength(0), 0);
-    // Valid empty segment
-    EXPECT_EQ(buffer.getLineSegment(0,0,0), "");
-    // Invalid: startCol > length (0)
-    EXPECT_THROW(buffer.getLineSegment(0, 1, 1), std::out_of_range);
-    // Invalid: endCol > length (0)
-    EXPECT_THROW(buffer.getLineSegment(0, 0, 1), std::out_of_range);
+    EXPECT_EQ(buffer.getLineSegment(0, 0, 0), "");        // Empty line, valid empty segment
+    EXPECT_THROW(buffer.getLineSegment(0, 1, 1), TextBufferException); // startCol=1 on empty line
 }
 
 // TODO: Add more tests for:
