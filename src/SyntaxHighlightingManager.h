@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include <chrono>
 #include <mutex>
-#include <shared_mutex>
 #include <atomic>
 #include <memory>
 
@@ -29,7 +28,7 @@ public:
     static constexpr size_t CACHE_ENTRY_LIFETIME_MS = 10000; // 10 seconds
     
     SyntaxHighlightingManager();
-    ~SyntaxHighlightingManager() = default;
+    ~SyntaxHighlightingManager();
     
     // Deleted copy/move operations for safety
     SyntaxHighlightingManager(const SyntaxHighlightingManager&) = delete;
@@ -94,16 +93,20 @@ public:
     
     // Get the number of context lines highlighted around visible area
     size_t getContextLines() const;
+
+    // Highlight a single line and store in cache.
+    // This is a public method that will acquire a unique_lock.
+    void highlightLine(size_t line);
     
 private:
     void invalidateAllLines_nolock(); // Internal use without locking
     
-    // Highlight a single line and store in cache
-    void highlightLine(size_t line);
+    // Internal method to highlight a single line, assumes caller holds unique_lock.
+    void highlightLine_nolock(size_t line);
     
-    // Highlight a range of lines with timeout
-    bool highlightLines(size_t startLine, size_t endLine, 
-                        const std::chrono::milliseconds& timeout);
+    // Internal method to highlight a range of lines with timeout, assumes caller holds unique_lock.
+    bool highlightLines_nolock(size_t startLine, size_t endLine, 
+                               const std::chrono::milliseconds& timeout);
     
     // Check if a line is within the cache range
     bool isLineInCache(size_t line) const;
@@ -115,19 +118,20 @@ private:
     std::pair<size_t, size_t> calculateEffectiveRange(size_t startLine, size_t endLine) const;
     
     // Clean up old cache entries to manage memory
-    void cleanupCache_nolock(); // Renamed from cleanupCache
+    void cleanupCache_nolock();
     
     // Thread-safe access to buffer_
     const TextBuffer* getBuffer() const;
+    
+    // Get highlighter pointer WITHOUT locking - for internal use when mutex is already held
+    SyntaxHighlighter* getHighlighterPtr_nolock() const;
 
 private:
     // The buffer to highlight - non-owning pointer
     std::atomic<const TextBuffer*> buffer_{nullptr};
     
-    // The active highlighter - using shared_ptr for safer ownership
-    std::shared_ptr<std::atomic<SyntaxHighlighter*>> highlighter_{
-        std::make_shared<std::atomic<SyntaxHighlighter*>>(nullptr)
-    };
+    // The active highlighter - using shared_ptr for proper ownership
+    std::shared_ptr<SyntaxHighlighter> highlighter_{nullptr};
     
     // Is syntax highlighting enabled - use atomic for thread safety
     std::atomic<bool> enabled_{true};
@@ -151,8 +155,8 @@ private:
     // Number of context lines to highlight around visible area
     std::atomic<size_t> contextLines_{DEFAULT_CONTEXT_LINES};
     
-    // Mutex for thread safety - using shared_mutex for better read concurrency
-    mutable std::shared_mutex mutex_;
+    // Mutex for thread safety
+    mutable std::recursive_mutex mutex_;
 };
 
 #endif // SYNTAX_HIGHLIGHTING_MANAGER_H 
