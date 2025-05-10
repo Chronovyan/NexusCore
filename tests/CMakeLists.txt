@@ -8,6 +8,7 @@ add_executable(runTests
     editor_commands_test.cpp
     syntax_highlighting_test.cpp
     syntax_highlighting_manager_test.cpp
+    editor_file_io_test.cpp
     # command_tests.cpp
     # editor_tests.cpp 
 )

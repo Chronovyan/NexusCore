@@ -1,6 +1,9 @@
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include "SyntaxHighlighter.h" // Assuming this is the path
 #include <iostream> // Added for std::cout
+#include <memory>
+#include <stdexcept>
 
 // Helper function to check if a specific style is applied to a range
 bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, SyntaxColor color) {
@@ -157,4 +160,142 @@ TEST_F(PatternBasedHighlighterTest, OverlappingPatternsFavorFirstAdded) {
     // For now, we are testing the actual behavior.
     // If "first added wins" is desired, PatternBasedHighlighter::highlightLine needs modification.
     std::cout << "[DEBUG] TEST_F(PatternBasedHighlighterTest, OverlappingPatternsFavorFirstAdded) - End" << std::endl;
+}
+
+// Mock SyntaxHighlighter that can be configured to throw on getSupportedExtensions
+class RegistryMockSyntaxHighlighter : public SyntaxHighlighter {
+public:
+    MOCK_CONST_METHOD2(highlightLine, std::vector<SyntaxStyle>(const std::string& line, size_t lineIndex));
+    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const TextBuffer& buffer));
+    MOCK_CONST_METHOD0(getSupportedExtensions, std::vector<std::string>());
+    MOCK_CONST_METHOD0(getLanguageName, std::string());
+
+    // Constructor to configure mock behavior
+    RegistryMockSyntaxHighlighter(bool throwOnGetExtensions = false, 
+                                 const std::string& exceptionMsg = "Test Exception") {
+        using namespace testing;
+
+        ON_CALL(*this, getLanguageName())
+            .WillByDefault(Return("MockLanguage"));
+
+        if (throwOnGetExtensions) {
+            ON_CALL(*this, getSupportedExtensions())
+                .WillByDefault(Throw(std::runtime_error(exceptionMsg)));
+        } else {
+            ON_CALL(*this, getSupportedExtensions())
+                .WillByDefault(Return(std::vector<std::string>{"mock", "test"}));
+        }
+    }
+};
+
+class SyntaxHighlighterRegistryTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Clear the registry (if possible) before each test
+        SyntaxHighlighterRegistry::getInstance().clearRegistry();
+    }
+
+    void TearDown() override {
+        // Clean up after each test
+        SyntaxHighlighterRegistry::getInstance().clearRegistry();
+    }
+};
+
+// Test registering a well-behaved highlighter
+TEST_F(SyntaxHighlighterRegistryTest, RegisterHighlighter) {
+    auto highlighter = std::make_unique<testing::NiceMock<RegistryMockSyntaxHighlighter>>(false);
+    
+    ASSERT_NO_THROW({
+        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(highlighter));
+    });
+    
+    // Verify highlighter was registered by checking if we can get it for its extensions
+    auto retrievedHighlighter = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension("mock");
+    ASSERT_NE(retrievedHighlighter, nullptr);
+    EXPECT_EQ(retrievedHighlighter->getLanguageName(), "MockLanguage");
+}
+
+// Test registering a null highlighter
+TEST_F(SyntaxHighlighterRegistryTest, RegisterNullHighlighter) {
+    std::unique_ptr<SyntaxHighlighter> nullHighlighter = nullptr;
+    
+    // Should handle null without crashing
+    ASSERT_NO_THROW({
+        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(nullHighlighter));
+    });
+    
+    // Verify it didn't affect the registry
+    auto retrievedHighlighter = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension("any");
+    EXPECT_EQ(retrievedHighlighter, nullptr);
+}
+
+// Test registering a highlighter that throws during getSupportedExtensions
+TEST_F(SyntaxHighlighterRegistryTest, RegisterThrowingHighlighter) {
+    auto throwingHighlighter = std::make_unique<testing::NiceMock<RegistryMockSyntaxHighlighter>>(true);
+    
+    // Should handle exception without crashing
+    ASSERT_NO_THROW({
+        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(throwingHighlighter));
+    });
+    
+    // Verify no highlighter was registered
+    auto retrievedHighlighter = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension("mock");
+    EXPECT_EQ(retrievedHighlighter, nullptr);
+}
+
+// Test getting a highlighter for a non-existent extension
+TEST_F(SyntaxHighlighterRegistryTest, GetHighlighterForNonExistentExtension) {
+    auto highlighter = std::make_unique<testing::NiceMock<RegistryMockSyntaxHighlighter>>(false);
+    SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(highlighter));
+    
+    // Should return nullptr for unknown extension
+    auto retrievedHighlighter = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension("nonexistent");
+    EXPECT_EQ(retrievedHighlighter, nullptr);
+}
+
+// Test getting a shared_ptr highlighter for an extension
+TEST_F(SyntaxHighlighterRegistryTest, GetSharedHighlighterForExtension) {
+    auto highlighter = std::make_unique<testing::NiceMock<RegistryMockSyntaxHighlighter>>(false);
+    SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(highlighter));
+    
+    // Test the shared_ptr version
+    auto sharedHighlighter = SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("mock");
+    ASSERT_NE(sharedHighlighter.get(), nullptr);
+    EXPECT_EQ(sharedHighlighter->getLanguageName(), "MockLanguage");
+    
+    // Verify it's actually a shared_ptr
+    auto sharedHighlighter2 = SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("mock");
+    EXPECT_EQ(sharedHighlighter.get(), sharedHighlighter2.get()); // Should point to same object
+}
+
+// Test the registry's thread safety
+TEST_F(SyntaxHighlighterRegistryTest, ThreadSafety) {
+    auto highlighter1 = std::make_unique<testing::NiceMock<RegistryMockSyntaxHighlighter>>(false);
+    auto expectedLanguageName = highlighter1->getLanguageName();
+    
+    // Register highlighter
+    SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::move(highlighter1));
+    
+    // Access from multiple threads
+    std::vector<std::thread> threads;
+    std::atomic<bool> encounteredError{false};
+    
+    for (int i = 0; i < 10; i++) {
+        threads.emplace_back([&encounteredError, expectedLanguageName]() {
+            try {
+                auto highlighter = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension("mock");
+                if (highlighter == nullptr || highlighter->getLanguageName() != expectedLanguageName) {
+                    encounteredError = true;
+                }
+            } catch (...) {
+                encounteredError = true;
+            }
+        });
+    }
+    
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    
+    EXPECT_FALSE(encounteredError.load());
 } 
