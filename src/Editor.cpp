@@ -215,7 +215,7 @@ void Editor::printView(std::ostream& os) const {
 
 // --- Editor-level operations (pass-through for now, but can add cursor logic) ---
 void Editor::addLine(const std::string& text) {
-    auto command = std::make_unique<AddLineCommand>(text);
+    auto command = std::make_unique<InsertLineCommand>(buffer_.lineCount(), text);
     commandManager_.executeCommand(std::move(command), *this);
 }
 
