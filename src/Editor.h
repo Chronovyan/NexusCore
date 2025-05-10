@@ -4,6 +4,7 @@
 #include "TextBuffer.h"
 #include "CommandManager.h"
 #include "SyntaxHighlighter.h"
+#include "SyntaxHighlightingManager.h"
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <limits> // For std::numeric_limits
@@ -133,6 +134,7 @@ public:
 protected:
     TextBuffer buffer_;
     CommandManager commandManager_;
+    SyntaxHighlightingManager syntaxHighlightingManager_;
     
     size_t cursorLine_ = 0;
     size_t cursorCol_ = 0;

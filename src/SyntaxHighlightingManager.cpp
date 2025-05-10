@@ -685,7 +685,11 @@ void SyntaxHighlightingManager::cleanupCache_nolock() {
 
         if (age.count() > CACHE_ENTRY_LIFETIME_MS) {
             if (line < cachedStyles_.size() && cachedStyles_[line]) {
+                // First mark as invalid for thread safety
                 cachedStyles_[line]->valid.store(false, std::memory_order_release);
+                
+                // Then reset the shared_ptr to release memory
+                cachedStyles_[line].reset();
             }
             it = lineTimestamps_.erase(it); 
             invalidatedLines_.insert(line); 
@@ -700,5 +704,15 @@ void SyntaxHighlightingManager::cleanupCache_nolock() {
                           "SyntaxHighlightingManager::cleanupCache_nolock",
                           "Cache cleanup: %zu entries before, %zu removed, %zu timestamps remaining.",
                           initialCacheSize, removedCount, lineTimestamps_.size());
+        
+        // Periodically shrink the vector capacity if it's significantly larger than its size
+        if (cachedStyles_.capacity() > cachedStyles_.size() * 2 && cachedStyles_.size() > 10) {
+            std::vector<std::shared_ptr<CacheEntry>> temp(cachedStyles_);
+            cachedStyles_.swap(temp);
+            logManagerMessage(EditorException::Severity::Warning,
+                              "SyntaxHighlightingManager::cleanupCache_nolock",
+                              "Vector capacity optimized: old=%zu, new=%zu", 
+                              temp.capacity(), cachedStyles_.capacity());
+        }
     }
 } 

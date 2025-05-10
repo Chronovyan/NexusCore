@@ -19,6 +19,10 @@ Editor::Editor()
     }
     validateAndClampCursor(); 
 
+    // Initialize syntax highlighting manager with the buffer
+    syntaxHighlightingManager_.setBuffer(&buffer_);
+    syntaxHighlightingManager_.setEnabled(syntaxHighlightingEnabled_);
+
     // Get actual terminal dimensions and calculate display properties
     int termWidth = getTerminalWidth();
     int termHeight = getTerminalHeight();
@@ -1213,6 +1217,7 @@ bool Editor::replaceAll(const std::string& searchTerm, const std::string& replac
 // Syntax highlighting methods
 void Editor::enableSyntaxHighlighting(bool enable) {
     syntaxHighlightingEnabled_ = enable;
+    syntaxHighlightingManager_.setEnabled(enable);
     invalidateHighlightingCache();
 }
 
@@ -1232,15 +1237,23 @@ std::string Editor::getFilename() const {
 void Editor::detectAndSetHighlighter() {
     // Reset current highlighter
     currentHighlighter_ = nullptr;
-    invalidateHighlightingCache();
     
     // If no filename or highlighting disabled, exit early
     if (filename_.empty() || !syntaxHighlightingEnabled_) {
+        syntaxHighlightingManager_.setHighlighter(nullptr);
+        invalidateHighlightingCache();
         return;
     }
     
-    // Get a highlighter for the file's extension
-    currentHighlighter_ = SyntaxHighlighterRegistry::getInstance().getHighlighterForExtension(filename_);
+    // Get a shared_ptr to the highlighter for the file's extension
+    std::shared_ptr<SyntaxHighlighter> highlighter = 
+        SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension(filename_);
+    
+    // Set the highlighter in the manager and keep raw pointer for compatibility
+    syntaxHighlightingManager_.setHighlighter(highlighter);
+    currentHighlighter_ = highlighter.get();
+    
+    invalidateHighlightingCache();
 }
 
 SyntaxHighlighter* Editor::getCurrentHighlighter() const {
@@ -1262,13 +1275,26 @@ std::vector<std::vector<SyntaxStyle>> Editor::getHighlightingStyles() const {
 
 void Editor::invalidateHighlightingCache() {
     highlightingStylesCacheValid_ = false;
+    
+    // Calculate visible range (simplification - can be implemented based on topVisibleLine_ and viewableLines_)
+    size_t startLine = topVisibleLine_;
+    size_t endLine = std::min(buffer_.lineCount(), topVisibleLine_ + viewableLines_) - 1;
+    
+    // Invalidate the visible lines in the manager
+    syntaxHighlightingManager_.invalidateLines(startLine, endLine);
 }
 
 void Editor::updateHighlightingCache() const {
     if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
         cachedHighlightStyles_ = std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
     } else {
-        cachedHighlightStyles_ = currentHighlighter_->highlightBuffer(buffer_);
+        // Calculate visible range (simplification)
+        size_t startLine = topVisibleLine_;
+        size_t endLine = std::min(buffer_.lineCount(), topVisibleLine_ + viewableLines_) - 1;
+        
+        // Set visible range in manager and get styles from it
+        syntaxHighlightingManager_.setVisibleRange(startLine, endLine);
+        cachedHighlightStyles_ = syntaxHighlightingManager_.getHighlightingStyles(startLine, endLine);
     }
     
     highlightingStylesCacheValid_ = true;
