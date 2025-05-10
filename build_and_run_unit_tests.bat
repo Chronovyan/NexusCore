@@ -64,7 +64,7 @@ if %ENABLE_PARALLEL%==1 (
 )
 
 REM Define common source files
-set SRC_FILES=src\Editor.cpp src\TextBuffer.cpp src\SyntaxHighlighter.cpp src\SyntaxHighlightingManager.cpp
+set SRC_FILES=src\Editor.cpp src\TextBuffer.cpp src\SyntaxHighlighter.cpp src\SyntaxHighlightingManager.cpp src\EditorCommands.cpp
 
 REM Compile CommandLogicTests.cpp
 echo Compiling tests/CommandLogicTests.cpp with flags: %COMMON_FLAGS% %OPT_FLAGS%

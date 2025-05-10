@@ -10,13 +10,46 @@ Editor::Editor()
       selectionEndLine_(0), selectionEndCol_(0), clipboard_(""),
       currentSearchTerm_(""), currentSearchCaseSensitive_(true),
       lastSearchLine_(0), lastSearchCol_(0), searchWrapped_(false),
-      syntaxHighlightingEnabled_(true), filename_(""), currentHighlighter_(nullptr),
-      highlightingStylesCacheValid_(false) {
+      syntaxHighlightingEnabled_(true), filename_("untitled.txt"), currentHighlighter_(nullptr),
+      highlightingStylesCacheValid_(false), commandLineHeight_(1), statusLineHeight_(1),
+      displayWidth_(80), displayHeight_(24), viewableLines_(22) {
     // Ensure buffer starts non-empty for initial cursor validation, or handle empty buffer case.
     if (buffer_.isEmpty()) {
         buffer_.addLine(""); // Start with one empty line so cursor at (0,0) is valid.
     }
     validateAndClampCursor(); 
+
+    // Get actual terminal dimensions and calculate display properties
+    int termWidth = getTerminalWidth();
+    int termHeight = getTerminalHeight();
+
+    const int MIN_DISPLAY_WIDTH = 10;
+    const int MIN_DISPLAY_HEIGHT = 5; 
+    const int MIN_VIEWABLE_LINES = 1;
+
+    // Calculate actual displayWidth based on terminal width
+    displayWidth_ = termWidth; // Simplification, add offsets if needed
+    if (displayWidth_ < MIN_DISPLAY_WIDTH) {
+        displayWidth_ = MIN_DISPLAY_WIDTH;
+    }
+
+    // Calculate actual displayHeight based on terminal height, considering command/status lines
+    // This is the total height available for the editor area (text + cmd + status)
+    displayHeight_ = termHeight; 
+    if (displayHeight_ < (commandLineHeight_ + statusLineHeight_ + MIN_VIEWABLE_LINES)) {
+        displayHeight_ = commandLineHeight_ + statusLineHeight_ + MIN_VIEWABLE_LINES;
+    }
+
+    // Calculate viewableLines_ (lines for text content)
+    if (displayHeight_ > (commandLineHeight_ + statusLineHeight_)) {
+        viewableLines_ = displayHeight_ - commandLineHeight_ - statusLineHeight_;
+    } else {
+        viewableLines_ = MIN_VIEWABLE_LINES; 
+    }
+    // Ensure viewableLines_ is at least MIN_VIEWABLE_LINES, even if calculated to 0 or less
+    if (viewableLines_ < MIN_VIEWABLE_LINES) {
+         viewableLines_ = MIN_VIEWABLE_LINES;
+    }
 }
 
 void Editor::setCursor(size_t line, size_t col) {
@@ -1239,4 +1272,54 @@ void Editor::updateHighlightingCache() const {
     }
     
     highlightingStylesCacheValid_ = true;
+}
+
+// --- Stubbed Terminal Dimension Getters ---
+int Editor::getTerminalWidth() const {
+    // STUB: Replace with actual terminal width detection logic
+    // For example, using ncurses getmaxx(stdscr) or platform-specific APIs
+    return 80; 
+}
+
+int Editor::getTerminalHeight() const {
+    // STUB: Replace with actual terminal height detection logic
+    // For example, using ncurses getmaxy(stdscr) or platform-specific APIs
+    return 24;
+}
+
+// --- File Operations ---
+bool Editor::openFile(const std::string& filename) {
+    if (buffer_.loadFromFile(filename)) {
+        filename_ = filename; // Store the new filename
+        setCursor(0, 0);
+        clearSelection();
+        commandManager_.clear(); // Corrected: Use existing clear() method
+        setModified(false);
+        detectAndSetHighlighter(); // Detect highlighter for new file
+        invalidateHighlightingCache();
+        return true;
+    }
+    std::cerr << "Error: Could not open file \"" << filename << "\"" << std::endl;
+    return false;
+}
+
+bool Editor::saveFile(const std::string& newFilename /* = "" */) {
+    std::string fileToSave = newFilename;
+    if (fileToSave.empty()) {
+        fileToSave = filename_; // Use current filename if none provided
+    }
+
+    if (fileToSave.empty() || fileToSave == "untitled.txt") {
+        std::cerr << "Error: Filename not specified. Please use 'saveas <filename>' or open/save a file first to set a filename." << std::endl;
+        return false;
+    }
+
+    if (buffer_.saveToFile(fileToSave)) {
+        filename_ = fileToSave; // Update internal filename if saved to a new one (e.g. saveas)
+        setModified(false);
+        detectAndSetHighlighter(); // Re-detect in case extension changed due to saveas
+        return true;
+    }
+    std::cerr << "Error: Could not save file to \"" << fileToSave << "\"" << std::endl;
+    return false;
 } 

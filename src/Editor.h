@@ -13,6 +13,16 @@ public:
     Editor();
     ~Editor() = default;
 
+    // File Operations
+    bool openFile(const std::string& filename);
+    bool saveFile(const std::string& filename = ""); // filename optional, uses internal if empty
+    bool isModified() const { return modified_; } // Already existed, ensure it's used consistently
+    void setModified(bool modified) { modified_ = modified; }
+
+    // Terminal/Display Dimension (stubbed for now, to be implemented properly)
+    int getTerminalWidth() const;  // To be implemented
+    int getTerminalHeight() const; // To be implemented
+
     // Cursor management
     virtual void setCursor(size_t line, size_t col);
     size_t getCursorLine() const;
@@ -113,9 +123,7 @@ public:
     // Viewport/Display related (placeholders)
     size_t getTopVisibleLine() const { return topVisibleLine_; }
     void setTopVisibleLine(size_t line) { topVisibleLine_ = line; }
-    size_t getVisibleLineCount() const { return 25; } // Example fixed value
-    bool isModified() const { return modified_; }
-    void setModified(bool modified) { modified_ = modified; }
+    size_t getVisibleLineCount() const { return viewableLines_; }
 
     friend class Command; 
     friend class CompoundCommand;
@@ -154,9 +162,14 @@ protected:
     mutable bool highlightingStylesCacheValid_ = false; // Renamed from highlightingCacheValid_ for clarity
     void updateHighlightingCache() const; // Kept protected
 
-    // Viewport and modification status
-    size_t topVisibleLine_ = 0; // Initialized
-    bool modified_ = false; // Initialized
+    // Viewport, Display Dimensions, and modification status
+    size_t topVisibleLine_ = 0;
+    bool modified_ = false;
+    size_t commandLineHeight_ = 1;   // Added
+    size_t statusLineHeight_ = 1;    // Added
+    size_t displayWidth_ = 80;       // Added (default, will be calculated)
+    size_t displayHeight_ = 24;      // Added (default, will be calculated)
+    size_t viewableLines_ = 22;      // Added (default, will be calculated: displayHeight - cmd - status)
 
     // Helper to validate and clamp cursor position
     void validateAndClampCursor();

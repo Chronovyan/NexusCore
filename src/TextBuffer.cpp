@@ -31,12 +31,12 @@ void TextBuffer::deleteLine(size_t index) {
         throw std::out_of_range("Index out of range for deleteLine");
     }
     
-    // Prevent deleting the only line in the buffer
-    if (lines_.size() == 1) {
-        throw std::runtime_error("Cannot delete the only line in the buffer");
+    if (lines_.size() == 1 && index == 0) { // If it's the only line and we're deleting it
+        lines_[0] = ""; // Make it an empty string
+        // Do not erase the line itself, ensuring the buffer still has one line.
+    } else {
+        lines_.erase(lines_.begin() + index);
     }
-    
-    lines_.erase(lines_.begin() + index);
 }
 
 void TextBuffer::replaceLine(size_t index, const std::string& newLine) {
@@ -258,13 +258,7 @@ size_t TextBuffer::lineLength(size_t lineIndex) const {
 
 std::string& TextBuffer::getLine(size_t lineIndex) {
     if (lineIndex >= lines_.size()) {
-        // Or throw std::out_of_range. For now, return last line or a static empty string to avoid crash.
-        // This case should ideally be prevented by callers checking lineCount().
-        static std::string emptyOnError; // Not ideal, but avoids immediate crash on bad index
-        // Consider throwing an exception for better error handling:
-        // throw std::out_of_range("TextBuffer::getLine non-const: lineIndex out of bounds");
-        if (lines_.empty()) return emptyOnError; // Should not happen if constructor ensures one line
-        return lines_.back(); // Fallback, less than ideal
+        throw std::out_of_range("TextBuffer::getLine non-const: lineIndex out of bounds");
     }
     return lines_[lineIndex];
 }

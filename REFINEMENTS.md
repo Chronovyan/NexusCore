@@ -197,3 +197,84 @@ void log_message(const std::string& msg) {
 }
 ```
 Ensure this is active in debug builds for facilities like `DeadlockTest.cpp`.
+
+## 8. Codebase-Specific Architectural Refinements
+
+This section details architectural and API improvements specific to this text editor project, derived from code review.
+
+### 8.1. Command Pattern Enhancements
+- **Consolidate Redundant Commands:**
+    - Review `DeleteTextCommand`, `DeleteForwardCommand`, and `DeleteCharCommand`. Consolidate into a single, robust `DeleteCharCommand(bool isBackspace)` and remove older/redundant versions from both `.h` and `.cpp` files to avoid confusion and simplify maintenance.
+- **Clarify Command Responsibilities:**
+    - `AddLineCommand`: Currently handles both appending a new line with text and splitting a line (like Enter key). This dual role is complex.
+        - Recommendation: Retain `AddLineCommand` solely for appending a line with optional text.
+        - Utilize the existing `NewLineCommand` for all line-splitting (Enter key) operations. This simplifies the logic for both commands.
+- **Improve Command Implementations:**
+    - `InsertTextCommand::undo()`: Currently deletes text character by character in a loop. For efficiency, especially with large pastes, consider adding a `TextBuffer::deleteRange(line, col, length)` or similar method and use it here.
+    - `CutCommand` Test Logic: **Critically, remove all hardcoded test-specific logic** from `CutCommand::execute` and `CutCommand::undo` in `EditorCommands.h`. Commands should implement generic logic, and unit tests should verify this generic behavior with appropriate test data.
+- **Configuration:**
+    - `CommandManager::maxHistory_`: Consider making this `static constexpr` or configurable at runtime if dynamic history limits are desired.
+
+### 8.2. Syntax Highlighting Architecture
+- **Simplify `SyntaxHighlightingManager::highlighter_` Member:**
+    - The current type `std::shared_ptr<std::atomic<SyntaxHighlighter*>> highlighter_` is unconventional for its role.
+    - If `SyntaxHighlightingManager` is intended to share ownership of the `SyntaxHighlighter` object (which `setHighlighter` taking a `std::shared_ptr` suggests):
+        - Change member to: `std::shared_ptr<SyntaxHighlighter> highlighter_;`
+        - `setHighlighter` would then store this `shared_ptr`.
+        - `getHighlighter` would return a copy of this `shared_ptr` (or `const &` if appropriate).
+    - If `SyntaxHighlightingManager` is only an observer of an externally-managed highlighter:
+        - Change member to: `std::atomic<SyntaxHighlighter*> highlighter_{nullptr};`
+        - `setHighlighter` stores the raw pointer.
+        - `getHighlighter` can return the raw `SyntaxHighlighter*` (documenting lifetime expectations) or continue using the `std::shared_ptr` with a no-op deleter, but explicitly document this non-owning nature.
+- **Integrate Editor's Highlighting Cache:**
+    - `Editor.cpp` contains `highlightingStylesCache_` and related logic. This appears redundant with `SyntaxHighlightingManager`.
+    - Recommendation: `Editor` should delegate all highlighting requests and cache management to an instance of `SyntaxHighlightingManager`. Remove the direct caching fields and logic from `Editor.cpp`.
+- **Cache Eviction in `SyntaxHighlightingManager::cleanupCache()`:**
+    - The current `cleanupCache` marks entries as invalid (`valid.store(false)`). For significant memory savings with large files or long sessions, consider also `reset()`-ing the `std::shared_ptr<CacheEntry>` in `cachedStyles_` for evicted lines to allow the style data to be deallocated. This might require ensuring no other thread is actively reading that specific entry, or adjusting the `cachedStyles_` vector structure (e.g., removing nullptrs periodically).
+
+### 8.3. API Clarity and Consistency
+- **Constants and Magic Numbers:**
+    - Replace magic numbers related to UI layout in `main.cpp` and `Editor.cpp` (e.g., `commandLineYOffset`, default display dimensions) with named `static constexpr` constants or configurable variables.
+- **Error Reporting Consolidation:**
+    - The error utilities in `EditorError.h` (`ErrorReporter`), `SyntaxHighlighter.h` (`handleError`, `logError`), and `SyntaxHighlightingManager.cpp` (`logManager`) have overlapping goals.
+    - Recommendation: Consolidate all error/exception logging through `ErrorReporter` from `EditorError.h`. The other utilities (`handleError`, `logManager`) can be refactored to use `ErrorReporter` internally. This provides a single, consistent logging style and point of control.
+
+### 8.4. Build and Development Practices
+- **Reduce Header Includes:** Minimize includes in header files. For example, if `iostream` is used in `EditorCommands.h` only for debugging macros that are not always enabled, consider if it can be moved or if debugging output can be conditional.
+- **Implementation Hiding:** Move implementations of complex commands and non-trivial functions from header files (`EditorCommands.h`, potentially parts of `SyntaxHighlighter.h`) into their corresponding `.cpp` files. This improves encapsulation, reduces compilation dependencies, and can speed up build times.
+
+## 9. Robustness and Edge Case Handling (Project Specific)
+
+Apply to relevant modules like `Editor.cpp`, `TextBuffer.cpp`, and Commands.
+- **Input Validation:**
+    - Always check for empty input after `std::getline` before processing (e.g., in `main.cpp`, `Editor::run()`).
+- **Arithmetic Safety:**
+    - Prevent potential division by zero in `Editor::Editor()` when calculating `displayWidth_` and `displayHeight_` if `getTerminalWidth()`/`Height()` can return 0 or 1. Add checks and provide safe defaults.
+- **`TextBuffer` Operations:**
+    - Ensure all `TextBuffer` methods (`deleteLine`, `insertLine`, `joinLines`, `splitLine`, etc.) are robust against edge cases (empty buffer, invalid indices, operations at buffer/line boundaries).
+    - Consistently use `TextBufferException` (or other appropriate `EditorException` derivatives) for reporting errors from `TextBuffer` operations.
+- **Command Logic Safety:**
+    - `InsertTextCommand::undo()`: As mentioned in 8.1, improve efficiency to avoid issues with very large undo operations.
+
+## 10. Testing Strategy (Project Specific)
+
+The current `src/EditorTest.cpp` is a basic driver program and should be expanded into a formal testing suite.
+
+- **Adopt a Unit Testing Framework:**
+    - Integrate a standard C++ unit testing framework such as GoogleTest or Catch2. This provides structure, assertions, test discovery, and clear reporting.
+- **Comprehensive Test Coverage:**
+    - **`TextBuffer`:** Test all methods with various inputs, including empty buffer, single/multiple lines, operations at start/middle/end of lines and buffer. Verify line content, line count, and cursor/selection state (if applicable via an `Editor` wrapper).
+    - **Commands:** For each command:
+        - Test `execute()`: Verify correct buffer modification, cursor positioning, selection changes, and clipboard state (for copy/cut).
+        - Test `undo()`: Verify that `undo()` perfectly reverses the state changes made by `execute()`.
+        - Test with edge cases (e.g., command on empty buffer, at boundaries).
+    - **`CommandManager`:** Test undo/redo stack limits, correct sequencing of undo/redo for single and compound commands.
+    - **`Editor` Facade:** Test `Editor` methods, potentially mocking or using test doubles for dependencies like file system or complex UI interactions if necessary. Test command dispatching.
+    - **Syntax Highlighting:** Test `SyntaxHighlighter` implementations with various code snippets. Test `SyntaxHighlightingManager` caching, invalidation, and timeout logic.
+    - **File I/O:** Test `Editor::openFile` and `Editor::saveFile` with valid and invalid paths, empty files, and different content. (May require file system interaction, plan accordingly).
+- **Remove Test-Specific Code from Production Logic:**
+    - As highlighted for `CutCommand`, ensure no production code paths are conditional on specific test string literals or hardcoded states. Tests must verify the generic, production behavior.
+- **Use Assertions for Verification:**
+    - Utilize the chosen framework's assertion macros (e.g., `ASSERT_EQ`, `EXPECT_TRUE`, `ASSERT_THROWS`) to automatically verify expected outcomes rather than relying on manual `std::cout` inspection.
+- **Error Handling in Tests:**
+    - Correct the `try-catch` block structure in the existing `EditorTest.cpp` (or its replacement test files) to properly catch and report exceptions.

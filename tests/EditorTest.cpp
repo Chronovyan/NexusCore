@@ -2,6 +2,7 @@
 #include <iostream> 
 #include <string> 
 #include <fstream> 
+#include <stdexcept> // Include for std::exception
  
 int main() { 
     try { 
@@ -19,9 +20,10 @@ int main() {
         editor.printView(std::cout); 
         std::cout << "Editor test completed successfully!\n"; 
         return 0; 
+    } catch (const std::exception& e) { // Catch standard exceptions
         std::cerr << "Error: " << e.what() << std::endl; 
         return 1; 
-    } catch (...) { 
+    } catch (...) { // Catch any other (non-standard) exceptions
         std::cerr << "Unknown error occurred" << std::endl; 
         return 1; 
     } 

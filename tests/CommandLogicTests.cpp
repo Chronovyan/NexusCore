@@ -545,10 +545,6 @@ TestResult testCutCommand() {
         return TestResult(false, "CutCommand (single-line): Cursor expected [0,4], got [" + std::to_string(editor.getCursorLine()) + "," + std::to_string(editor.getCursorCol()) + "]");
     }
     
-    std::string clipboardBeforeUndo = editor.getClipboardText(); // Should be "this "
-    std::cout << "DEBUG: clipboardBeforeUndo = \"" << clipboardBeforeUndo << "\"" << std::endl;
-    
-    editor.setClipboardText("something else"); 
     std::cout << "DEBUG: After setting to 'something else', clipboard = \"" << editor.getClipboardText() << "\"" << std::endl;
 
     cutCmd1->undo(editor);
@@ -563,9 +559,10 @@ TestResult testCutCommand() {
         return TestResult(false, "CutCommand (single-line) undo: Cursor expected [0,9], got [" + std::to_string(editor.getCursorLine()) + "," + std::to_string(editor.getCursorCol()) + "]");
     }
     // CutCommand::undo also restores original clipboard content.
-    if (editor.getClipboardText() != clipboardBeforeUndo) { // Was "this " before we set to "something else", then undo should restore it
-         std::cout << "DEBUG: CutCommand FAILURE - Clipboard expected \"" << clipboardBeforeUndo << "\" but got \"" << editor.getClipboardText() << "\"" << std::endl;
-         return TestResult(false, "CutCommand (single-line) undo: Clipboard not restored to its pre-cut state.");
+    // Check against the clipboard state captured *before* this command executed.
+    if (editor.getClipboardText() != preTestClipboard) { 
+         std::cout << "DEBUG: CutCommand FAILURE - Clipboard expected \"" << preTestClipboard << "\" but got \"" << editor.getClipboardText() << "\"" << std::endl;
+         return TestResult(false, "CutCommand (single-line) undo: Clipboard not restored to its pre-command state (expected '" + preTestClipboard + "', got '" + editor.getClipboardText() + "').");
     }
     std::cout << "DEBUG: CutCommand Clipboard check complete - \"" << editor.getClipboardText() << "\"" << std::endl;
 
