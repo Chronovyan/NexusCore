@@ -1,25 +1,41 @@
 #include "SyntaxHighlightingManager.h"
 #include <iostream>
 #include <thread>
+#include "EditorError.h"
 
 namespace {
-    // Logger function using the standardized error handling approach
+    // New logger function using ErrorReporter
     template<typename... Args>
-    void logManager(const char* location, const char* format, Args... args) {
+    void logManagerMessage(EditorException::Severity severity, const char* location, const char* format, Args... args) {
         try {
-            // Get thread ID for better debugging
-            std::stringstream ss;
-            ss << "[Thread " << std::this_thread::get_id() << "] ";
-            ss << location << ": ";
+            std::stringstream ss_prefix;
+            ss_prefix << "[Thread " << std::this_thread::get_id() << "] ";
+            ss_prefix << location << ": ";
             
-            // Format message - in real code, use std::format (C++20) or a formatting library
-            char buffer[256];
-            snprintf(buffer, sizeof(buffer), format, args...);
-            ss << buffer;
-            
-            std::cerr << ss.str() << std::endl;
+            // Determine needed size for buffer
+            int needed = std::snprintf(nullptr, 0, format, args...);
+            if (needed < 0) {
+                ErrorReporter::logError("logManagerMessage: Error in snprintf determining size.");
+                return;
+            }
+
+            std::string msg_content;
+            msg_content.resize(needed + 1); // +1 for null terminator
+            std::snprintf(&msg_content[0], msg_content.size(), format, args...);
+            msg_content.resize(needed); // Remove null terminator for string operations
+
+            std::string full_message = ss_prefix.str() + msg_content;
+
+            if (severity == EditorException::Severity::Warning) {
+                ErrorReporter::logWarning(full_message);
+            } else { // Default to error for other severities (e.g., Error, Critical)
+                ErrorReporter::logError(full_message);
+            }
+        } catch (const std::exception& log_ex) {
+            // Fallback to cerr if ErrorReporter itself fails or if string stream fails
+            std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: " << log_ex.what() << std::endl;
         } catch (...) {
-            // Last resort - silently continue if we can't even log
+            std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: Unknown exception." << std::endl;
         }
     }
 }
@@ -48,11 +64,12 @@ void SyntaxHighlightingManager::setHighlighter(std::shared_ptr<SyntaxHighlighter
         highlighter_->store(raw_ptr, std::memory_order_release);
         
         invalidateAllLines_nolock();
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setHighlighter", ex, ErrorSeverity::Major);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setHighlighter: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setHighlighter", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setHighlighter");
     }
 }
 
@@ -67,15 +84,30 @@ std::shared_ptr<SyntaxHighlighter> SyntaxHighlightingManager::getHighlighter() c
         
         // This is a simplification - in a real implementation, we'd need proper lifetime management
         // For now, treating this as a weak reference (non-owning)
-        return std::shared_ptr<SyntaxHighlighter>(raw_ptr, [](SyntaxHighlighter*){});
+        // To correctly return a shared_ptr, we need to ensure the object remains alive.
+        // This requires a more complex setup if the manager doesn't own the highlighter.
+        // For now, assuming the caller or context ensures lifetime if raw_ptr is not null.
+        // If the goal is to truly share ownership, highlighter_ itself should be std::shared_ptr<SyntaxHighlighter>
+        // and not std::shared_ptr<std::atomic<SyntaxHighlighter*>>.
+        // Given the current structure, returning a shared_ptr that observes the raw pointer is risky.
+        // A raw pointer or a weak_ptr (if highlighter_ was a shared_ptr) would be safer.
+        // Sticking to the previous return type but acknowledging the risk.
+        if(raw_ptr) {
+             // This is problematic as the shared_ptr doesn't own the object unless highlighter itself is a shared_ptr to the object.
+             // This custom deleter does nothing, meaning it doesn't extend lifetime.
+             // This was how it was before, so retaining for now.
+            return std::shared_ptr<SyntaxHighlighter>(raw_ptr, [](SyntaxHighlighter*){});
+        }
+        return nullptr;
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        return nullptr;
     } catch (const std::exception& ex) {
-        return handleError<std::shared_ptr<SyntaxHighlighter>>(
-            "SyntaxHighlightingManager::getHighlighter", 
-            ex, ErrorSeverity::Major, nullptr);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("getHighlighter: ") + ex.what(), EditorException::Severity::Error));
+        return nullptr;
     } catch (...) {
-        return handleError<std::shared_ptr<SyntaxHighlighter>>(
-            "SyntaxHighlightingManager::getHighlighter", 
-            std::runtime_error("Unknown exception"), ErrorSeverity::Critical, nullptr);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::getHighlighter");
+        return nullptr;
     }
 }
 
@@ -87,11 +119,12 @@ void SyntaxHighlightingManager::setEnabled(bool enabled) {
             enabled_.store(enabled, std::memory_order_release);
             invalidateAllLines_nolock();
         }
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setEnabled", ex, ErrorSeverity::Major);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setEnabled: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setEnabled", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setEnabled");
     }
 }
 
@@ -99,12 +132,15 @@ bool SyntaxHighlightingManager::isEnabled() const {
     try {
         // Atomic read doesn't need a lock
         return enabled_.load(std::memory_order_acquire);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        return false; // Default value on error
     } catch (const std::exception& ex) {
-        return handleError<bool>("SyntaxHighlightingManager::isEnabled", 
-                                ex, ErrorSeverity::Major, false);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("isEnabled: ") + ex.what(), EditorException::Severity::Error));
+        return false; // Default value on error
     } catch (...) {
-        return handleError<bool>("SyntaxHighlightingManager::isEnabled", 
-                                std::runtime_error("Unknown exception"), ErrorSeverity::Critical, false);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::isEnabled");
+        return false; // Default value on error
     }
 }
 
@@ -113,16 +149,23 @@ void SyntaxHighlightingManager::setBuffer(const TextBuffer* buffer) {
         std::scoped_lock lock(mutex_);
         buffer_.store(buffer, std::memory_order_release);
         invalidateAllLines_nolock();
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setBuffer", ex, ErrorSeverity::Major);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setBuffer: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setBuffer", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setBuffer");
     }
 }
 
 std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(
     size_t startLine, size_t endLine) {
+    std::vector<std::vector<SyntaxStyle>> empty_result;
+    if (startLine > endLine) return empty_result; // Basic sanity check
+    size_t num_lines = endLine - startLine + 1;
+    empty_result.resize(num_lines);
+
+
     try {
         std::scoped_lock lock(mutex_);
         
@@ -133,25 +176,31 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         
         // Check if highlighting is disabled or no buffer/highlighter
         if (!enabled || !buffer || !highlighter) {
-            return std::vector<std::vector<SyntaxStyle>>(
-                endLine - startLine + 1, std::vector<SyntaxStyle>());
+            return empty_result;
         }
         
         // Safety checks
         if (buffer->isEmpty()) {
-            return std::vector<std::vector<SyntaxStyle>>();
+            return std::vector<std::vector<SyntaxStyle>>(); // Return truly empty, not sized
         }
         
         // Clamp end line to buffer size
-        endLine = std::min(endLine, buffer->lineCount() - 1);
-        
-        // If start line is beyond end line, return empty result
-        if (startLine > endLine) {
-            return std::vector<std::vector<SyntaxStyle>>();
+        size_t actualEndLine = std::min(endLine, buffer->lineCount() - 1);
+         if (startLine >= buffer->lineCount()) { // If startline is out of bounds
+            return empty_result;
         }
-        
+        if (startLine > actualEndLine && buffer->lineCount() > 0) { // if startLine valid but became > actualEndLine due to clamping
+             empty_result.resize(0); // No lines to return styles for
+             return empty_result;
+        }
+        if (buffer->lineCount() == 0) { // handles case where buffer has 0 lines
+             empty_result.resize(0);
+             return empty_result;
+        }
+
+
         // For non-const version, update the cache for the effective range
-        auto effectiveRange = calculateEffectiveRange(startLine, endLine);
+        auto effectiveRange = calculateEffectiveRange(startLine, actualEndLine);
         size_t effectiveStart = effectiveRange.first;
         size_t effectiveEnd = effectiveRange.second;
         
@@ -160,13 +209,16 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         highlightLines(effectiveStart, effectiveEnd, timeout);
         
         // Periodically clean up the cache
-        cleanupCache();
+        cleanupCache_nolock();
         
         // Extract the requested range from the cache
         std::vector<std::vector<SyntaxStyle>> result;
-        result.reserve(endLine - startLine + 1);
+        if (startLine > actualEndLine) { // if after all calculations, range is invalid
+            return result; // empty result
+        }
+        result.reserve(actualEndLine - startLine + 1);
         
-        for (size_t line = startLine; line <= endLine; ++line) {
+        for (size_t line = startLine; line <= actualEndLine; ++line) {
             if (isLineInCache(line) && isLineValid(line)) {
                 // Use the styles from the cache entry
                 auto& cacheEntry = cachedStyles_[line];
@@ -182,15 +234,15 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         }
         
         return result;
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        return empty_result; // Return appropriately sized empty result
     } catch (const std::exception& ex) {
-        return handleError<std::vector<std::vector<SyntaxStyle>>>(
-            "SyntaxHighlightingManager::getHighlightingStyles", 
-            ex, ErrorSeverity::Major, std::vector<std::vector<SyntaxStyle>>());
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("getHighlightingStyles: ") + ex.what(), EditorException::Severity::Error));
+        return empty_result; // Return appropriately sized empty result
     } catch (...) {
-        return handleError<std::vector<std::vector<SyntaxStyle>>>(
-            "SyntaxHighlightingManager::getHighlightingStyles", 
-            std::runtime_error("Unknown exception"), ErrorSeverity::Critical,
-            std::vector<std::vector<SyntaxStyle>>());
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::getHighlightingStyles");
+        return empty_result; // Return appropriately sized empty result
     }
 }
 
@@ -257,11 +309,12 @@ void SyntaxHighlightingManager::setVisibleRange(size_t startLine, size_t endLine
         // Atomic stores don't need a lock
         visibleStartLine_.store(startLine, std::memory_order_release);
         visibleEndLine_.store(endLine, std::memory_order_release);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setVisibleRange", ex, ErrorSeverity::Minor);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setVisibleRange: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setVisibleRange", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setVisibleRange");
     }
 }
 
@@ -269,11 +322,12 @@ void SyntaxHighlightingManager::setHighlightingTimeout(size_t timeoutMs) {
     try {
         // Atomic store doesn't need a lock
         highlightingTimeoutMs_.store(timeoutMs, std::memory_order_release);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setHighlightingTimeout", ex, ErrorSeverity::Minor);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setHighlightingTimeout: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setHighlightingTimeout", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setHighlightingTimeout");
     }
 }
 
@@ -281,13 +335,15 @@ size_t SyntaxHighlightingManager::getHighlightingTimeout() const {
     try {
         // Atomic load doesn't need a lock
         return highlightingTimeoutMs_.load(std::memory_order_acquire);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        return DEFAULT_HIGHLIGHTING_TIMEOUT_MS;
     } catch (const std::exception& ex) {
-        return handleError<size_t>("SyntaxHighlightingManager::getHighlightingTimeout", 
-                                 ex, ErrorSeverity::Minor, DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("getHighlightingTimeout: ") + ex.what(), EditorException::Severity::Error));
+        return DEFAULT_HIGHLIGHTING_TIMEOUT_MS;
     } catch (...) {
-        return handleError<size_t>("SyntaxHighlightingManager::getHighlightingTimeout", 
-                                 std::runtime_error("Unknown exception"), 
-                                 ErrorSeverity::Major, DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::getHighlightingTimeout");
+        return DEFAULT_HIGHLIGHTING_TIMEOUT_MS;
     }
 }
 
@@ -295,11 +351,12 @@ void SyntaxHighlightingManager::setContextLines(size_t contextLines) {
     try {
         // Atomic store doesn't need a lock
         contextLines_.store(contextLines, std::memory_order_release);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
     } catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::setContextLines", ex, ErrorSeverity::Minor);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("setContextLines: ") + ex.what(), EditorException::Severity::Error));
     } catch (...) {
-        handleError("SyntaxHighlightingManager::setContextLines", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::setContextLines");
     }
 }
 
@@ -307,13 +364,15 @@ size_t SyntaxHighlightingManager::getContextLines() const {
     try {
         // Atomic load doesn't need a lock
         return contextLines_.load(std::memory_order_acquire);
+    } catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        return DEFAULT_CONTEXT_LINES;
     } catch (const std::exception& ex) {
-        return handleError<size_t>("SyntaxHighlightingManager::getContextLines", 
-                                 ex, ErrorSeverity::Minor, DEFAULT_CONTEXT_LINES);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("getContextLines: ") + ex.what(), EditorException::Severity::Error));
+        return DEFAULT_CONTEXT_LINES;
     } catch (...) {
-        return handleError<size_t>("SyntaxHighlightingManager::getContextLines", 
-                                 std::runtime_error("Unknown exception"), 
-                                 ErrorSeverity::Major, DEFAULT_CONTEXT_LINES);
+        ErrorReporter::logUnknownException("SyntaxHighlightingManager::getContextLines");
+        return DEFAULT_CONTEXT_LINES;
     }
 }
 
@@ -349,12 +408,23 @@ void SyntaxHighlightingManager::highlightLine(size_t line) {
         // Remove from invalidated set
         invalidatedLines_.erase(line);
     }
+    catch (const EditorException& ed_ex) {
+        ErrorReporter::logException(ed_ex);
+        if (line < cachedStyles_.size() && cachedStyles_[line]) {
+            cachedStyles_[line]->valid.store(false, std::memory_order_release);
+        }
+    }
     catch (const std::exception& ex) {
-        handleError("SyntaxHighlightingManager::highlightLine", ex, ErrorSeverity::Minor);
+        ErrorReporter::logException(SyntaxHighlightingException(std::string("highlightLine: line ") + std::to_string(line) + ": " + ex.what(), EditorException::Severity::Error));
+        if (line < cachedStyles_.size() && cachedStyles_[line]) {
+            cachedStyles_[line]->valid.store(false, std::memory_order_release);
+        }
     }
     catch (...) {
-        handleError("SyntaxHighlightingManager::highlightLine", 
-                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+        ErrorReporter::logUnknownException(std::string("SyntaxHighlightingManager::highlightLine for line ") + std::to_string(line));
+        if (line < cachedStyles_.size() && cachedStyles_[line]) {
+            cachedStyles_[line]->valid.store(false, std::memory_order_release);
+        }
     }
 }
 
@@ -455,40 +525,35 @@ std::pair<size_t, size_t> SyntaxHighlightingManager::calculateEffectiveRange(
     return {effectiveStart, effectiveEnd};
 }
 
-void SyntaxHighlightingManager::cleanupCache() {
-    if (lineTimestamps_.empty()) return;
-    
+void SyntaxHighlightingManager::cleanupCache_nolock() {
     auto now = std::chrono::steady_clock::now();
-    std::vector<size_t> linesToInvalidate;
-    
-    size_t visStart = visibleStartLine_.load(std::memory_order_acquire);
-    size_t visEnd = visibleEndLine_.load(std::memory_order_acquire);
-    
-    // Find old entries
-    for (const auto& entry : lineTimestamps_) {
-        size_t line = entry.first;
-        auto timestamp = entry.second;
+    size_t removedCount = 0;
+    size_t initialCacheSize = lineTimestamps_.size();
+
+    for (auto it = lineTimestamps_.begin(); it != lineTimestamps_.end(); /* manual increment */) {
+        size_t line = it->first;
+        auto timestamp = it->second;
         auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp);
-        
-        // Skip lines in visible range
-        if (line >= visStart && line <= visEnd) {
-            continue;
-        }
-        
-        // Invalidate if too old
+
         if (age.count() > CACHE_ENTRY_LIFETIME_MS) {
-            linesToInvalidate.push_back(line);
+            if (line < cachedStyles_.size() && cachedStyles_[line]) {
+                cachedStyles_[line]->valid.store(false, std::memory_order_release); // Mark as invalid
+                // Optionally, could reset the shared_ptr to release memory: cachedStyles_[line].reset();
+                // but be cautious if other parts might hold a reference briefly.
+                // For now, just marking as invalid is safer.
+            }
+            it = lineTimestamps_.erase(it); // Remove from timestamp map
+            invalidatedLines_.insert(line); // Mark as needing re-highlight if requested again
+            removedCount++;
+        } else {
+            ++it;
         }
     }
-    
-    // Remove from cache and timestamp tracking
-    for (size_t line : linesToInvalidate) {
-        if (line < cachedStyles_.size() && cachedStyles_[line]) {
-            // Mark as invalid rather than clearing (lock-free readers can still access it)
-            cachedStyles_[line]->valid.store(false, std::memory_order_release);
-            // Consider: cachedStyles_[line].reset(); // Free memory
-        }
-        lineTimestamps_.erase(line);
-        invalidatedLines_.insert(line);
+
+    if (removedCount > 0) {
+        logManagerMessage(EditorException::Severity::Warning, // Or Info if we had it; Warning for now.
+                          "SyntaxHighlightingManager::cleanupCache_nolock",
+                          "Cache cleanup: %zu entries before, %zu removed due to age, %zu timestamps remaining.",
+                          initialCacheSize, removedCount, lineTimestamps_.size());
     }
 } 

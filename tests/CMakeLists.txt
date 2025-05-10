@@ -6,6 +6,8 @@ add_executable(runTests
     sample_test.cpp 
     textbuffer_test.cpp
     editor_commands_test.cpp
+    syntax_highlighting_test.cpp
+    syntax_highlighting_manager_test.cpp
     # command_tests.cpp
     # editor_tests.cpp 
 )
@@ -13,7 +15,7 @@ add_executable(runTests
 # Link against EditorLib to access its components for testing
 # and GTest for the testing framework.
 # EditorLib should make its include directories (src/) available PUBLICLY.
-target_link_libraries(runTests PRIVATE EditorLib gtest_main)
+target_link_libraries(runTests PRIVATE EditorLib gtest_main GTest::gmock)
 
 # Explicitly add include directory for editor headers if not automatically inherited
 # from EditorLib. EditorLib has `target_include_directories(EditorLib PUBLIC src)`
@@ -21,6 +23,15 @@ target_link_libraries(runTests PRIVATE EditorLib gtest_main)
 # If includes like #include "TextBuffer.h" fail in test files, ensure that the path
 # from the perspective of files in tests/ is correct, or add `target_include_directories(runTests PRIVATE ../src)`.
 # For now, relying on EditorLib's public include propagation.
+
+# Add Google Mock include directory explicitly
+# Assuming googletest_SOURCE_DIR is available from FetchContent in parent scope
+if(TARGET GTest::gmock) # Or just check if googletest_SOURCE_DIR is defined
+    target_include_directories(runTests PRIVATE
+        ${googletest_SOURCE_DIR}/googlemock/include
+        # ${googletest_SOURCE_DIR}/googletest/include # This one seems to be already picked up via -isystem
+    )
+endif()
 
 # To test components from the main TextEditor project (e.g., TextBuffer, Editor commands):
 # Option 1: Compile necessary .cpp files from ../src directly into the test executable.

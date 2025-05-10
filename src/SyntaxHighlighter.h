@@ -13,6 +13,7 @@
 #include <atomic> // For memory barriers
 #include <thread>
 #include <sstream>
+#include "EditorError.h" // Needed for ErrorReporter and EditorException
 
 // Forward declaration
 class TextBuffer;
@@ -41,55 +42,6 @@ struct SyntaxStyle {
         : startCol(start), endCol(end), color(c) {}
 };
 
-// Define error severity levels for standardized error handling
-enum class ErrorSeverity {
-    Critical, // Program integrity threatened - log and terminate if necessary
-    Major,    // Function cannot complete - log and return error value
-    Minor     // Function can recover - log and continue
-};
-
-// Thread-safe logging function
-inline void logError(const char* location, const std::string& message, ErrorSeverity severity) {
-    try {
-        std::string prefix;
-        switch(severity) {
-            case ErrorSeverity::Critical:
-                prefix = "CRITICAL ERROR";
-                break;
-            case ErrorSeverity::Major:
-                prefix = "ERROR";
-                break;
-            case ErrorSeverity::Minor:
-                prefix = "WARNING";
-                break;
-        }
-        
-        std::stringstream ss;
-        ss << "[" << prefix << "] [Thread " << std::this_thread::get_id() << "] ";
-        ss << location << ": " << message;
-        
-        std::cerr << ss.str() << std::endl;
-        
-        // In production, would also log to file here
-    } catch (...) {
-        // Last resort - silently continue if we can't even log
-    }
-}
-
-// Overload for non-void return types
-template<typename ReturnT>
-typename std::enable_if<!std::is_void<ReturnT>::value, ReturnT>::type
-handleError(const char* location, const std::exception& ex, ErrorSeverity severity, ReturnT defaultValue = {}) {
-    logError(location, ex.what(), severity);
-    return defaultValue;
-}
-
-// Specialized overload for void return type
-inline void handleError(const char* location, const std::exception& ex, ErrorSeverity severity) {
-    logError(location, ex.what(), severity);
-    // Nothing to return for void
-}
-
 // Base class for all syntax highlighters
 class SyntaxHighlighter {
 public:
@@ -115,6 +67,7 @@ public:
     
     std::vector<SyntaxStyle> highlightLine(const std::string& line, [[maybe_unused]] size_t lineIndex) const override {
         std::vector<SyntaxStyle> styles;
+        
         // Apply each pattern to the line
         for (const auto& pattern_pair : patterns_) {
             const auto& regex = pattern_pair.first;
@@ -206,9 +159,9 @@ public:
         addPattern("\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'",
                    SyntaxColor::String);
         
-        // Comments
-        addPattern("//.*$|/\\*[\\s\\S]*?\\*/",
-                   SyntaxColor::Comment);
+        // Comments (split into two patterns)
+        addPattern("//.*$", SyntaxColor::Comment); // Line comments
+        addPattern("/\\*[\\s\\S]*?\\*/", SyntaxColor::Comment); // Block comments
         
         // Functions
         addPattern("\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()",
@@ -250,11 +203,12 @@ public:
             
             // Ensure changes are visible to other threads
             std::atomic_thread_fence(std::memory_order_release);
+        } catch (const EditorException& ed_ex) { // Catch EditorException first
+            ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            handleError("SyntaxHighlighterRegistry::registerHighlighter", ex, ErrorSeverity::Major);
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::registerHighlighter: ") + ex.what(), EditorException::Severity::Error));
         } catch (...) {
-            handleError("SyntaxHighlighterRegistry::registerHighlighter", 
-                       std::runtime_error("Unknown error"), ErrorSeverity::Critical);
+            ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::registerHighlighter");
         }
     }
     
@@ -285,13 +239,15 @@ public:
             }
             
             return nullptr; // No highlighter found
+        } catch (const EditorException& ed_ex) { // Catch EditorException first
+            ErrorReporter::logException(ed_ex);
+            return nullptr;
         } catch (const std::exception& ex) {
-            return handleError<SyntaxHighlighter*>("SyntaxHighlighterRegistry::getHighlighterForExtension", 
-                                                 ex, ErrorSeverity::Major, nullptr);
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getHighlighterForExtension: ") + ex.what(), EditorException::Severity::Error));
+            return nullptr;
         } catch (...) {
-            return handleError<SyntaxHighlighter*>("SyntaxHighlighterRegistry::getHighlighterForExtension", 
-                                                 std::runtime_error("Unknown error"), 
-                                                 ErrorSeverity::Critical, nullptr);
+            ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::getHighlighterForExtension");
+            return nullptr;
         }
     }
     
@@ -306,11 +262,13 @@ private:
             
             // Add memory barrier after initialization
             std::atomic_thread_fence(std::memory_order_release);
+        } catch (const EditorException& ed_ex) { // Catch EditorException first
+             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            handleError("SyntaxHighlighterRegistry::constructor", ex, ErrorSeverity::Critical);
+            // Constructor errors are generally critical
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::constructor: ") + ex.what(), EditorException::Severity::Critical));
         } catch (...) {
-            handleError("SyntaxHighlighterRegistry::constructor", 
-                       std::runtime_error("Unknown error"), ErrorSeverity::Critical);
+            ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::constructor");
         }
     }
     

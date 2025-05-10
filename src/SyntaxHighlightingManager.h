@@ -115,7 +115,7 @@ private:
     std::pair<size_t, size_t> calculateEffectiveRange(size_t startLine, size_t endLine) const;
     
     // Clean up old cache entries to manage memory
-    void cleanupCache();
+    void cleanupCache_nolock(); // Renamed from cleanupCache
     
     // Thread-safe access to buffer_
     const TextBuffer* getBuffer() const;
