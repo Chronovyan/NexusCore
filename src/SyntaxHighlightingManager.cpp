@@ -1,11 +1,23 @@
 #include "SyntaxHighlightingManager.h"
 #include <iostream>
+#include <thread>
 
-// Utility to log critical errors during initialization
 namespace {
-    void logCriticalError(const char* location, const char* message) {
+    // Logger function using the standardized error handling approach
+    template<typename... Args>
+    void logManager(const char* location, const char* format, Args... args) {
         try {
-            std::cerr << "[CRITICAL ERROR] " << location << ": " << message << std::endl;
+            // Get thread ID for better debugging
+            std::stringstream ss;
+            ss << "[Thread " << std::this_thread::get_id() << "] ";
+            ss << location << ": ";
+            
+            // Format message - in real code, use std::format (C++20) or a formatting library
+            char buffer[256];
+            snprintf(buffer, sizeof(buffer), format, args...);
+            ss << buffer;
+            
+            std::cerr << ss.str() << std::endl;
         } catch (...) {
             // Last resort - silently continue if we can't even log
         }
@@ -13,8 +25,8 @@ namespace {
 }
 
 SyntaxHighlightingManager::SyntaxHighlightingManager()
-    : buffer_(nullptr), 
-      highlighter_(nullptr), 
+    : buffer_(nullptr),
+      highlighter_(std::make_shared<std::atomic<SyntaxHighlighter*>>(nullptr)),
       enabled_(true),
       visibleStartLine_(0), 
       visibleEndLine_(0),
@@ -22,88 +34,116 @@ SyntaxHighlightingManager::SyntaxHighlightingManager()
       contextLines_(DEFAULT_CONTEXT_LINES) {
 }
 
-void SyntaxHighlightingManager::setHighlighter(SyntaxHighlighter* highlighter) {
+// Thread-safe getter for buffer
+const TextBuffer* SyntaxHighlightingManager::getBuffer() const {
+    return buffer_.load(std::memory_order_acquire);
+}
+
+void SyntaxHighlightingManager::setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter) {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
-        highlighter_ = highlighter;
+        std::scoped_lock lock(mutex_);
+        
+        // Store raw pointer in the atomic
+        SyntaxHighlighter* raw_ptr = highlighter.get();
+        highlighter_->store(raw_ptr, std::memory_order_release);
+        
         invalidateAllLines_nolock();
     } catch (const std::exception& ex) {
-        logCriticalError("setHighlighter", ex.what());
+        handleError("SyntaxHighlightingManager::setHighlighter", ex, ErrorSeverity::Major);
     } catch (...) {
-        logCriticalError("setHighlighter", "Unknown exception");
+        handleError("SyntaxHighlightingManager::setHighlighter", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
     }
 }
 
-SyntaxHighlighter* SyntaxHighlightingManager::getHighlighter() const {
+std::shared_ptr<SyntaxHighlighter> SyntaxHighlightingManager::getHighlighter() const {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return highlighter_;
+        // Use shared lock for reading
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        
+        // We can only return the raw pointer - in a real implementation, we'd need
+        // to maintain a map of raw pointers to shared_ptrs or use a different approach
+        SyntaxHighlighter* raw_ptr = highlighter_->load(std::memory_order_acquire);
+        
+        // This is a simplification - in a real implementation, we'd need proper lifetime management
+        // For now, treating this as a weak reference (non-owning)
+        return std::shared_ptr<SyntaxHighlighter>(raw_ptr, [](SyntaxHighlighter*){});
     } catch (const std::exception& ex) {
-        logCriticalError("getHighlighter", ex.what());
-        return nullptr;
+        return handleError<std::shared_ptr<SyntaxHighlighter>>(
+            "SyntaxHighlightingManager::getHighlighter", 
+            ex, ErrorSeverity::Major, nullptr);
     } catch (...) {
-        logCriticalError("getHighlighter", "Unknown exception");
-        return nullptr;
+        return handleError<std::shared_ptr<SyntaxHighlighter>>(
+            "SyntaxHighlightingManager::getHighlighter", 
+            std::runtime_error("Unknown exception"), ErrorSeverity::Critical, nullptr);
     }
 }
 
 void SyntaxHighlightingManager::setEnabled(bool enabled) {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (enabled_ != enabled) {
-            enabled_ = enabled;
+        std::scoped_lock lock(mutex_);
+        bool oldValue = enabled_.load(std::memory_order_acquire);
+        if (oldValue != enabled) {
+            enabled_.store(enabled, std::memory_order_release);
             invalidateAllLines_nolock();
         }
     } catch (const std::exception& ex) {
-        logCriticalError("setEnabled", ex.what());
+        handleError("SyntaxHighlightingManager::setEnabled", ex, ErrorSeverity::Major);
     } catch (...) {
-        logCriticalError("setEnabled", "Unknown exception");
+        handleError("SyntaxHighlightingManager::setEnabled", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
     }
 }
 
 bool SyntaxHighlightingManager::isEnabled() const {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return enabled_;
+        // Atomic read doesn't need a lock
+        return enabled_.load(std::memory_order_acquire);
     } catch (const std::exception& ex) {
-        logCriticalError("isEnabled", ex.what());
-        return false;
+        return handleError<bool>("SyntaxHighlightingManager::isEnabled", 
+                                ex, ErrorSeverity::Major, false);
     } catch (...) {
-        logCriticalError("isEnabled", "Unknown exception");
-        return false;
+        return handleError<bool>("SyntaxHighlightingManager::isEnabled", 
+                                std::runtime_error("Unknown exception"), ErrorSeverity::Critical, false);
     }
 }
 
 void SyntaxHighlightingManager::setBuffer(const TextBuffer* buffer) {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
-        buffer_ = buffer;
+        std::scoped_lock lock(mutex_);
+        buffer_.store(buffer, std::memory_order_release);
         invalidateAllLines_nolock();
     } catch (const std::exception& ex) {
-        logCriticalError("setBuffer", ex.what());
+        handleError("SyntaxHighlightingManager::setBuffer", ex, ErrorSeverity::Major);
     } catch (...) {
-        logCriticalError("setBuffer", "Unknown exception");
+        handleError("SyntaxHighlightingManager::setBuffer", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Critical);
     }
 }
 
 std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(
     size_t startLine, size_t endLine) {
     try {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
+        
+        // Get buffer and check enabled status
+        const TextBuffer* buffer = getBuffer();
+        SyntaxHighlighter* highlighter = highlighter_->load(std::memory_order_acquire);
+        bool enabled = enabled_.load(std::memory_order_acquire);
         
         // Check if highlighting is disabled or no buffer/highlighter
-        if (!enabled_ || !buffer_ || !highlighter_) {
+        if (!enabled || !buffer || !highlighter) {
             return std::vector<std::vector<SyntaxStyle>>(
                 endLine - startLine + 1, std::vector<SyntaxStyle>());
         }
         
         // Safety checks
-        if (buffer_->isEmpty()) {
+        if (buffer->isEmpty()) {
             return std::vector<std::vector<SyntaxStyle>>();
         }
         
         // Clamp end line to buffer size
-        endLine = std::min(endLine, buffer_->lineCount() - 1);
+        endLine = std::min(endLine, buffer->lineCount() - 1);
         
         // If start line is beyond end line, return empty result
         if (startLine > endLine) {
@@ -116,7 +156,7 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         size_t effectiveEnd = effectiveRange.second;
         
         // Highlight invalidated lines within the effective range
-        std::chrono::milliseconds timeout(highlightingTimeoutMs_);
+        std::chrono::milliseconds timeout(highlightingTimeoutMs_.load(std::memory_order_acquire));
         highlightLines(effectiveStart, effectiveEnd, timeout);
         
         // Periodically clean up the cache
@@ -128,7 +168,13 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         
         for (size_t line = startLine; line <= endLine; ++line) {
             if (isLineInCache(line) && isLineValid(line)) {
-                result.push_back(cachedStyles_[line]);
+                // Use the styles from the cache entry
+                auto& cacheEntry = cachedStyles_[line];
+                if (cacheEntry && cacheEntry->valid.load(std::memory_order_acquire)) {
+                    result.push_back(cacheEntry->styles);
+                } else {
+                    result.push_back(std::vector<SyntaxStyle>());
+                }
             } else {
                 // For lines that weren't highlighted (due to timeout), return empty styles
                 result.push_back(std::vector<SyntaxStyle>());
@@ -137,131 +183,194 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         
         return result;
     } catch (const std::exception& ex) {
-        logCriticalError("getHighlightingStyles", ex.what());
-        return std::vector<std::vector<SyntaxStyle>>();
+        return handleError<std::vector<std::vector<SyntaxStyle>>>(
+            "SyntaxHighlightingManager::getHighlightingStyles", 
+            ex, ErrorSeverity::Major, std::vector<std::vector<SyntaxStyle>>());
     } catch (...) {
-        logCriticalError("getHighlightingStyles", "Unknown exception");
-        return std::vector<std::vector<SyntaxStyle>>();
+        return handleError<std::vector<std::vector<SyntaxStyle>>>(
+            "SyntaxHighlightingManager::getHighlightingStyles", 
+            std::runtime_error("Unknown exception"), ErrorSeverity::Critical,
+            std::vector<std::vector<SyntaxStyle>>());
     }
 }
 
 void SyntaxHighlightingManager::invalidateLine(size_t line) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     
-    if (line < cachedStyles_.size()) {
+    if (line < cachedStyles_.size() && cachedStyles_[line]) {
+        // Mark the cache entry as invalid
+        cachedStyles_[line]->valid.store(false, std::memory_order_release);
         invalidatedLines_.insert(line);
         lineTimestamps_.erase(line);
     }
 }
 
 void SyntaxHighlightingManager::invalidateLines(size_t startLine, size_t endLine) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     
-    if (!buffer_) return;
+    const TextBuffer* buffer = getBuffer();
+    if (!buffer) return;
     
     // Clamp to buffer size
-    endLine = std::min(endLine, buffer_->lineCount() - 1);
+    endLine = std::min(endLine, buffer->lineCount() - 1);
     
     for (size_t line = startLine; line <= endLine; ++line) {
+        if (line < cachedStyles_.size() && cachedStyles_[line]) {
+            // Mark the cache entry as invalid
+            cachedStyles_[line]->valid.store(false, std::memory_order_release);
+        }
         invalidatedLines_.insert(line);
         lineTimestamps_.erase(line);
     }
 }
 
 void SyntaxHighlightingManager::invalidateAllLines() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     invalidateAllLines_nolock();
 }
 
 void SyntaxHighlightingManager::invalidateAllLines_nolock() {
-    if (!buffer_) return;
+    const TextBuffer* buffer = getBuffer();
+    if (!buffer) return;
+    
+    // Mark all cache entries as invalid
+    for (auto& entry : cachedStyles_) {
+        if (entry) {
+            entry->valid.store(false, std::memory_order_release);
+        }
+    }
     
     // Clear the cache and invalidate all lines
     cachedStyles_.clear();
     invalidatedLines_.clear();
     lineTimestamps_.clear();
     
-    if (buffer_->lineCount() > 0) {
-        for (size_t i = 0; i < buffer_->lineCount(); ++i) {
+    if (buffer->lineCount() > 0) {
+        for (size_t i = 0; i < buffer->lineCount(); ++i) {
             invalidatedLines_.insert(i);
         }
     }
 }
 
 void SyntaxHighlightingManager::setVisibleRange(size_t startLine, size_t endLine) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    visibleStartLine_ = startLine;
-    visibleEndLine_ = endLine;
+    try {
+        // Atomic stores don't need a lock
+        visibleStartLine_.store(startLine, std::memory_order_release);
+        visibleEndLine_.store(endLine, std::memory_order_release);
+    } catch (const std::exception& ex) {
+        handleError("SyntaxHighlightingManager::setVisibleRange", ex, ErrorSeverity::Minor);
+    } catch (...) {
+        handleError("SyntaxHighlightingManager::setVisibleRange", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+    }
 }
 
 void SyntaxHighlightingManager::setHighlightingTimeout(size_t timeoutMs) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    highlightingTimeoutMs_ = timeoutMs;
+    try {
+        // Atomic store doesn't need a lock
+        highlightingTimeoutMs_.store(timeoutMs, std::memory_order_release);
+    } catch (const std::exception& ex) {
+        handleError("SyntaxHighlightingManager::setHighlightingTimeout", ex, ErrorSeverity::Minor);
+    } catch (...) {
+        handleError("SyntaxHighlightingManager::setHighlightingTimeout", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+    }
 }
 
 size_t SyntaxHighlightingManager::getHighlightingTimeout() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return highlightingTimeoutMs_;
+    try {
+        // Atomic load doesn't need a lock
+        return highlightingTimeoutMs_.load(std::memory_order_acquire);
+    } catch (const std::exception& ex) {
+        return handleError<size_t>("SyntaxHighlightingManager::getHighlightingTimeout", 
+                                 ex, ErrorSeverity::Minor, DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+    } catch (...) {
+        return handleError<size_t>("SyntaxHighlightingManager::getHighlightingTimeout", 
+                                 std::runtime_error("Unknown exception"), 
+                                 ErrorSeverity::Major, DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+    }
 }
 
 void SyntaxHighlightingManager::setContextLines(size_t contextLines) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    contextLines_ = contextLines;
+    try {
+        // Atomic store doesn't need a lock
+        contextLines_.store(contextLines, std::memory_order_release);
+    } catch (const std::exception& ex) {
+        handleError("SyntaxHighlightingManager::setContextLines", ex, ErrorSeverity::Minor);
+    } catch (...) {
+        handleError("SyntaxHighlightingManager::setContextLines", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
+    }
 }
 
 size_t SyntaxHighlightingManager::getContextLines() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return contextLines_;
+    try {
+        // Atomic load doesn't need a lock
+        return contextLines_.load(std::memory_order_acquire);
+    } catch (const std::exception& ex) {
+        return handleError<size_t>("SyntaxHighlightingManager::getContextLines", 
+                                 ex, ErrorSeverity::Minor, DEFAULT_CONTEXT_LINES);
+    } catch (...) {
+        return handleError<size_t>("SyntaxHighlightingManager::getContextLines", 
+                                 std::runtime_error("Unknown exception"), 
+                                 ErrorSeverity::Major, DEFAULT_CONTEXT_LINES);
+    }
 }
 
 void SyntaxHighlightingManager::highlightLine(size_t line) {
-    if (!buffer_ || !highlighter_ || !enabled_) return;
+    const TextBuffer* buffer = getBuffer();
+    SyntaxHighlighter* highlighter = highlighter_->load(std::memory_order_acquire);
+    bool enabled = enabled_.load(std::memory_order_acquire);
+    
+    if (!buffer || !highlighter || !enabled) return;
     
     // Safety check
-    if (line >= buffer_->lineCount()) return;
+    if (line >= buffer->lineCount()) return;
     
     try {
         // Get the line text
-        const std::string& lineText = buffer_->getLine(line);
+        const std::string& lineText = buffer->getLine(line);
         
         // Highlight the line
-        std::vector<SyntaxStyle> lineStyles = highlighter_->highlightLine(lineText, line);
+        std::vector<SyntaxStyle> lineStyles = highlighter->highlightLine(lineText, line);
         
         // Ensure cache is large enough
         if (cachedStyles_.size() <= line) {
             cachedStyles_.resize(line + 1);
         }
         
-        // Store in cache
-        cachedStyles_[line] = std::move(lineStyles);
+        // Create a new cache entry with the highlighted styles
+        auto newEntry = std::make_shared<CacheEntry>(std::move(lineStyles));
+        cachedStyles_[line] = newEntry;
         
         // Update timestamp
-        lineTimestamps_[line] = std::chrono::steady_clock::now();
+        lineTimestamps_[line] = newEntry->timestamp;
         
         // Remove from invalidated set
         invalidatedLines_.erase(line);
     }
-    catch (const SyntaxHighlightingException& ex) {
-        ErrorReporter::logException(ex);
-    }
     catch (const std::exception& ex) {
-        ErrorReporter::logException(ex);
+        handleError("SyntaxHighlightingManager::highlightLine", ex, ErrorSeverity::Minor);
     }
     catch (...) {
-        ErrorReporter::logUnknownException("SyntaxHighlightingManager::highlightLine");
+        handleError("SyntaxHighlightingManager::highlightLine", 
+                   std::runtime_error("Unknown exception"), ErrorSeverity::Major);
     }
 }
 
 bool SyntaxHighlightingManager::highlightLines(size_t startLine, size_t endLine, 
                                                const std::chrono::milliseconds& timeout) {
-    if (!buffer_ || !highlighter_ || !enabled_) return false;
+    const TextBuffer* buffer = getBuffer();
+    SyntaxHighlighter* highlighter = highlighter_->load(std::memory_order_acquire);
+    bool enabled = enabled_.load(std::memory_order_acquire);
+    
+    if (!buffer || !highlighter || !enabled) return false;
     
     // Safety checks
-    if (buffer_->isEmpty()) return false;
+    if (buffer->isEmpty()) return false;
     
     // Clamp end line to buffer size
-    endLine = std::min(endLine, buffer_->lineCount() - 1);
+    endLine = std::min(endLine, buffer->lineCount() - 1);
     
     // If start line is beyond end line, return
     if (startLine > endLine) return false;
@@ -273,7 +382,10 @@ bool SyntaxHighlightingManager::highlightLines(size_t startLine, size_t endLine,
     std::vector<size_t> linesToProcess;
     
     // First add visible invalidated lines
-    for (size_t line = visibleStartLine_; line <= visibleEndLine_ && line <= endLine; ++line) {
+    size_t visStart = visibleStartLine_.load(std::memory_order_acquire);
+    size_t visEnd = visibleEndLine_.load(std::memory_order_acquire);
+    
+    for (size_t line = visStart; line <= visEnd && line <= endLine; ++line) {
         if (invalidatedLines_.find(line) != invalidatedLines_.end()) {
             linesToProcess.push_back(line);
         }
@@ -281,7 +393,7 @@ bool SyntaxHighlightingManager::highlightLines(size_t startLine, size_t endLine,
     
     // Then add non-visible invalidated lines
     for (size_t line = startLine; line <= endLine; ++line) {
-        if (line >= visibleStartLine_ && line <= visibleEndLine_) {
+        if (line >= visStart && line <= visEnd) {
             continue; // Skip visible lines already added
         }
         
@@ -301,7 +413,7 @@ bool SyntaxHighlightingManager::highlightLines(size_t startLine, size_t endLine,
         
         if (elapsed >= timeout) {
             // Return partial success if we processed visible lines
-            return i >= (visibleEndLine_ - visibleStartLine_ + 1);
+            return i >= (visEnd - visStart + 1);
         }
     }
     
@@ -309,31 +421,36 @@ bool SyntaxHighlightingManager::highlightLines(size_t startLine, size_t endLine,
 }
 
 bool SyntaxHighlightingManager::isLineInCache(size_t line) const {
-    return line < cachedStyles_.size();
+    return line < cachedStyles_.size() && cachedStyles_[line] != nullptr;
 }
 
 bool SyntaxHighlightingManager::isLineValid(size_t line) const {
-    return isLineInCache(line) && invalidatedLines_.find(line) == invalidatedLines_.end();
+    return isLineInCache(line) && 
+           cachedStyles_[line]->valid.load(std::memory_order_acquire) &&
+           invalidatedLines_.find(line) == invalidatedLines_.end();
 }
 
 std::pair<size_t, size_t> SyntaxHighlightingManager::calculateEffectiveRange(
     size_t startLine, size_t endLine) const {
     
-    if (!buffer_) return {startLine, endLine};
+    const TextBuffer* buffer = getBuffer();
+    if (!buffer) return {startLine, endLine};
+    
+    size_t contextL = contextLines_.load(std::memory_order_acquire);
     
     // Start with the requested range
     size_t effectiveStart = startLine;
     size_t effectiveEnd = endLine;
     
     // Add context lines before
-    if (startLine >= contextLines_) {
-        effectiveStart = startLine - contextLines_;
+    if (startLine >= contextL) {
+        effectiveStart = startLine - contextL;
     } else {
         effectiveStart = 0;
     }
     
     // Add context lines after
-    effectiveEnd = std::min(endLine + contextLines_, buffer_->lineCount() - 1);
+    effectiveEnd = std::min(endLine + contextL, buffer->lineCount() - 1);
     
     return {effectiveStart, effectiveEnd};
 }
@@ -344,12 +461,17 @@ void SyntaxHighlightingManager::cleanupCache() {
     auto now = std::chrono::steady_clock::now();
     std::vector<size_t> linesToInvalidate;
     
+    size_t visStart = visibleStartLine_.load(std::memory_order_acquire);
+    size_t visEnd = visibleEndLine_.load(std::memory_order_acquire);
+    
     // Find old entries
-    for (const auto& [line, timestamp] : lineTimestamps_) {
+    for (const auto& entry : lineTimestamps_) {
+        size_t line = entry.first;
+        auto timestamp = entry.second;
         auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp);
         
         // Skip lines in visible range
-        if (line >= visibleStartLine_ && line <= visibleEndLine_) {
+        if (line >= visStart && line <= visEnd) {
             continue;
         }
         
@@ -361,9 +483,10 @@ void SyntaxHighlightingManager::cleanupCache() {
     
     // Remove from cache and timestamp tracking
     for (size_t line : linesToInvalidate) {
-        if (line < cachedStyles_.size()) {
-            cachedStyles_[line].clear();
-            cachedStyles_[line].shrink_to_fit();
+        if (line < cachedStyles_.size() && cachedStyles_[line]) {
+            // Mark as invalid rather than clearing (lock-free readers can still access it)
+            cachedStyles_[line]->valid.store(false, std::memory_order_release);
+            // Consider: cachedStyles_[line].reset(); // Free memory
         }
         lineTimestamps_.erase(line);
         invalidatedLines_.insert(line);

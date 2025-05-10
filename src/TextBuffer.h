@@ -18,9 +18,11 @@ public:
     void insertLine(size_t index, const std::string& line);
     void deleteLine(size_t index);
     void replaceLine(size_t index, const std::string& newLine);
+    void setLine(size_t lineIndex, const std::string& text);
 
     // Accessors
     const std::string& getLine(size_t index) const;
+    std::string& getLine(size_t index); // Non-const version
     size_t lineCount() const;
     bool isEmpty() const;
 
@@ -46,6 +48,9 @@ public:
     
     // Line properties
     size_t lineLength(size_t lineIndex) const;
+
+    // New methods
+    void clear(bool keepEmptyLine = true); // Modified to control empty line behavior
 
 private:
     std::vector<std::string> lines_;

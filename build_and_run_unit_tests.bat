@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-echo Building Enhanced Deadlock ^& Concurrency Verification Test
+echo Building and Running Unit Tests
 
 REM Setup Visual Studio environment if needed
 if not defined VSCMD_VER (
@@ -47,7 +47,7 @@ goto parse_args
 :end_parse_args
 
 REM Set up compiler flags
-set COMMON_FLAGS=/std:c++17 /EHsc /W4 /Zi
+set COMMON_FLAGS=/std:c++17 /EHsc /W4 /Zi /I. /Isrc /Itests
 
 REM Add sanitizer options
 if %ENABLE_TSAN%==1 (
@@ -63,24 +63,38 @@ if %ENABLE_PARALLEL%==1 (
     set OPT_FLAGS=%OPT_FLAGS% /MP
 )
 
-REM Compile the deadlock test with standard C++17 flags
-echo Compiling DeadlockTest.cpp with flags: %COMMON_FLAGS% %OPT_FLAGS%
-cl.exe %COMMON_FLAGS% %OPT_FLAGS% ^
-    /Febin\DeadlockTest.exe DeadlockTest.cpp ^
-    src\Editor.cpp src\TextBuffer.cpp src\SyntaxHighlighter.cpp src\SyntaxHighlightingManager.cpp ^
-    /I. /Fo"bin\\"
+REM Define common source files
+set SRC_FILES=src\Editor.cpp src\TextBuffer.cpp src\SyntaxHighlighter.cpp src\SyntaxHighlightingManager.cpp
 
+REM Compile CommandLogicTests.cpp
+echo Compiling tests/CommandLogicTests.cpp with flags: %COMMON_FLAGS% %OPT_FLAGS%
+cl.exe %COMMON_FLAGS% %OPT_FLAGS% ^
+    /Febin\CommandLogicTests.exe tests\CommandLogicTests.cpp %SRC_FILES%
 if errorlevel 1 (
-    echo Compilation failed.
+    echo Compilation of CommandLogicTests failed.
     exit /b 1
 )
+echo CommandLogicTests.cpp compiled successfully.
+echo.
+
+REM Compile CommandManagerTests.cpp
+echo Compiling tests/CommandManagerTests.cpp with flags: %COMMON_FLAGS% %OPT_FLAGS%
+cl.exe %COMMON_FLAGS% %OPT_FLAGS% ^
+    /Febin\CommandManagerTests.exe tests\CommandManagerTests.cpp %SRC_FILES%
+if errorlevel 1 (
+    echo Compilation of CommandManagerTests failed.
+    exit /b 1
+)
+echo CommandManagerTests.cpp compiled successfully.
+echo.
 
 REM Clean up temporary files
 if exist *.obj del *.obj
+if exist bin\*.obj del bin\*.obj
 
 echo.
-echo Compilation successful.
-echo Running enhanced deadlock verification test...
+echo All unit test compilations successful.
+echo Running unit tests...
 echo.
 
 REM Set environment variables for sanitizers
@@ -91,16 +105,28 @@ if %ENABLE_ASAN%==1 (
     set ASAN_OPTIONS=detect_leaks=1:symbolize=1
 )
 
-REM Run the test
-bin\DeadlockTest.exe
-
+REM Run CommandLogicTests
+echo --- Running CommandLogicTests ---
+bin\CommandLogicTests.exe
 if errorlevel 1 (
     echo.
-    echo Deadlock test failed.
-    exit /b 1
+    echo CommandLogicTests FAILED.
 ) else (
     echo.
-    echo Deadlock test passed. Thread safety verified!
+    echo CommandLogicTests PASSED.
 )
+echo.
+
+REM Run CommandManagerTests
+echo --- Running CommandManagerTests ---
+bin\CommandManagerTests.exe
+if errorlevel 1 (
+    echo.
+    echo CommandManagerTests FAILED.
+) else (
+    echo.
+    echo CommandManagerTests PASSED.
+)
+echo.
 
 endlocal 

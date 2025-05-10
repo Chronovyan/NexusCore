@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <mutex>
 #include <iostream>
+#include <shared_mutex> // For read-write lock
+#include <atomic> // For memory barriers
+#include <thread>
+#include <sstream>
 
 // Forward declaration
 class TextBuffer;
@@ -37,16 +41,65 @@ struct SyntaxStyle {
         : startCol(start), endCol(end), color(c) {}
 };
 
+// Define error severity levels for standardized error handling
+enum class ErrorSeverity {
+    Critical, // Program integrity threatened - log and terminate if necessary
+    Major,    // Function cannot complete - log and return error value
+    Minor     // Function can recover - log and continue
+};
+
+// Thread-safe logging function
+inline void logError(const char* location, const std::string& message, ErrorSeverity severity) {
+    try {
+        std::string prefix;
+        switch(severity) {
+            case ErrorSeverity::Critical:
+                prefix = "CRITICAL ERROR";
+                break;
+            case ErrorSeverity::Major:
+                prefix = "ERROR";
+                break;
+            case ErrorSeverity::Minor:
+                prefix = "WARNING";
+                break;
+        }
+        
+        std::stringstream ss;
+        ss << "[" << prefix << "] [Thread " << std::this_thread::get_id() << "] ";
+        ss << location << ": " << message;
+        
+        std::cerr << ss.str() << std::endl;
+        
+        // In production, would also log to file here
+    } catch (...) {
+        // Last resort - silently continue if we can't even log
+    }
+}
+
+// Overload for non-void return types
+template<typename ReturnT>
+typename std::enable_if<!std::is_void<ReturnT>::value, ReturnT>::type
+handleError(const char* location, const std::exception& ex, ErrorSeverity severity, ReturnT defaultValue = {}) {
+    logError(location, ex.what(), severity);
+    return defaultValue;
+}
+
+// Specialized overload for void return type
+inline void handleError(const char* location, const std::exception& ex, ErrorSeverity severity) {
+    logError(location, ex.what(), severity);
+    // Nothing to return for void
+}
+
 // Base class for all syntax highlighters
 class SyntaxHighlighter {
 public:
     virtual ~SyntaxHighlighter() = default;
     
     // Highlight a line of text
-    virtual std::vector<SyntaxStyle> highlightLine(const std::string& line, size_t lineIndex) = 0;
+    virtual std::vector<SyntaxStyle> highlightLine(const std::string& line, size_t lineIndex) const = 0;
     
     // Highlight a full buffer
-    virtual std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) = 0;
+    virtual std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const = 0;
     
     // Get the file extensions this highlighter supports
     virtual std::vector<std::string> getSupportedExtensions() const = 0;
@@ -60,7 +113,7 @@ class PatternBasedHighlighter : public SyntaxHighlighter {
 public:
     PatternBasedHighlighter(const std::string& name) : languageName_(name) {}
     
-    std::vector<SyntaxStyle> highlightLine(const std::string& line, size_t lineIndex) override {
+    std::vector<SyntaxStyle> highlightLine(const std::string& line, size_t lineIndex) const override {
         std::vector<SyntaxStyle> styles;
         
         // Apply each pattern to the line
@@ -95,7 +148,7 @@ public:
     }
     
     // Declaration only - implementation moved to .cpp file
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) override;
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override;
     
     std::vector<std::string> getSupportedExtensions() const override {
         return supportedExtensions_;
@@ -170,9 +223,11 @@ public:
 // Registry for syntax highlighters
 class SyntaxHighlighterRegistry {
 public:
+    // Thread-safe singleton access with memory ordering guarantees
     static SyntaxHighlighterRegistry& getInstance() {
         // Using Meyers Singleton pattern for thread-safety
         static SyntaxHighlighterRegistry instance;
+        std::atomic_thread_fence(std::memory_order_acquire); // Ensure visibility of instance
         return instance;
     }
     
@@ -182,7 +237,8 @@ public:
         }
         
         try {
-            std::lock_guard<std::mutex> lock(registry_mutex_);
+            // Use exclusive lock for writing
+            std::scoped_lock lock(registry_mutex_);
             
             // Store the highlighter's extensions
             auto extensions = highlighter->getSupportedExtensions();
@@ -195,17 +251,21 @@ public:
             
             // Store the highlighter
             highlighters_.push_back(std::move(highlighter));
+            
+            // Ensure changes are visible to other threads
+            std::atomic_thread_fence(std::memory_order_release);
         } catch (const std::exception& ex) {
-            // Log error but don't propagate exception during static init
-            std::cerr << "Error in registerHighlighter: " << ex.what() << std::endl;
+            handleError("SyntaxHighlighterRegistry::registerHighlighter", ex, ErrorSeverity::Major);
         } catch (...) {
-            std::cerr << "Unknown error in registerHighlighter" << std::endl;
+            handleError("SyntaxHighlighterRegistry::registerHighlighter", 
+                       std::runtime_error("Unknown error"), ErrorSeverity::Critical);
         }
     }
     
-    SyntaxHighlighter* getHighlighterForExtension(const std::string& extension) {
+    SyntaxHighlighter* getHighlighterForExtension(const std::string& extension) const {
         try {
-            std::lock_guard<std::mutex> lock(registry_mutex_);
+            // Use shared lock for reading (allows multiple concurrent readers)
+            std::shared_lock<std::shared_mutex> lock(registry_mutex_);
             
             if (highlighters_.empty()) {
                 return nullptr;
@@ -230,23 +290,31 @@ public:
             
             return nullptr; // No highlighter found
         } catch (const std::exception& ex) {
-            std::cerr << "Error in getHighlighterForExtension: " << ex.what() << std::endl;
-            return nullptr;
+            return handleError<SyntaxHighlighter*>("SyntaxHighlighterRegistry::getHighlighterForExtension", 
+                                                 ex, ErrorSeverity::Major, nullptr);
         } catch (...) {
-            std::cerr << "Unknown error in getHighlighterForExtension" << std::endl;
-            return nullptr;
+            return handleError<SyntaxHighlighter*>("SyntaxHighlighterRegistry::getHighlighterForExtension", 
+                                                 std::runtime_error("Unknown error"), 
+                                                 ErrorSeverity::Critical, nullptr);
         }
     }
     
 private:
     SyntaxHighlighterRegistry() {
         try {
+            // Add memory barrier before initialization
+            std::atomic_thread_fence(std::memory_order_acquire);
+            
             // Register built-in highlighters
             registerHighlighter(std::make_unique<CppHighlighter>());
+            
+            // Add memory barrier after initialization
+            std::atomic_thread_fence(std::memory_order_release);
         } catch (const std::exception& ex) {
-            std::cerr << "Error initializing SyntaxHighlighterRegistry: " << ex.what() << std::endl;
+            handleError("SyntaxHighlighterRegistry::constructor", ex, ErrorSeverity::Critical);
         } catch (...) {
-            std::cerr << "Unknown error initializing SyntaxHighlighterRegistry" << std::endl;
+            handleError("SyntaxHighlighterRegistry::constructor", 
+                       std::runtime_error("Unknown error"), ErrorSeverity::Critical);
         }
     }
     
@@ -258,8 +326,8 @@ private:
     SyntaxHighlighterRegistry(SyntaxHighlighterRegistry&&) = delete;
     SyntaxHighlighterRegistry& operator=(SyntaxHighlighterRegistry&&) = delete;
     
-    // Thread-safe registry access
-    std::mutex registry_mutex_;
+    // Thread-safe registry access with read-write lock for better concurrency
+    mutable std::shared_mutex registry_mutex_;
     std::vector<std::unique_ptr<SyntaxHighlighter>> highlighters_;
     std::map<std::string, size_t> extensionMap_;
 };

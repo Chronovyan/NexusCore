@@ -9,7 +9,13 @@
 #include <unordered_map>
 #include <chrono>
 #include <mutex>
+#include <shared_mutex>
+#include <atomic>
 #include <memory>
+
+// Forward declarations
+class TextBuffer;
+class SyntaxHighlighter;
 
 class SyntaxHighlightingManager {
 public:
@@ -25,11 +31,30 @@ public:
     SyntaxHighlightingManager();
     ~SyntaxHighlightingManager() = default;
     
+    // Deleted copy/move operations for safety
+    SyntaxHighlightingManager(const SyntaxHighlightingManager&) = delete;
+    SyntaxHighlightingManager& operator=(const SyntaxHighlightingManager&) = delete;
+    SyntaxHighlightingManager(SyntaxHighlightingManager&&) = delete;
+    SyntaxHighlightingManager& operator=(SyntaxHighlightingManager&&) = delete;
+    
+    // Thread-safe cache entry representation
+    struct CacheEntry {
+        std::vector<SyntaxStyle> styles;
+        std::chrono::steady_clock::time_point timestamp;
+        std::atomic<bool> valid{true};
+        
+        CacheEntry() : timestamp(std::chrono::steady_clock::now()) {}
+        
+        CacheEntry(std::vector<SyntaxStyle> s) 
+            : styles(std::move(s)), 
+              timestamp(std::chrono::steady_clock::now()) {}
+    };
+    
     // Set the active highlighter
-    void setHighlighter(SyntaxHighlighter* highlighter);
+    void setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter);
     
     // Get the current highlighter
-    SyntaxHighlighter* getHighlighter() const;
+    std::shared_ptr<SyntaxHighlighter> getHighlighter() const;
     
     // Enable or disable syntax highlighting
     void setEnabled(bool enabled);
@@ -37,7 +62,7 @@ public:
     // Check if syntax highlighting is enabled
     bool isEnabled() const;
     
-    // Set the buffer to highlight
+    // Set the buffer to highlight (still using non-owning pointer as buffer is owned elsewhere)
     void setBuffer(const TextBuffer* buffer);
     
     // Get highlighting styles for a range of lines (const version - only returns cached styles)
@@ -71,7 +96,7 @@ public:
     size_t getContextLines() const;
     
 private:
-    void invalidateAllLines_nolock(); // Added for internal use
+    void invalidateAllLines_nolock(); // Internal use without locking
     
     // Highlight a single line and store in cache
     void highlightLine(size_t line);
@@ -91,19 +116,24 @@ private:
     
     // Clean up old cache entries to manage memory
     void cleanupCache();
+    
+    // Thread-safe access to buffer_
+    const TextBuffer* getBuffer() const;
 
 private:
-    // The buffer to highlight
-    const TextBuffer* buffer_;
+    // The buffer to highlight - non-owning pointer
+    std::atomic<const TextBuffer*> buffer_{nullptr};
     
-    // The active highlighter
-    SyntaxHighlighter* highlighter_;
+    // The active highlighter - using shared_ptr for safer ownership
+    std::shared_ptr<std::atomic<SyntaxHighlighter*>> highlighter_{
+        std::make_shared<std::atomic<SyntaxHighlighter*>>(nullptr)
+    };
     
-    // Is syntax highlighting enabled
-    bool enabled_;
+    // Is syntax highlighting enabled - use atomic for thread safety
+    std::atomic<bool> enabled_{true};
     
     // Highlighted styles cache
-    std::vector<std::vector<SyntaxStyle>> cachedStyles_;
+    std::vector<std::shared_ptr<CacheEntry>> cachedStyles_;
     
     // Set of lines that need to be rehighlighted
     std::unordered_set<size_t> invalidatedLines_;
@@ -112,17 +142,17 @@ private:
     std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineTimestamps_;
     
     // The current visible range
-    size_t visibleStartLine_;
-    size_t visibleEndLine_;
+    std::atomic<size_t> visibleStartLine_{0};
+    std::atomic<size_t> visibleEndLine_{0};
     
     // Highlighting timeout in milliseconds
-    size_t highlightingTimeoutMs_;
+    std::atomic<size_t> highlightingTimeoutMs_{DEFAULT_HIGHLIGHTING_TIMEOUT_MS};
     
     // Number of context lines to highlight around visible area
-    size_t contextLines_;
+    std::atomic<size_t> contextLines_{DEFAULT_CONTEXT_LINES};
     
-    // Mutex for thread safety
-    mutable std::mutex mutex_;
+    // Mutex for thread safety - using shared_mutex for better read concurrency
+    mutable std::shared_mutex mutex_;
 };
 
 #endif // SYNTAX_HIGHLIGHTING_MANAGER_H 

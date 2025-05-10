@@ -5,8 +5,14 @@
 #include <fstream>   // For std::ofstream and std::ifstream
 
 TextBuffer::TextBuffer() {
-    // Constructor: Initialize with an empty line or leave completely empty
-    // lines_.emplace_back(""); // Option: start with one empty line
+    clear(true); // Start with one empty line
+}
+
+void TextBuffer::clear(bool keepEmptyLine) {
+    lines_.clear();
+    if (keepEmptyLine) {
+        lines_.emplace_back(""); // Add empty line only if requested
+    }
 }
 
 void TextBuffer::addLine(const std::string& line) {
@@ -15,9 +21,6 @@ void TextBuffer::addLine(const std::string& line) {
 
 void TextBuffer::insertLine(size_t index, const std::string& line) {
     if (index > lines_.size()) {
-        // If index is out of bounds (beyond one past the end), 
-        // one could throw or adjust to append.
-        // For now, let's be strict like std::vector::insert.
         throw std::out_of_range("Index out of range for insertLine");
     }
     lines_.insert(lines_.begin() + index, line);
@@ -27,6 +30,12 @@ void TextBuffer::deleteLine(size_t index) {
     if (index >= lines_.size()) {
         throw std::out_of_range("Index out of range for deleteLine");
     }
+    
+    // Prevent deleting the only line in the buffer
+    if (lines_.size() == 1) {
+        throw std::runtime_error("Cannot delete the only line in the buffer");
+    }
+    
     lines_.erase(lines_.begin() + index);
 }
 
@@ -141,10 +150,18 @@ void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
             // Caller might need to adjust cursor to previous line, last column
         }
     } else if (colIndex <= line.length()) {
-        // Normal backspace within a line
-        line.erase(colIndex - 1, 1);
+        // Normal backspace within a line - delete the character at colIndex-1
+        // Only erase if there's something to erase and we're not at position 0
+        if (colIndex > 0 && colIndex <= line.length() && line.length() > 0) {
+            // Position colIndex refers to the cursor position, which is AFTER the character
+            // to be deleted by backspace. So we delete the character at colIndex-1.
+            line.erase(colIndex - 1, 1);
+        }
     } else {
-        throw std::out_of_range("Column index out of range for deleteChar");
+        // If colIndex is beyond line length, treat as backspace at the end of the line
+        if (line.length() > 0) {
+            line.erase(line.length() - 1, 1);
+        }
     }
 }
 
@@ -155,11 +172,18 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     
     std::string& line = lines_[lineIndex];
     
+    // Limit colIndex to line.length() for safety
+    if (colIndex > line.length()) {
+        colIndex = line.length();  // Clamp to end of line
+    }
+    
     if (colIndex < line.length()) {
-        // Normal delete within a line
+        // Normal delete within a line - delete the character AT the cursor position
+        // This is different from backspace which deletes the character BEFORE the cursor
         line.erase(colIndex, 1);
     } else if (lineIndex < lines_.size() - 1) {
         // Delete at end of line - join with next line
+        // This happens when cursor is at the very end of a line and Delete is pressed
         line += lines_[lineIndex + 1];
         lines_.erase(lines_.begin() + lineIndex + 1);
     }
@@ -204,7 +228,7 @@ void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::stri
     std::string& line = lines_[lineIndex];
     
     if (colIndex > line.length()) {
-        throw std::out_of_range("Column index out of range for insertString");
+        colIndex = line.length();  // Limit to end of line
     }
     
     line.insert(colIndex, text);
@@ -230,6 +254,29 @@ size_t TextBuffer::lineLength(size_t lineIndex) const {
     }
     
     return lines_[lineIndex].length();
+}
+
+std::string& TextBuffer::getLine(size_t lineIndex) {
+    if (lineIndex >= lines_.size()) {
+        // Or throw std::out_of_range. For now, return last line or a static empty string to avoid crash.
+        // This case should ideally be prevented by callers checking lineCount().
+        static std::string emptyOnError; // Not ideal, but avoids immediate crash on bad index
+        // Consider throwing an exception for better error handling:
+        // throw std::out_of_range("TextBuffer::getLine non-const: lineIndex out of bounds");
+        if (lines_.empty()) return emptyOnError; // Should not happen if constructor ensures one line
+        return lines_.back(); // Fallback, less than ideal
+    }
+    return lines_[lineIndex];
+}
+
+void TextBuffer::setLine(size_t lineIndex, const std::string& text) {
+    if (lineIndex < lines_.size()) {
+        lines_[lineIndex] = text;
+    } else {
+        // Or throw std::out_of_range or handle error appropriately
+        // For now, if lineIndex is out of bounds, this does nothing.
+        // Consider adding lines if lineIndex == lines_.size()
+    }
 }
 
 // Optional: Implementation for a friend ostream operator if you prefer `std::cout << buffer;`
