@@ -1,123 +1,69 @@
-# Future Improvements for Text Editor
+# Potential Future Enhancements
 
-This document outlines potential future improvements for the text editor codebase, focusing on further enhancing stability, performance, and maintainability.
+This document outlines potential high-level directions for future development of the text editor, focusing on significant enhancements to its capabilities, performance, and maintainability.
 
-## Code Quality Enhancements
+## I. Core Editor & Feature Development
 
-### 1. Fix Remaining Compiler Warnings
+1.  **Advanced Text Editing Features:**
+    *   Sophisticated cursor behaviors (e.g., multiple cursors, rectangular selection).
+    *   Code-aware navigation (e.g., jump to definition, find references - potentially via LSP).
+    *   Advanced search/replace (e.g., regex lookahead/lookbehind, multi-file search).
 
-- Address `lineIndex` unused parameter in `SyntaxHighlighter.h` - consider removing it if not needed or document why it's necessary
-- Fix type conversion warnings in `std::transform` calls by using appropriate types
-- Fix unused variable warnings for `currentPos` in `Editor.cpp`
-- Resolve DLL linkage inconsistency for `SetThreadDescription` in `DeadlockTest.cpp`
+2.  **Plugin Architecture for Extensibility:**
+    *   Design and implement a robust plugin system to allow third-party extensions (e.g., new language support, linters, formatters, custom tools).
+    *   Requires a stable plugin API, discovery mechanism, and potentially sandboxing.
 
-### 2. Complete Smart Pointer Migration
+3.  **Enhanced Syntax Highlighting Engine:**
+    *   Support for a wider range of programming languages (potentially via TextMate grammars or similar).
+    *   Semantic highlighting (leveraging code analysis for more accurate tokenization).
+    *   User-customizable themes and highlighting rules.
 
-- Finish converting remaining raw pointers to appropriate smart pointers
-- Review ownership semantics throughout the codebase
-- Consider using `std::weak_ptr` for non-owning references to objects with shared ownership
-- Document ownership patterns clearly in class documentation
+4.  **Basic Graphical User Interface (GUI):**
+    *   Develop a simple, cross-platform GUI wrapper for the editor core.
+    *   Focus on essential UI elements: text area, menus, file dialogs, status bar.
 
-### 3. Improved Documentation
+5.  **Workspace & Project Management:**
+    *   Ability to open and manage folders as projects.
+    *   Basic project-wide operations (e.g., search in project files).
 
-- Add comprehensive API documentation for all public methods
-- Include thread-safety annotations for all methods
-- Document preconditions and postconditions for complex operations
-- Add architectural documentation explaining component interactions
+## II. Performance & Stability
 
-## Performance Improvements
+1.  **Advanced Performance Optimizations:**
+    *   Explore lock-free algorithms or RCU (Read-Copy-Update) for critical data structures if profiling indicates contention.
+    *   Memory optimization: custom allocators, object pooling for high-frequency objects, `std::string_view` adoption.
+    *   Parallelize suitable operations (e.g., syntax highlighting of different regions, file loading/parsing).
 
-### 1. Lock-Free Algorithms
+2.  **Comprehensive Testing Strategies:**
+    *   Implement property-based testing for core algorithms.
+    *   Introduce fuzz testing to discover edge cases in parsing and input handling.
+    *   Develop automated memory leak detection for long-running sessions.
 
-- Identify additional opportunities for lock-free operations
-- Replace mutex-protected data structures with lock-free alternatives
-- Consider using lock-free containers from third-party libraries for hot paths
-- Replace reader-writer locks with RCU (Read-Copy-Update) for read-heavy workloads
+3.  **Robust Error Recovery & Persistence:**
+    *   Implement state recovery mechanisms for critical operations.
+    *   Automatic backups during editing sessions and crash recovery for unsaved changes.
 
-### 2. Memory Optimization
+4.  **Integrated Performance Profiling & Diagnostics:**
+    *   Embed instrumentation for performance measurement of key operations.
+    *   Develop tools or visualizations for performance data and runtime diagnostics.
+    *   Establish performance regression tests and configurable performance budgets.
 
-- Profile memory usage and optimize cache entry lifetime
-- Consider custom allocators for frequently allocated objects
-- Implement object pooling for frequently created/destroyed objects
-- Review string copy operations and replace with string_view where appropriate
+## III. Code Quality, Build System, & Developer Experience
 
-### 3. Syntax Highlighting Optimization
+1.  **Continuous Code Quality & Modernization:**
+    *   Proactively address compiler warnings and static analysis issues.
+    *   Regularly review and refactor for `const`-correctness, smart pointer usage, and modern C++ idioms.
+    *   Maintain comprehensive API documentation (Doxygen or similar) and architectural diagrams.
 
-- Implement incremental highlighting for large files
-- Consider parallel highlighting for multiple regions
-- Add background thread for highlighting operations
-- Implement a more sophisticated cache eviction policy based on access patterns
+2.  **Build System & Dependency Management Modernization:**
+    *   Ensure CMake practices remain current (e.g., target-based properties, modern find_package usage).
+    *   Streamline dependency management (e.g., using CMake's FetchContent or a package manager like Conan/vcpkg if external dependencies grow).
+    *   Full sanitizer support (ASan, TSan, UBSan, MSan) across all relevant build configurations and platforms.
 
-## Stability Enhancements
+3.  **Enhanced CI/CD Pipeline:**
+    *   Automated performance benchmarking within CI.
+    *   Integration of more advanced static analysis tools (e.g., Clang-Tidy, SonarQube) in the CI pipeline.
+    *   Automated release packaging and deployment processes.
 
-### 1. Advanced Testing
-
-- Implement stress tests for large files
-- Add fuzzing tests to find edge cases
-- Implement property-based testing for core algorithms
-- Develop memory leak tests for long-running sessions
-
-### 2. Improved Error Recovery
-
-- Add state recovery mechanisms for critical operations
-- Implement automatic backups during editing
-- Add crash recovery system for unsaved changes
-- Develop diagnostics system for capturing error state
-
-### 3. Logging and Monitoring
-
-- Implement structured logging throughout the codebase
-- Add runtime performance metrics collection
-- Create tooling for analyzing error logs
-- Implement runtime assertion system for invariant checking
-
-## Feature Improvements
-
-### 1. Plugin Architecture
-
-- Design a plugin system for extensibility
-- Create a clean API for syntax highlighter extensions
-- Implement a plugin manager with dynamic loading
-- Add sandboxing for third-party plugins
-
-### 2. Enhanced Syntax Highlighting
-
-- Support for more programming languages
-- Add semantic highlighting based on code analysis
-- Implement customizable highlighting themes
-- Add syntax highlighting rules editor
-
-### 3. Performance Profiling
-
-- Add instrumentation for performance measurement
-- Implement visualization of performance data
-- Create performance regression tests
-- Add configurable performance budgets for operations
-
-## Build System Improvements
-
-### 1. CMake Modernization
-
-- Migrate to modern CMake practices
-- Add proper dependency management
-- Implement consistent build options across platforms
-- Add sanitizer support for all supported platforms
-
-### 2. CI/CD Integration
-
-- Set up continuous integration for automatic testing
-- Implement automated performance benchmarking
-- Add static analysis to CI pipeline
-- Create automated release process
-
-## Next Steps
-
-The following items should be prioritized for the next development cycle:
-
-1. Address remaining compiler warnings
-2. Complete integration of standardized error handling throughout the codebase
-3. Improve test coverage, focusing on edge cases
-4. Optimize syntax highlighting performance for large files
-5. Add structured logging for better diagnostics
-
-These improvements will further enhance the robustness, maintainability, and performance of the text editor. 
+4.  **Structured Logging & Monitoring:**
+    *   Implement a comprehensive structured logging framework throughout the codebase.
+    *   Collect runtime performance metrics for monitoring and diagnostics.

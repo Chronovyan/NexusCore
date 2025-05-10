@@ -1,127 +1,136 @@
-# Thread Safety Best Practices in C++
+# Thread Safety Patterns & Practices (C++17)
 
-This document outlines the thread safety patterns and best practices implemented in our text editor project.
+This document outlines key thread safety patterns and best practices implemented in the project, targeting an expert C++ audience.
 
 ## Core Thread Safety Patterns
 
-### 1. Reader-Writer Lock Pattern
+### 1. Reader-Writer Locks (`std::shared_mutex`)
 
-We've implemented a reader-writer lock pattern using `std::shared_mutex` to allow multiple concurrent readers while ensuring exclusive write access:
+Utilize `std::shared_mutex` for resources where read operations are frequent and write operations are less common, allowing multiple concurrent readers but exclusive writer access.
 
 ```cpp
-// Thread-safe registry access with read-write lock for better concurrency
-mutable std::shared_mutex registry_mutex_;
-
-// Shared (read) lock - allows multiple concurrent readers
-std::shared_lock<std::shared_mutex> lock(mutex_);  
-
-// Exclusive (write) lock - only one writer at a time
-std::unique_lock<std::shared_mutex> lock(mutex_);
+// Example: Protecting a shared resource
+class SharedResource {
+    mutable std::shared_mutex m_mutex; 
+    Data m_data;
+public:
+    Data read() const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return m_data;
+    }
+    void write(const Data& new_data) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        m_data = new_data;
+    }
+};
 ```
 
-This pattern significantly improves concurrency when read operations are more frequent than write operations.
+### 2. Atomic Operations & Memory Ordering
 
-### 2. Atomic Operations with Memory Ordering
-
-We use atomic variables with explicit memory ordering semantics to ensure thread-safe access without full mutex locking:
+Use `std::atomic` for simple data types requiring thread-safe modifications without mutexes. Specify memory ordering explicitly where necessary (default is `std::memory_order_seq_cst`).
 
 ```cpp
-// Atomic storage with release ordering (makes writes visible to other threads)
-highlighter_.store(highlighter, std::memory_order_release);
+std::atomic<bool> data_ready{false};
+std::atomic<int> counter{0};
 
-// Atomic load with acquire ordering (ensures visibility of previous writes)
-bool enabled = enabled_.load(std::memory_order_acquire);
-```
+// Example: Signaling data readiness
+data_ready.store(true, std::memory_order_release); // Ensure preceding writes are visible
 
-Key memory ordering semantics:
-- `memory_order_acquire`: Ensures this thread sees all memory operations that happened-before a store
-- `memory_order_release`: Ensures all previous memory operations in this thread are visible after this operation
-- `memory_order_seq_cst`: Full memory fence for complete ordering (most expensive)
-
-### 3. Meyer's Singleton Pattern
-
-For thread-safe initialization of singletons, we use Scott Meyer's Singleton pattern which is guaranteed to be thread-safe in C++11 and later:
-
-```cpp
-static SyntaxHighlighterRegistry& getInstance() {
-    // C++11 guarantees thread-safe initialization of static locals
-    static SyntaxHighlighterRegistry instance;
-    std::atomic_thread_fence(std::memory_order_acquire);
-    return instance;
-}
-```
-
-### 4. Non-Recursive Locks & Lock-Free Helper Methods
-
-To prevent deadlocks from reentrant calls, we create separate "no-lock" versions of methods:
-
-```cpp
-// Public method acquires a lock
-void invalidateAllLines() {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    invalidateAllLines_nolock();  // Calls no-lock version
+// Example: Checking data readiness
+if (data_ready.load(std::memory_order_acquire)) { // Ensure subsequent reads see the data
+    // ... process data ...
 }
 
-// Private helper doesn't try to acquire lock
-void invalidateAllLines_nolock() {
-    // Implementation without locking
-}
+// Key memory orders:
+// - std::memory_order_relaxed: No synchronization or ordering constraints.
+// - std::memory_order_acquire: Prevents reads/writes from being reordered before this load.
+// - std::memory_order_release: Prevents reads/writes from being reordered after this store.
+// - std::memory_order_acq_rel: Combines acquire and release semantics (for RMW operations).
+// - std::memory_order_seq_cst: Strongest, guarantees sequential consistency.
 ```
 
-### 5. Thread-Local Storage
+### 3. Thread-Safe Singleton Initialization (Meyer's Singleton)
 
-For thread-specific data that shouldn't be shared, we use thread-local storage:
+C++11 and later guarantee thread-safe initialization of function-local static variables.
 
 ```cpp
-// Thread-local random number generator
-thread_local std::mt19937 rng{std::random_device{}()};
+class SingletonService {
+public:
+    static SingletonService& instance() {
+        static SingletonService service_instance; // Thread-safe initialization
+        return service_instance;
+    }
+private:
+    SingletonService() = default;
+    // ... other members ...
+};
 ```
 
-### 6. Robust Exception Handling
+### 4. Non-Recursive Locking Pattern
 
-We wrap all thread-sensitive code in try-catch blocks to prevent exceptions from escaping threads:
+To prevent deadlocks from re-entrant calls on the same mutex, use private `_nolock` helper methods that assume the lock is already held by the public caller.
 
 ```cpp
-try {
-    // Thread-sensitive operations
-} catch (const std::exception& ex) {
-    logCriticalError("operationName", ex.what());
-    // Provide sensible fallback
-} catch (...) {
-    logCriticalError("operationName", "Unknown exception");
-    // Provide sensible fallback
+class TaskManager {
+    std::mutex m_task_mutex;
+    void performTask_nolock(Task& task);
+public:
+    void processTask(Task& task) {
+        std::lock_guard<std::mutex> lock(m_task_mutex);
+        // ... preparation ...
+        performTask_nolock(task);
+        // ... cleanup ...
+    }
+};
+```
+
+### 5. Thread-Local Storage (`thread_local`)
+
+For data that must be unique to each thread (e.g., per-thread caches, random number generators).
+
+```cpp
+// Example: Thread-local buffer or RNG
+thread_local std::vector<char> thread_buffer(1024);
+thread_local std::mt19937 thread_rng{std::random_device{}()};
+```
+
+### 6. Exception Safety in Threads
+
+Ensure exceptions do not propagate out of a thread's top-level function. Catch exceptions, log them, and handle them appropriately (e.g., terminate thread, signal error).
+
+```cpp
+void thread_worker_function() {
+    try {
+        // ... thread operations ...
+    } catch (const std::exception& e) {
+        // Log error: e.what(), thread ID, etc.
+        // Perform any necessary cleanup or signaling
+    } catch (...) {
+        // Log unknown error
+    }
 }
 ```
 
 ## Testing Thread Safety
 
-We've implemented a comprehensive testing approach:
+- **Stress Testing**: High iteration counts, concurrent operations on shared resources.
+- **Deadlock Detection**: Specific tests designed to provoke deadlocks (e.g., `DeadlockTest.cpp`).
+- **Sanitizers**: Utilize ThreadSanitizer (TSan) in builds.
+- **Resource Limiting Tests**: Ensure behavior under constrained resources.
+- **Coordination Primitive Tests**: Verify correctness of atomics, condition variables, etc.
 
-1. **Concurrent Stress Testing**: Creating multiple threads simultaneously to increase interaction likelihood
-2. **Resource Limiting**: Preventing too many concurrent editors to avoid resource exhaustion
-3. **Timeout Detection**: Monitoring for deadlocks with explicit timeouts
-4. **Atomic Coordination**: Using atomic variables for thread coordination
-5. **Condition Variables**: For thread synchronization and signaling
+## Common Pitfalls & Considerations
 
-## Common Pitfalls
-
-1. **Race Conditions**: Avoid accessing shared data without proper synchronization
-2. **Recursive Mutex Issues**: Be aware of reentrant code that could cause deadlocks
-3. **Order of Lock Acquisition**: Always acquire locks in the same order to prevent deadlocks
-4. **Atomic vs. Non-atomic**: Don't mix atomic and non-atomic operations on the same data
-5. **Memory Ordering**: Be explicit about memory ordering requirements
-
-## Performance Considerations
-
-1. **Fine-grained Locking**: Lock only what needs protection, not entire objects
-2. **Reader Preference**: Use reader-writer locks when reads are more common than writes
-3. **Lock-free When Possible**: Use atomic operations for simple state
-4. **Minimize Critical Sections**: Keep locked code sections as small as possible
-5. **Atomic vs. Mutex**: Atomics are faster but offer less protection than mutexes
+- **Race Conditions**: Always protect shared, mutable data.
+- **Deadlocks**: Consistent lock acquisition order; `std::scoped_lock` for multiple mutexes.
+- **Livelocks**: Threads active but not making progress.
+- **Data Races vs. Atomicity**: `std::atomic` guarantees freedom from data races for the atomic variable itself, not for larger operations.
+- **False Sharing**: Cache line contention with unrelated atomic variables.
+- **Memory Ordering**: Default to `seq_cst` if unsure, but understand costs. Profile for `relaxed` or `acq/rel` benefits.
+- **Minimize Critical Sections**: Keep code under locks brief.
 
 ## Further Reading
 
-1. C++ Memory Model and Atomic Operations: [cppreference.com/w/cpp/atomic](https://en.cppreference.com/w/cpp/atomic)
-2. C++ Thread Support Library: [cppreference.com/w/cpp/thread](https://en.cppreference.com/w/cpp/thread)
-3. "C++ Concurrency in Action" by Anthony Williams
-4. "Effective Modern C++" by Scott Meyers 
+1.  C++ Memory Model and Atomics: [cppreference.com/w/cpp/atomic](https://en.cppreference.com/w/cpp/atomic)
+2.  C++ Thread Support Library: [cppreference.com/w/cpp/thread](https://en.cppreference.com/w/cpp/thread)
+3.  "C++ Concurrency in Action" by Anthony Williams 

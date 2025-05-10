@@ -1,152 +1,93 @@
-# TextEditor
+# TextEditor (C++17)
 
-A C++17 text editor implementation with support for basic text editing operations.
+A command-line C++17 text editor focused on stability and core editing features.
 
-## Features
+## Key Features & Status
 
-- Text buffer management with line-based operations
-- Cursor movement (basic and advanced navigation)
-- Text insertion, deletion, and manipulation
-- Selection support with clipboard operations (copy, cut, paste)
-- Word-based operations
-- Search and replace functionality
-- File I/O (save/load)
-- Command-line interface
-- Automated testing framework
+- ✅ Core text buffer, cursor navigation, text manipulation (insert/delete)
+- ✅ Selection, clipboard (copy/cut/paste), word operations
+- ✅ File I/O (save/load)
+- ✅ Search & Replace
+- ✅ Automated testing framework (`ctest` / batch scripts)
+- ⏳ Syntax highlighting (Planned)
+- ⏳ Basic Graphical UI (Planned)
 
-## Current Implementation Status
-
-- ✅ Core text buffer implementation
-- ✅ Basic cursor navigation
-- ✅ Advanced cursor movement (line start/end, word jumping)
-- ✅ Text selection and clipboard operations
-- ✅ File I/O operations
-- ✅ Search and replace functionality
-- ✅ Automated testing
-- ⏳ Syntax highlighting (planned)
-- ⏳ Graphical UI (planned)
-
-## Building from Source
+## Building & Running
 
 ### Prerequisites
 
 - C++17 compatible compiler (MSVC, GCC, Clang)
+- CMake (version 3.10+ recommended)
 
 ### Build Instructions
 
-Using the included batch build system:
+Primary method (CMake):
+```bash
+# From project root
+mkdir build && cd build
+cmake ..
+cmake --build . # Or: make / msbuild TextEditor.sln (depending on generator)
+# Executable typically in: build/src/TextEditor, build/bin/TextEditor, or build/TextEditor
+```
 
+Alternative (Windows Batch for building and testing):
+```batch
+REM From project root - ensures clean build and runs tests
+build_run_test.bat 
+REM Executable in: bin/TextEditor.exe (if produced by this script)
 ```
-build.bat
-```
+For just building with batch scripts, see `build.bat`.
 
 ### Running Tests
 
-The project includes an automated test suite to verify functionality:
-
-```
-cd tests
-build_and_run_tests.bat
+Using CTest (after CMake build, from `build` directory):
+```bash
+ctest -C Debug # Or Release, etc.
 ```
 
-## Usage
+Alternative (Windows Batch for unit tests):
+```batch
+REM From project root
+build_and_run_unit_tests.bat
+```
 
-The text editor currently provides a command-line interface with the following commands:
+## Basic Usage (CLI)
 
-### Basic Buffer Operations
-| Command | Description |
-|---------|-------------|
-| `add <text>` | Adds text as a new line at the end |
-| `insert <index> <text>` | Inserts text at the given 0-based line index |
-| `delete <index>` | Deletes the line at the given 0-based index |
-| `replace <index> <text>` | Replaces the line at the given 0-based index |
-| `view` | Prints the entire buffer with cursor position |
-| `lines` | Shows the current number of lines |
-| `clear` | Clears all lines from the buffer |
+Launch the editor from its build location (e.g., `./build/src/TextEditor` or `bin\\TextEditor.exe`).
+It provides an interactive command prompt. Key commands:
 
-### Cursor Movement
-| Command | Description |
-|---------|-------------|
-| `cursor` | Shows current cursor position |
-| `setcursor <line> <col>` | Sets cursor to specified position |
-| `cu` | Move cursor up |
-| `cd` | Move cursor down |
-| `cl` | Move cursor left |
-| `cr` | Move cursor right |
-| `home` | Move cursor to start of line |
-| `end` | Move cursor to end of line |
-| `top` | Move cursor to start of buffer |
-| `bottom` | Move cursor to end of buffer |
-| `nextword` | Move cursor to next word |
-| `prevword` | Move cursor to previous word |
+| Command                                      | Description                                      |
+| -------------------------------------------- | ------------------------------------------------ |
+| `load <filename>`                            | Load file into buffer.                           |
+| `save <filename>`                            | Save buffer to file.                             |
+| `add <text>`                                 | Add text as a new line at the end.               |
+| `insert <line_idx> <text>`                   | Insert text at specified 0-based line index.     |
+| `delete <line_idx>`                          | Delete line at 0-based index.                    |
+| `view`                                       | Print buffer with cursor.                        |
+| `setcursor <line> <col>`                     | Set cursor position.                             |
+| `type <text>`                                | Insert text at cursor.                           |
+| `search <term>` / `find <term>`              | Find text.                                       |
+| `replace <search_term> <replace_text>`       | Find and replace first occurrence.               |
+| `replaceall <search_term> <replace_text>`    | Replace all occurrences.                         |
+| `help`                                       | Show all commands.                               |
+| `quit` / `exit`                              | Exit the editor.                                 |
 
-### Text Editing
-| Command | Description |
-|---------|-------------|
-| `type <text>` | Inserts text at the cursor position |
-| `backspace` | Deletes the character before the cursor |
-| `del` | Deletes the character at the cursor position |
-| `newline` | Inserts a line break at the cursor position |
-| `join` | Joins the current line with the next line |
-| `delword` | Deletes word at cursor position |
+(Use the `help` command for a comprehensive list of all available operations.)
 
-### Selection and Clipboard
-| Command | Description |
-|---------|-------------|
-| `selstart` | Starts text selection at current cursor position |
-| `selend` | Ends text selection at current cursor position |
-| `selclear` | Clears current selection |
-| `selshow` | Shows selected text |
-| `selword` | Selects word at cursor position |
-| `cut` | Cuts selected text to clipboard |
-| `copy` | Copies selected text to clipboard |
-| `paste` | Pastes clipboard content at cursor position |
+## Project Documentation
 
-### Search and Replace
-| Command | Description |
-|---------|-------------|
-| `search <text>` or `find <text>` | Search for text in the document |
-| `searchnext` or `findnext` | Move to the next occurrence of the search term |
-| `replace <search_term> <replacement_text>` | Find and replace the first occurrence |
-| `replaceall <search_term> <replacement_text>` | Replace all occurrences in the document |
-
-### File Operations
-| Command | Description |
-|---------|-------------|
-| `save <filename>` | Saves the buffer content to a file |
-| `load <filename>` | Loads content from a file |
-
-### Miscellaneous
-| Command | Description |
-|---------|-------------|
-| `help` | Shows help message |
-| `quit` or `exit` | Exits the editor |
-
-## Testing
-
-The project includes a simple testing framework that can be used to verify the functionality of the editor:
-
-### Test Framework Features
-
-- Automated test execution for all editor operations
-- Input/output simulation to test command behavior
-- Editor state checkpoints for comprehensive validation
-- Detailed test reporting
-
-### Implemented Tests
-
-- Basic line operations (add, insert, delete, replace)
-- Cursor movement (navigation, positioning)
-- Text editing (typing, deletion, line manipulation)
-- Selection and clipboard operations (copy, cut, paste)
-- Search and replace operations (find, replace, replace all)
-
-## Documentation
-
-Additional documentation is available in the `docs` directory:
-
-- [Search and Replace Feature](docs/SearchFeature.md)
+- **Core Principles & Practices:**
+  - [`STABILITY.MD`](STABILITY.md): Editor stability principles.
+  - [`THREAD_SAFETY.MD`](THREAD_SAFETY.md): Thread safety patterns.
+  - [`REFINEMENTS.MD`](REFINEMENTS.md): C++ code refinements and best practices.
+- **Development & Progress:**
+  - [`ROADMAP.MD`](ROADMAP.md): Project development roadmap.
+  - [`FUTURE_IMPROVEMENTS.MD`](FUTURE_IMPROVEMENTS.md): Ideas for future enhancements.
+  - [`PROGRESS.MD`](PROGRESS.md): Key milestones achieved.
+- **Features:**
+  - [`docs/SearchFeature.md`](docs/SearchFeature.md): User guide for search/replace.
+  - [`docs/SearchImplementationSummary.md`](docs/SearchImplementationSummary.md): Technical details of search.
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
