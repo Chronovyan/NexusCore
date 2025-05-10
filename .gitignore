@@ -9,6 +9,7 @@
 *.o
 *.a
 *.lib
+*.pdb
 
 # Visual Studio specific
 *.suo
@@ -35,6 +36,7 @@ Release/
 x64/
 x86/
 build/
+tmp/
 
 # CMake build
 CMakeFiles/

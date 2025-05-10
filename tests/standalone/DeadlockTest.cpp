@@ -248,35 +248,31 @@ int main() {
                     // If timeout occurred, threads may be deadlocked
                     t.detach(); // Just detach them in this test
                 } else {
-                    // Normal termination - join threads
                     t.join();
                 }
             }
         }
         
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        
-        std::cout << std::endl;
-        std::cout << "Test completed in " << duration.count() << "ms" << std::endl;
-        std::cout << "Editors successfully created: " << editors_created.load(std::memory_order_acquire) << std::endl;
-        std::cout << "Threads completed: " << threads_completed.load(std::memory_order_acquire) 
-                  << " of " << NUM_THREADS << std::endl;
-        
         if (test_failed.load(std::memory_order_acquire)) {
-            std::cout << "TEST FAILED: Issues detected during test!" << std::endl;
+            std::cout << std::endl << "!!! Test FAILED (deadlock or other concurrency issue detected) !!!" << std::endl;
             return 1;
-        } else {
-            std::cout << "TEST PASSED: No deadlocks or exceptions detected." << std::endl;
+        } else if (timeout_occurred) {
+             std::cout << std::endl << "!!! Test FAILED (timeout) !!!" << std::endl;
+            return 1;
+        }
+        else {
+            std::cout << std::endl << "All threads completed successfully." << std::endl;
+            std::cout << "Total editors created: " << editors_created.load() << std::endl;
+            std::cout << "Test PASSED" << std::endl;
             return 0;
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "Test failed with exception: " << e.what() << std::endl;
+        std::cerr << "Main thread caught exception: " << e.what() << std::endl;
         return 1;
     }
     catch (...) {
-        std::cerr << "Test failed with unknown exception." << std::endl;
+        std::cerr << "Main thread caught unknown exception." << std::endl;
         return 1;
     }
 } 
