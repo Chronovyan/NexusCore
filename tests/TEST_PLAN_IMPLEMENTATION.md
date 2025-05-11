@@ -99,10 +99,12 @@ The test consolidation effort has made significant progress with the following a
    - `memory_leak_test.cpp`
    - `editor_file_io_test.cpp`
 
-2. **Recently Migrated Command Tests**
+2. **Migrated Command Tests**
    - `command_join_lines_test.cpp` - Tests for JoinLinesCommand
    - `command_insert_text_test.cpp` - Tests for InsertTextCommand
    - `command_delete_char_test.cpp` - Tests for DeleteCharCommand
+   - `command_replace_test.cpp` - Tests for ReplaceCommand
+   - `command_new_line_test.cpp` - Tests for NewLineCommand
 
 3. **Migration Strategy Implementation**
    - Created consistent test fixture patterns for editor initialization
@@ -111,8 +113,6 @@ The test consolidation effort has made significant progress with the following a
    - Ensured proper test isolation with SetUp/TearDown methods
 
 4. **Next Commands for Migration**
-   - ReplaceCommand
-   - NewLineCommand
    - DeleteLineCommand
    - Copy/Paste/Cut Commands
    - Search/Replace Commands
