@@ -105,6 +105,7 @@ The test consolidation effort has made significant progress with the following a
    - `command_delete_char_test.cpp` - Tests for DeleteCharCommand
    - `command_replace_test.cpp` - Tests for ReplaceCommand
    - `command_new_line_test.cpp` - Tests for NewLineCommand
+   - `command_delete_line_test.cpp` - Tests for DeleteLineCommand
 
 3. **Migration Strategy Implementation**
    - Created consistent test fixture patterns for editor initialization
@@ -113,7 +114,6 @@ The test consolidation effort has made significant progress with the following a
    - Ensured proper test isolation with SetUp/TearDown methods
 
 4. **Next Commands for Migration**
-   - DeleteLineCommand
    - Copy/Paste/Cut Commands
    - Search/Replace Commands
 
