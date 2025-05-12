@@ -1001,4 +1001,134 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
 
     EXPECT_EQ(errors.load(), 0);
     manager_.setBuffer(&text_buffer_);
+}
+
+// A highlighter that produces distinct styles based on its instance ID
+class DistinctStyleHighlighter : public SyntaxHighlighter {
+public:
+    explicit DistinctStyleHighlighter(int id) : id_(id) {}
+
+    std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t) const override {
+        auto styles = std::make_unique<std::vector<SyntaxStyle>>();
+        // Always apply a style, even for empty lines
+        SyntaxColor color = static_cast<SyntaxColor>((static_cast<int>(SyntaxColor::Keyword) + id_) % 
+                                                    (static_cast<int>(SyntaxColor::Operator) + 1));
+        styles->push_back(SyntaxStyle(0, std::max(size_t(1), line.length()), color));
+        return styles;
+    }
+
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override {
+        std::vector<std::vector<SyntaxStyle>> result;
+        result.reserve(buffer.lineCount());
+        for (size_t i = 0; i < buffer.lineCount(); ++i) {
+            const std::string& line = buffer.getLine(i);
+            std::vector<SyntaxStyle> lineStyles;
+            // Always apply a style, even for empty lines
+            SyntaxColor color = static_cast<SyntaxColor>((static_cast<int>(SyntaxColor::Keyword) + id_) % 
+                                                        (static_cast<int>(SyntaxColor::Operator) + 1));
+            lineStyles.push_back(SyntaxStyle(0, std::max(size_t(1), line.length()), color));
+            result.push_back(std::move(lineStyles));
+        }
+        return result;
+    }
+
+    std::vector<std::string> getSupportedExtensions() const override {
+        return {".test"};
+    }
+
+    std::string getLanguageName() const override {
+        return "TestLanguage" + std::to_string(id_);
+    }
+
+private:
+    int id_;
+};
+
+TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
+    const size_t NUM_READER_THREADS = 2;
+    const int OPERATIONS_PER_THREAD = 3;
+    const size_t BUFFER_LINE_COUNT = 5;
+
+    // Create a test buffer with known content
+    text_buffer_ = TextBuffer();
+    for (size_t i = 0; i < BUFFER_LINE_COUNT; ++i) {
+        text_buffer_.addLine("Line " + std::to_string(i));
+    }
+
+    // Create multiple distinct highlighters
+    auto highlighter1 = std::make_shared<DistinctStyleHighlighter>(1); // Will use color Keyword + 1
+    auto highlighter2 = std::make_shared<DistinctStyleHighlighter>(2); // Will use color Keyword + 2
+
+    manager_.setBuffer(&text_buffer_);
+    manager_.setHighlighter(highlighter1);
+    manager_.setEnabled(true);
+    manager_.invalidateAllLines();
+
+    std::atomic<bool> stop_flag(false);
+    std::vector<std::thread> threads;
+    std::atomic<int> errors(0);
+
+    // Writer thread that alternates between highlighters
+    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors, 
+                         highlighter1, highlighter2]() {
+        bool use_highlighter1 = false;
+        for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
+            try {
+                auto highlighter_to_set = use_highlighter1 ? highlighter1 : highlighter2;
+                manager_.setHighlighter(highlighter_to_set);
+                use_highlighter1 = !use_highlighter1;
+                std::this_thread::sleep_for(std::chrono::microseconds(70));
+            } catch (...) {
+                errors++;
+                break;
+            }
+        }
+    });
+
+    // Reader threads
+    for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
+        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+            for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
+                try {
+                    auto styles = manager_.getHighlightingStyles(0, 1);
+                    // Verify we got valid styles (not checking specific colors as they may change mid-read)
+                    if (styles.size() != 2) {
+                        errors++;
+                    }
+                    std::this_thread::sleep_for(std::chrono::microseconds(100));
+                } catch (...) {
+                    errors++;
+                    break;
+                }
+            }
+        });
+    }
+
+    // Let threads run for a short time
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    stop_flag.store(true);
+
+    // Wait for all threads
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    // Verify no errors occurred during concurrent operations
+    EXPECT_EQ(errors.load(), 0);
+
+    // Final verification - set a known highlighter and verify its output
+    manager_.setHighlighter(highlighter1);
+    manager_.invalidateAllLines();
+    auto final_styles = manager_.getHighlightingStyles(0, 0);
+    ASSERT_EQ(final_styles.size(), 1);
+    ASSERT_FALSE(final_styles[0].empty());
+    // Highlighter1 should produce styles with color = Keyword + 1
+    EXPECT_EQ(final_styles[0][0].color, 
+              static_cast<SyntaxColor>((static_cast<int>(SyntaxColor::Keyword) + 1) % 
+                                     (static_cast<int>(SyntaxColor::Operator) + 1)));
+
+    // Reset to default highlighter for cleanup
+    manager_.setHighlighter(mock_highlighter_);
 } 
