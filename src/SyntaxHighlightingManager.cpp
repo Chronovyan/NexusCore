@@ -5,6 +5,8 @@
 
 namespace {
     // New logger function using ErrorReporter
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-security"
     template<typename... Args>
     void logManagerMessage(EditorException::Severity severity, const char* location, const char* format, Args... args) {
         try {
@@ -38,6 +40,7 @@ namespace {
             std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: Unknown exception." << std::endl;
         }
     }
+#pragma clang diagnostic pop
 }
 
 SyntaxHighlightingManager::SyntaxHighlightingManager()
@@ -220,47 +223,78 @@ line, static_cast<const void*>(buffer), static_cast<void*>(highlighter), enabled
         return; // Caller should have ensured this.
     }
 
-    std::vector<SyntaxStyle> lineStyles;
+    // MAJOR SAFETY CHANGE: Create styles vector first, then only fill it if no exceptions occur
+    std::shared_ptr<CacheEntry> newEntry = std::make_shared<CacheEntry>();
     bool exception_during_highlight = false;
 
     try {
         const std::string& lineText = buffer->getLine(line);
         logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", "Highlighting line %zu text: \"%s\"", line, lineText.substr(0, 50).c_str());
-        lineStyles = highlighter->highlightLine(lineText, line);
-        logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", "Got %zu styles for line %zu.", lineStyles.size(), line);
-    } catch (const EditorException& ed_ex) {
-        ErrorReporter::logException(ed_ex);
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", "EditorException caught highlighting line %zu: %s", line, ed_ex.what());
-        exception_during_highlight = true;
-    } catch (const std::runtime_error& e) {
-        ErrorReporter::logError(std::string("Runtime error highlighting line ") + std::to_string(line) + ": " + e.what());
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", "Runtime error highlighting line %zu: %s", line, e.what());
-        exception_during_highlight = true;
+        
+        // CRITICAL CHANGE: Wrap in a try block that's entirely focused on the exception-prone call
+        std::unique_ptr<std::vector<SyntaxStyle>> stylesPtr;
+        
+        try {
+            // This is the ONLY call that might throw
+            stylesPtr = highlighter->highlightLine(lineText, line);
+        } catch (...) {
+            // Immediately mark as exception and don't rethrow
+            exception_during_highlight = true;
+            logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", 
+                             "Exception caught during highlightLine for line %zu", line);
+        }
+        
+        // Only attempt to use the result if we got one without exception
+        if (!exception_during_highlight && stylesPtr) {
+            newEntry->styles = std::move(*stylesPtr);
+            logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", 
+                              "Got %zu styles for line %zu.", newEntry->styles.size(), line);
+        } else {
+            // Otherwise use empty styles
+            if (!exception_during_highlight) {
+                logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", 
+                                 "Highlighter returned nullptr for line %zu.", line);
+            }
+            // Empty styles already in newEntry
+        }
     } catch (const std::exception& ex) {
-        ErrorReporter::logException(SyntaxHighlightingException(std::string("highlightLine_nolock: ") + ex.what() + " on line " + std::to_string(line), EditorException::Severity::Error));
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", "std::exception caught highlighting line %zu: %s", line, ex.what());
+        // Any other exceptions outside the highlighter call
+        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", 
+                         "Outer exception during highlighting line %zu: %s", line, ex.what());
         exception_during_highlight = true;
     } catch (...) {
-        ErrorReporter::logUnknownException("SyntaxHighlightingManager::highlightLine_nolock line " + std::to_string(line));
-        logManagerMessage(EditorException::Severity::Critical, "SyntaxHighlightingManager::highlightLine_nolock", "Unknown exception caught highlighting line %zu.", line);
+        logManagerMessage(EditorException::Severity::Critical, "SyntaxHighlightingManager::highlightLine_nolock", 
+                         "Unknown outer exception during highlighting line %zu.", line);
         exception_during_highlight = true;
     }
 
-    // Update cache - this is safe as caller holds unique_lock and ensures cacheStyles_ is sized.
-    if (line < cachedStyles_.size()) { // Should always be true due to caller's resize.
-        if (exception_during_highlight) {
-            cachedStyles_[line] = std::make_unique<CacheEntry>(std::vector<SyntaxStyle>()); 
+    // Update cache - this is separate from the try-catch to ensure it always happens
+    try {
+        if (line < cachedStyles_.size()) { // Should always be true due to caller's resize.
+            // First clear any existing entry
+            if (cachedStyles_[line]) {
+                cachedStyles_[line].reset();
+            }
+            
+            // Now set the new entry (which might have empty styles if exception occurred)
+            cachedStyles_[line] = newEntry;
+            invalidatedLines_.erase(line);
+            lineTimestamps_[line] = std::chrono::steady_clock::now();
+            
+            logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", 
+                             "Cache updated for line %zu. Exception during highlight: %s", 
+                             line, exception_during_highlight ? "true" : "false");
         } else {
-            cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(lineStyles));
+            logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", 
+                             "Cache access out of bounds for line %zu after processing. Cache size: %zu. STYLES LOST.", 
+                             line, cachedStyles_.size());
         }
-        // Mark as valid (CacheEntry constructor sets valid=true by default)
-        // cachedStyles_[line]->valid.store(true, std::memory_order_release); // Already true by CacheEntry constructor
-        invalidatedLines_.erase(line); // No longer invalidated
-        lineTimestamps_[line] = std::chrono::steady_clock::now(); // Update timestamp
-        logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::highlightLine_nolock", "Cache updated for line %zu. Exception during highlight: %s", line, exception_during_highlight ? "true" : "false");
-    } else {
-        // This case should ideally not be reached if caller manages cache size correctly.
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", "Cache access out of bounds for line %zu after processing. Cache size: %zu. STYLES LOST.", line, cachedStyles_.size());
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", 
+                          "Exception during cache update for line %zu: %s", line, ex.what());
+    } catch (...) {
+        logManagerMessage(EditorException::Severity::Critical, "SyntaxHighlightingManager::highlightLine_nolock", 
+                          "Unknown exception during cache update for line %zu", line);
     }
 }
 
@@ -401,6 +435,70 @@ bool SyntaxHighlightingManager::highlightLines_nolock(size_t startLine, size_t e
     return true; // Or return anyVisibleProcessed if that's more meaningful for partial success.
 }
 
+// Definition of the CONST version of getHighlightingStyles
+std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(
+    size_t startLine, size_t endLine) const {
+    
+    std::scoped_lock<std::recursive_mutex> lock(mutex_); 
+    logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Getting styles for lines %zu to %zu.", startLine, endLine);
+
+    const TextBuffer* currentBuffer = getBuffer(); 
+    if (!currentBuffer || !isEnabled() || !highlighter_ || (currentBuffer->lineCount() > 0 && (startLine > endLine || endLine >= currentBuffer->lineCount())) || (currentBuffer->lineCount() == 0 && (startLine != 0 || endLine != 0)) ) {
+        if (!currentBuffer) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "No buffer.");
+        else if (!isEnabled()) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Not enabled.");
+        else if (!highlighter_) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "No highlighter.");
+        else if (currentBuffer->lineCount() > 0 && (startLine > endLine || endLine >= currentBuffer->lineCount())) {
+             logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Invalid line range %zu-%zu for buffer size %zu.", startLine, endLine, currentBuffer->lineCount());
+        } else if (currentBuffer->lineCount() == 0 && (startLine !=0 || endLine != 0)) {
+            logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Invalid line range %zu-%zu for empty buffer.", startLine, endLine);
+        }
+        
+        std::vector<std::vector<SyntaxStyle>> emptyStyles;
+        // If range is numerically valid (e.g. 0-0 for empty buffer, or valid sub-range for non-empty)
+        // provide a correctly sized vector of empty style lists.
+        if (startLine <= endLine) { // Check if the range itself is non-negative
+            size_t count = endLine - startLine + 1;
+            // If buffer is empty, only line 0 count 1 (0-0) is sensible for "empty line style"
+            if (currentBuffer && currentBuffer->lineCount() == 0 && (startLine == 0 && endLine == 0)) {
+                emptyStyles.resize(1);
+            } else if (currentBuffer && currentBuffer->lineCount() > 0 && endLine < currentBuffer->lineCount()) {
+                emptyStyles.resize(count);
+            } else if (!currentBuffer) { // No buffer, but range given, provide empty styles for count
+                 emptyStyles.resize(count);
+            } // else, range is invalid for buffer, return truly empty (size 0) vector.
+        }
+        return emptyStyles;
+    }
+
+    std::vector<std::vector<SyntaxStyle>> resultStyles;
+    resultStyles.reserve(endLine - startLine + 1);
+
+    for (size_t i = startLine; i <= endLine; ++i) {
+        if (i < cachedStyles_.size() && cachedStyles_[i] && cachedStyles_[i]->valid.load(std::memory_order_acquire)) {
+            if constexpr (CACHE_ENTRY_LIFETIME_MS > 0) {
+                auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - cachedStyles_[i]->timestamp);
+                if (age.count() < static_cast<long long>(CACHE_ENTRY_LIFETIME_MS)) {
+                    resultStyles.push_back(cachedStyles_[i]->styles);
+                } else {
+                    resultStyles.emplace_back(); 
+                    logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Cache entry for line %zu expired.", i);
+                }
+            } else { 
+                 resultStyles.push_back(cachedStyles_[i]->styles);
+            }
+        } else {
+            resultStyles.emplace_back(); 
+            if (i >= cachedStyles_.size()) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Line %zu out of cachedStyles_ bounds (%zu).", i, cachedStyles_.size());
+            else if (!cachedStyles_[i]) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "No cache entry for line %zu.", i);
+            else if (!cachedStyles_[i]->valid.load(std::memory_order_acquire)) logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Cache entry for line %zu not valid.", i);
+        }
+    }
+    logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (CONST)", "Returning %zu style sets.", resultStyles.size());
+    return resultStyles;
+}
+
+// Non-const version - this was existing
 std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(
     size_t startLine, size_t endLine) {
     logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::getHighlightingStyles (public)", "Called for lines %zu to %zu.", startLine, endLine);
@@ -549,29 +647,54 @@ void SyntaxHighlightingManager::invalidateAllLines() {
 void SyntaxHighlightingManager::invalidateAllLines_nolock() {
     logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::invalidateAllLines_nolock", "Called.");
     const TextBuffer* buffer = getBuffer(); // Safe atomic load
-    // No buffer check needed here, as operations below are safe with nullptr buffer
     
-    // Mark all cache entries as invalid
-    for (auto& entry : cachedStyles_) {
-        if (entry) {
-            entry->valid.store(false, std::memory_order_release);
+    try {
+        // First mark all cache entries as invalid
+        for (auto& entry : cachedStyles_) {
+            if (entry) {
+                entry->valid.store(false, std::memory_order_release);
+            }
         }
-    }
-    
-    // Clear the cache and invalidate all lines
-    cachedStyles_.clear();
-    invalidatedLines_.clear();
-    lineTimestamps_.clear();
-    
-    // If buffer exists and has lines, mark them for re-highlight upon next request.
-    if (buffer && buffer->lineCount() > 0) {
-        for (size_t i = 0; i < buffer->lineCount(); ++i) {
-            invalidatedLines_.insert(i);
+        
+        // Then explicitly release all entries
+        for (size_t i = 0; i < cachedStyles_.size(); ++i) {
+            if (cachedStyles_[i]) {
+                // Explicitly reset the shared_ptr to release memory
+                cachedStyles_[i].reset();
+            }
         }
+        
+        // Clear the containers
+        cachedStyles_.clear();
+        invalidatedLines_.clear();
+        lineTimestamps_.clear();
+        
+        // If buffer exists and has lines, mark them for re-highlight upon next request
+        if (buffer && buffer->lineCount() > 0) {
+            for (size_t i = 0; i < buffer->lineCount(); ++i) {
+                invalidatedLines_.insert(i);
+            }
+        }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::Error, 
+                        "SyntaxHighlightingManager::invalidateAllLines_nolock", 
+                        "Exception during invalidation: %s", ex.what());
+        // Try to recover by clearing containers
+        cachedStyles_.clear();
+        invalidatedLines_.clear();
+        lineTimestamps_.clear();
+    } catch (...) {
+        logManagerMessage(EditorException::Severity::Critical, 
+                        "SyntaxHighlightingManager::invalidateAllLines_nolock", 
+                        "Unknown exception during invalidation");
+        // Try to recover by clearing containers
+        cachedStyles_.clear();
+        invalidatedLines_.clear();
+        lineTimestamps_.clear();
     }
 }
 
-void SyntaxHighlightingManager::setVisibleRange(size_t startLine, size_t endLine) {
+void SyntaxHighlightingManager::setVisibleRange(size_t startLine, size_t endLine) const {
     try {
         // Atomic stores don't need a lock
         visibleStartLine_.store(startLine, std::memory_order_release);
@@ -674,45 +797,72 @@ std::pair<size_t, size_t> SyntaxHighlightingManager::calculateEffectiveRange(
 }
 
 void SyntaxHighlightingManager::cleanupCache_nolock() {
-    auto now = std::chrono::steady_clock::now();
-    size_t removedCount = 0;
-    size_t initialCacheSize = lineTimestamps_.size();
+    try {
+        auto now = std::chrono::steady_clock::now();
+        size_t removedCount = 0;
+        size_t initialCacheSize = lineTimestamps_.size();
 
-    for (auto it = lineTimestamps_.begin(); it != lineTimestamps_.end(); /* manual increment */) {
-        size_t line = it->first;
-        auto timestamp = it->second;
-        auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp);
+        // First, identify entries to remove
+        std::vector<size_t> linesToRemove;
+        for (const auto& entry : lineTimestamps_) {
+            size_t line = entry.first;
+            auto timestamp = entry.second;
+            auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp);
 
-        if (age.count() > CACHE_ENTRY_LIFETIME_MS) {
+            if (age.count() > CACHE_ENTRY_LIFETIME_MS) {
+                linesToRemove.push_back(line);
+            }
+        }
+        
+        // Then, process them safely
+        for (size_t line : linesToRemove) {
+            // Mark as invalid first
             if (line < cachedStyles_.size() && cachedStyles_[line]) {
-                // First mark as invalid for thread safety
                 cachedStyles_[line]->valid.store(false, std::memory_order_release);
                 
-                // Then reset the shared_ptr to release memory
+                // Then release the entry
                 cachedStyles_[line].reset();
             }
-            it = lineTimestamps_.erase(it); 
-            invalidatedLines_.insert(line); 
+            
+            // Remove from containers
+            lineTimestamps_.erase(line);
+            invalidatedLines_.insert(line);
             removedCount++;
-        } else {
-            ++it;
         }
-    }
 
-    if (removedCount > 0) {
-        logManagerMessage(EditorException::Severity::Warning, 
-                          "SyntaxHighlightingManager::cleanupCache_nolock",
-                          "Cache cleanup: %zu entries before, %zu removed, %zu timestamps remaining.",
-                          initialCacheSize, removedCount, lineTimestamps_.size());
-        
-        // Periodically shrink the vector capacity if it's significantly larger than its size
-        if (cachedStyles_.capacity() > cachedStyles_.size() * 2 && cachedStyles_.size() > 10) {
-            std::vector<std::shared_ptr<CacheEntry>> temp(cachedStyles_);
-            cachedStyles_.swap(temp);
-            logManagerMessage(EditorException::Severity::Warning,
-                              "SyntaxHighlightingManager::cleanupCache_nolock",
-                              "Vector capacity optimized: old=%zu, new=%zu", 
-                              temp.capacity(), cachedStyles_.capacity());
+        if (removedCount > 0) {
+            logManagerMessage(EditorException::Severity::Warning, 
+                            "SyntaxHighlightingManager::cleanupCache_nolock",
+                            "Cache cleanup: %zu entries before, %zu removed, %zu timestamps remaining.",
+                            initialCacheSize, removedCount, lineTimestamps_.size());
+            
+            // Periodically shrink the vector capacity if it's significantly larger than its size
+            if (cachedStyles_.capacity() > cachedStyles_.size() * 2 && cachedStyles_.size() > 10) {
+                // Create a new vector with exactly the right size
+                std::vector<std::shared_ptr<CacheEntry>> temp;
+                temp.reserve(cachedStyles_.size());
+                
+                // Copy only valid entries
+                for (size_t i = 0; i < cachedStyles_.size(); ++i) {
+                    temp.push_back(cachedStyles_[i]);
+                }
+                
+                // Swap with original
+                cachedStyles_.swap(temp);
+                
+                logManagerMessage(EditorException::Severity::Warning,
+                                "SyntaxHighlightingManager::cleanupCache_nolock",
+                                "Vector capacity optimized: old=%zu, new=%zu", 
+                                temp.capacity(), cachedStyles_.capacity());
+            }
         }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::Error, 
+                        "SyntaxHighlightingManager::cleanupCache_nolock", 
+                        "Exception during cache cleanup: %s", ex.what());
+    } catch (...) {
+        logManagerMessage(EditorException::Severity::Critical, 
+                        "SyntaxHighlightingManager::cleanupCache_nolock", 
+                        "Unknown exception during cache cleanup");
     }
 } 

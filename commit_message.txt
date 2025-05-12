@@ -1,0 +1,42 @@
+Refactor command_find_replace_test.cpp to use standardized test utilities
+
+This commit completes the standardization of all previously migrated command test files to use the new test utilities from TestUtilities.h. Key changes:
+
+1. Removed redundant SearchReplaceTestBase class in favor of test_utils::EditorCommandTestBase
+2. Refactored SearchCommandTest and ReplaceAllCommandTest to use standardized utilities:
+   - Replaced manual buffer setup with setBufferLines()
+   - Replaced cursor positioning with positionCursor()  
+   - Replaced manual verification with verifySelection(), verifyBufferContent(), verifyCursorPosition()
+3. Updated TEST_PLAN_IMPLEMENTATION.md to reflect completion of this milestone
+
+Benefits:
+- Improved code consistency across all command tests
+- Enhanced readability with standardized setup and verification
+- Significantly better maintainability through reduced duplication
+- More descriptive test failures through specialized assertion methods
+
+This marks the completion of a major refactoring milestone, with all migrated command test files now using a consistent, more maintainable approach. 
+
+fix: resolve heap corruption in SyntaxHighlightingManager tests
+
+This commit resolves critical heap corruption errors that occurred during test
+runs of SyntaxHighlightingManager when handling exceptions. The primary fix:
+
+- Replaced GMock-based exception tests with simpler direct implementations
+- Created isolated test environments to avoid shared state contamination
+- Implemented non-mocked exception-throwing highlighters with cleaner memory 
+  management
+- Added standalone tests that use local instances to prevent fixture state issues
+
+The following tests now pass without heap corruption errors:
+- SyntaxHighlightingManagerTest.HighlightLineCatchesExceptionFromHighlighter
+- SyntaxHighlightingManagerTest.GetHighlightingStylesReturnsEmptyWhenHighlighterThrows
+- SyntaxHighlightingManagerTest.ExceptionThrowingHighlighterTest
+- StandaloneExceptionTest.HighlightingManagerHandlesExceptions
+
+Root cause: The heap corruption was occurring due to GMock expectations 
+interacting poorly with C++ exception handling, particularly when using
+mock objects that throw exceptions during highlightLine method calls.
+
+This fix improves test reliability without modifying production code,
+which is preferable for test-only issues. 

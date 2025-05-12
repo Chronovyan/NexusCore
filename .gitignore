@@ -1,56 +1,67 @@
-# C++ build artifacts
-*.exe
-*.out
-*.app
-*.dll
-*.so
-*.dylib
+# Build directories
+/build*/
+/clean_*/
+/bin/
+/obj/
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+*.cmake
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.idea/
+*.iml
+
+# Compiled files
 *.obj
 *.o
 *.a
 *.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.out
+*.app
 *.pdb
+*.ilk
+*.exp
 
-# Visual Studio specific
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-*.vcxproj.filters
-.vs/
-ipch/
-*.aps
-*.ncb
-*.opendb
-*.opensdf
-*.sdf
-*.cachefile
-*.VC.db
-*.VC.VC.opendb
+# Debug files
+*.dSYM/
+*.su
+*.idb
 
-# Build directories
-bin/
-obj/
-Debug/
-Release/
-x64/
-x86/
-build/
-tmp/
+# Dependency directories
+vcpkg_installed/
+ThirdParty/
 
-# CMake build
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-compile_commands.json
-
-# Editor files
-*~
-*.swp
-*.swo
-.vscode/
-.idea/
+# Test results
+testresults/
+tests/bin/
+tests/build/
+tests/out/
 
 # OS specific files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Test results and reports
+/reports/
+
+# Other
+large_generated_file.txt
+*.log 

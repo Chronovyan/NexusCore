@@ -3,7 +3,7 @@
 ## Overview
 This roadmap outlines the strategic plan to enhance the text editor, prioritizing backend stability and performance, followed by GUI development and final polishing. The primary goal is a highly stable, performant editor.
 
-## Phase 1: Core Backend Solidification (Largely Complete)
+## Phase 1: Core Backend Solidification (Foundation Established, Refinements Ongoing)
 *Focus: Establishing a rock-solid foundation with robust error handling, efficient command processing, and performant core features.*
 
 ### 1.1 Robust Error Handling

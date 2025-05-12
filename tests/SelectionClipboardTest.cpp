@@ -1,180 +1,205 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "EditorTestableFixed.h"
+#include "EditorTestable.h"
+#include "TestFramework.h"
+#include "TestEditor.h"
+#include "../src/EditorCommands.h"
+#include "../src/CommandManager.h"
+
+// Test selection operations
+TestResult testBasicSelection() {
+    TestEditor editor;
+    
+    // Setup
+    editor.getBuffer().clear(false);
+    editor.getBuffer().addLine("The quick brown fox jumps over the lazy dog");
+    editor.setCursor(0, 4); // Position at the start of "quick"
+    
+    // Test selection start
+    editor.setSelectionStart();
+    if (!editor.hasSelection() || editor.getSelectedText() != "") {
+        return TestResult(false, "Selection start failed - empty selection should exist");
+    }
+    
+    // Move cursor to create selection
+    for (int i = 0; i < 5; i++) {
+        editor.moveCursorRight();
+    }
+    editor.setSelectionEnd();
+    
+    // Verify selection
+    if (!editor.hasSelection()) {
+        return TestResult(false, "No selection after setSelectionEnd");
+    }
+    
+    if (editor.getSelectedText() != "quick") {
+        return TestResult(false, "Incorrect selection text. Expected: 'quick', Got: '" + 
+                         editor.getSelectedText() + "'");
+    }
+    
+    // Test selection clear
+    editor.clearSelection();
+    if (editor.hasSelection()) {
+        return TestResult(false, "Selection not cleared after clearSelection");
+    }
+    
+    return TestResult(true, "Basic selection test passed");
+}
+
+// Test clipboard operations (copy, cut, paste)
+TestResult testClipboardOperations() {
+    TestEditor editor;
+    CommandManager cmdManager;
+    
+    // Setup
+    editor.getBuffer().clear(false);
+    editor.getBuffer().addLine("The quick brown fox");
+    editor.setCursor(0, 4); // Position at the start of "quick"
+    
+    // Create selection
+    editor.setSelectionStart();
+    for (int i = 0; i < 5; i++) {
+        editor.moveCursorRight();
+    }
+    editor.setSelectionEnd();
+    
+    // Test copy
+    cmdManager.executeCommand(std::make_unique<CopyCommand>(), editor);
+    if (editor.getClipboardText() != "quick") {
+        return TestResult(false, "Copy failed. Expected clipboard: 'quick', Got: '" + 
+                         editor.getClipboardText() + "'");
+    }
+    
+    // Verify selection still exists after copy
+    if (!editor.hasSelection()) {
+        return TestResult(false, "Selection was cleared after copy");
+    }
+    
+    // Test cut
+    cmdManager.executeCommand(std::make_unique<CutCommand>(), editor);
+    if (editor.getClipboardText() != "quick") {
+        return TestResult(false, "Cut failed to put text in clipboard. Got: '" + editor.getClipboardText() + "'");
+    }
+    
+    if (editor.hasSelection()) {
+        return TestResult(false, "Selection not cleared after cut");
+    }
+    
+    if (editor.getBuffer().getLine(0) != "The  brown fox") {
+        return TestResult(false, "Cut failed to remove text. Got: '" + 
+                         editor.getBuffer().getLine(0) + "'");
+    }
+    
+    // Test paste
+    cmdManager.executeCommand(std::make_unique<PasteCommand>(), editor);
+    if (editor.getBuffer().getLine(0) != "The quick brown fox") {
+        return TestResult(false, "Paste failed. Got: '" + 
+                         editor.getBuffer().getLine(0) + "'");
+    }
+    
+    return TestResult(true, "Clipboard operations test passed");
+}
+
+// Test selection across multiple lines
+TestResult testMultiLineSelection() {
+    TestEditor editor;
+    CommandManager cmdManager;
+    
+    // Setup
+    editor.getBuffer().clear(false);
+    editor.getBuffer().addLine("First line");
+    editor.getBuffer().addLine("Second line");
+    editor.setCursor(0, 6); // After "First"
+    
+    // Create selection across lines
+    editor.setSelectionStart();
+    editor.moveCursorDown();
+    editor.moveCursorRight();
+    editor.moveCursorRight();
+    editor.moveCursorRight();
+    editor.setSelectionEnd();
+    
+    // Verify selection spans multiple lines
+    std::string selectedText = editor.getSelectedText();
+    if (selectedText != " line\nSec") {
+        return TestResult(false, "Multi-line selection failed. Expected: ' line\\nSec', Got: '" + 
+                         selectedText + "'");
+    }
+    
+    // Test copy and paste of multi-line selection
+    cmdManager.executeCommand(std::make_unique<CopyCommand>(), editor);
+    editor.clearSelection();
+    editor.setCursor(1, 9); // End of "Second line"
+    cmdManager.executeCommand(std::make_unique<PasteCommand>(), editor);
+    
+    if (editor.getBuffer().lineCount() != 3 || 
+        editor.getBuffer().getLine(1) != "Second line line" || 
+        editor.getBuffer().getLine(2) != "Sec") {
+        std::string debugBuffer;
+        for(size_t i=0; i < editor.getBuffer().lineCount(); ++i) {
+            debugBuffer += "L" + std::to_string(i) + ": '" + editor.getBuffer().getLine(i) + "'\\n";
+        }
+        return TestResult(false, "Multi-line paste failed. Buffer:\\n" + debugBuffer);
+    }
+    
+    return TestResult(true, "Multi-line selection test passed");
+}
+
+// Test word selection
+TestResult testWordSelection() {
+    TestEditor editor;
+    
+    // Setup
+    editor.getBuffer().clear(false);
+    editor.getBuffer().addLine("The quick brown fox");
+    editor.setCursor(0, 5); // Middle of "quick"
+    
+    // Select word
+    editor.selectWord();
+    
+    // Verify selection
+    if (!editor.hasSelection()) {
+        return TestResult(false, "No selection after selectWord");
+    }
+    
+    if (editor.getSelectedText() != "quick") {
+        return TestResult(false, "Word selection failed. Expected: 'quick', Got: '" + 
+                         editor.getSelectedText() + "'");
+    }
+    
+    return TestResult(true, "Word selection test passed");
+}
+
+// Test delete word
+TestResult testDeleteWord() {
+    TestEditor editor;
+    
+    // Setup
+    editor.getBuffer().clear(false);
+    editor.getBuffer().addLine("The quick brown fox");
+    editor.setCursor(0, 4); // Start of "quick"
+    
+    // Delete word
+    editor.deleteWord();
+    
+    // Verify word was deleted
+    if (editor.getBuffer().getLine(0) != "The  brown fox") {
+        return TestResult(false, "Delete word failed. Expected: 'The  brown fox', Got: '" + 
+                         editor.getBuffer().getLine(0) + "'");
+    }
+    
+    return TestResult(true, "Delete word test passed");
+}
 
 int main() {
-    std::cout << "=== Selection and Clipboard Operations Tests ===" << std::endl;
-    std::string output;
-
-    // Test 1: Basic Selection
-    std::vector<std::string> basicSelectionTest = {
-        "clear",
-        "add The quick brown fox jumps over the lazy dog",
-        "view",
-        "setcursor 0 4", // Position at 'q'
-        "cursor",
-        "selstart",
-        "setcursor 0 9", // Position after 'quick'
-        "cursor",
-        "selend",
-        "selshow",
-        "view"
-    };
-
-    // Test 2: Copy and Paste
-    std::vector<std::string> copyPasteTest = {
-        "clear",
-        "add First line with text",
-        "view",
-        "setcursor 0 6", // Position at 'l'
-        "cursor",
-        "selstart",
-        "setcursor 0 10", // Position after 'line'
-        "cursor",
-        "selend",
-        "selshow",
-        "copy",
-        "setcursor 0 16", // After 'with'
-        "cursor",
-        "paste",
-        "view",
-        "cursor"
-    };
-
-    // Test 3: Cut and Paste
-    std::vector<std::string> cutPasteTest = {
-        "clear",
-        "add Text to be cut and pasted",
-        "view",
-        "setcursor 0 5", // At space after 'Text'
-        "cursor",
-        "selstart",
-        "setcursor 0 12", // Position after 'be cut'
-        "cursor",
-        "selend",
-        "selshow",
-        "cut",
-        "view",
-        "cursor",
-        "setcursor 0 9", // After 'and'
-        "cursor",
-        "paste",
-        "view",
-        "cursor"
-    };
-
-    // Test 4: Select Word
-    std::vector<std::string> selectWordTest = {
-        "clear",
-        "add Multiple words for testing selection",
-        "view",
-        "setcursor 0 5", // Inside 'Multiple'
-        "cursor",
-        "selword",
-        "selshow",
-        "view",
-        "setcursor 0 15", // Inside 'for'
-        "cursor",
-        "selword",
-        "selshow",
-        "view"
-    };
-
-    // Test 5: Delete Word
-    std::vector<std::string> deleteWordTest = {
-        "clear",
-        "add Words to delete in this test",
-        "view",
-        "setcursor 0 0", // At the beginning
-        "cursor",
-        "delword", // Delete 'Words'
-        "view",
-        "cursor",
-        "setcursor 0 3", // At 'delete'
-        "cursor",
-        "delword", // Delete 'delete'
-        "view",
-        "cursor"
-    };
-
-    // Test 6: Selection Clear
-    std::vector<std::string> selectionClearTest = {
-        "clear",
-        "add Testing selection clear function",
-        "view",
-        "setcursor 0 8", // At 'selection'
-        "cursor",
-        "selstart",
-        "setcursor 0 17", // After 'selection'
-        "cursor",
-        "selend",
-        "selshow",
-        "selclear",
-        "selshow",
-        "view",
-        "cursor"
-    };
-
-    // Test 7: Selection Edge Cases
-    std::vector<std::string> selectionEdgeCasesTest = {
-        "clear",
-        "add First line",
-        "add Second line",
-        "view",
-        // Select across lines
-        "setcursor 0 8", // At end of 'First line'
-        "cursor",
-        "selstart",
-        "setcursor 1 5", // Middle of 'Second line'
-        "cursor",
-        "selend",
-        "selshow", // Should show newline
-        "view",
-        // Empty selection (start = end)
-        "setcursor 0 0",
-        "cursor",
-        "selstart",
-        "selend",
-        "selshow", // Should show no selection
-        "view"
-    };
-
-    // Run each test
-    std::cout << "\n=== Test 1: Basic Selection ===" << std::endl;
-    EditorTestableFixed::runWithInputs(basicSelectionTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 2: Copy and Paste ===" << std::endl;
-    EditorTestableFixed::runWithInputs(copyPasteTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 3: Cut and Paste ===" << std::endl;
-    EditorTestableFixed::runWithInputs(cutPasteTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 4: Select Word ===" << std::endl;
-    EditorTestableFixed::runWithInputs(selectWordTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 5: Delete Word ===" << std::endl;
-    EditorTestableFixed::runWithInputs(deleteWordTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 6: Selection Clear ===" << std::endl;
-    EditorTestableFixed::runWithInputs(selectionClearTest, output);
-    std::cout << output << std::endl;
-
-    output.clear();
-    std::cout << "\n=== Test 7: Selection Edge Cases ===" << std::endl;
-    EditorTestableFixed::runWithInputs(selectionEdgeCasesTest, output);
-    std::cout << output << std::endl;
-
-    std::cout << "\n=== Selection and Clipboard Tests Complete ===" << std::endl;
+    TestFramework runner;
+    runner.registerTest("Basic Selection", testBasicSelection);
+    runner.registerTest("Clipboard Operations", testClipboardOperations);
+    runner.registerTest("Multi-Line Selection & Paste", testMultiLineSelection);
+    runner.registerTest("Word Selection", testWordSelection);
+    runner.registerTest("Delete Word", testDeleteWord);
+    runner.runAllTests();
     return 0;
-} 
+}
+

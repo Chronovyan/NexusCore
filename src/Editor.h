@@ -8,6 +8,7 @@
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <limits> // For std::numeric_limits
+#include <memory> // For std::shared_ptr
 
 class Editor {
 public:
@@ -53,63 +54,64 @@ public:
 
     // Text editing operations (higher level, often use commands)
     void typeText(const std::string& textToInsert); // Uses InsertTextCommand
-    void typeChar(char ch); 
-    void backspace(); // Uses DeleteCharCommand
-    void deleteForward(); // Uses DeleteCharCommand
-    void newLine(); // Uses AddLineCommand
+    void typeChar(char charToInsert);  // Uses InsertTextCommand with a single char
+    void deleteSelection();  // Uses DeleteSelectionCommand
+    void backspace();        // Uses BackspaceCommand
+    void deleteForward();    // Uses DeleteCommand
+    void newLine();          // Uses NewLineCommand
     void joinWithNextLine(); // Uses JoinLinesCommand
+    // Add wordwise variants (deleteWordBackward, deleteWordForward) if needed
 
-    // Selection methods
-    void setSelectionStart(); 
-    void setSelectionEnd();   
-    bool hasSelection() const; // Public method to check selection state
-    void clearSelection();
-    std::string getSelectedText() const;
-    void deleteSelectedText(); // Uses a CompoundCommand with DeleteCharCommands or similar
-    void setSelectionRange(size_t sl, size_t sc, size_t el, size_t ec);
-    size_t getSelectionStartLine() const { return selectionStartLine_; }
-    size_t getSelectionStartCol() const { return selectionStartCol_; }
-    size_t getSelectionEndLine() const { return selectionEndLine_; }
-    size_t getSelectionEndCol() const { return selectionEndCol_; }
-
-    // Clipboard operations (higher level, use commands)
-    void copySelectedText();  // Uses CopyCommand
-    void cutSelectedText();   // Uses CutCommand
-    void pasteText();         // Uses PasteCommand
-    std::string getClipboardText() const { return clipboard_; } // Public getter
-    void setClipboardText(const std::string& text) { clipboard_ = text; } // Public setter
-
-    // Word operations
-    void deleteWord();
-    void selectWord();
-    
+    // Undo/redo operations
+    bool canUndo() const { return commandManager_.canUndo(); }
+    bool canRedo() const { return commandManager_.canRedo(); }
     bool undo();
     bool redo();
-    bool canUndo() const;
-    bool canRedo() const;
+
+    // Selection methods
+    void startSelection();
+    void updateSelection();
+    void clearSelection();
+    bool hasSelection() const; // DECLARATION ONLY
+    std::string getSelectedText() const;
+    void setSelectionStart();
+    void setSelectionEnd();
+    void setSelectionRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
+    void replaceSelection(const std::string& text);
     
-    // Search operations (higher level)
-    bool search(const std::string& searchTerm, bool caseSensitive = true); // Uses SearchCommand for first find
-    bool searchNext(); // Uses SearchCommand with isNewSearch=false
-    bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true); // Uses ReplaceCommand
-    bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true); // Uses ReplaceAllCommand
+    // Public getters for selection coordinates
+    size_t getSelectionStartLine() const;
+    size_t getSelectionStartCol() const;
+    size_t getSelectionEndLine() const;
+    size_t getSelectionEndCol() const;
     
-    void enableSyntaxHighlighting(bool enable = true);
+    // Clipboard operations
+    void copySelectedText();
+    void cutSelectedText();
+    void pasteText();
+    std::string getClipboardText() const;      // Added
+    void setClipboardText(const std::string& text); // Added
+    
+    // Word operations (can be grouped with text editing or selection)
+    void deleteWord();
+    void selectWord();
+
+    // Search and replace operations
+    bool search(const std::string& searchTerm, bool caseSensitive = true, bool forward = true);
+    bool searchNext();
+    bool searchPrevious();
+    bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
+    bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
+
+    // Syntax highlighting methods
+    virtual void enableSyntaxHighlighting(bool enable = true);
     bool isSyntaxHighlightingEnabled() const;
-    void setFilename(const std::string& filename); // Sets filename and tries to detect highlighter
+    void setFilename(const std::string& filename);
     std::string getFilename() const;
-    void detectAndSetHighlighter();
-    SyntaxHighlighter* getCurrentHighlighter() const;
-    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const;
-    void invalidateHighlightingCache(); // MOVED HERE
-    
-    // Helpers for direct buffer manipulation (used by performReplaceLogic and ReplaceCommand)
-    // These are likely okay to be public if commands need them and are not friends for this.
+
+    // --- Potentially public helpers for Commands (revisit access level later) ---
     void directDeleteTextRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
     void directInsertText(size_t line, size_t col, const std::string& text, size_t& outEndLine, size_t& outEndCol);
-
-    // Internal logic for search and replace, called by commands (public for now as commands are not all friends yet for this)
-    bool performSearchLogic(const std::string& searchTerm, bool caseSensitive, bool isNewSearch);
     bool performReplaceLogic(
         const std::string& searchTerm, 
         const std::string& replacementText, 
@@ -120,7 +122,43 @@ public:
         size_t& outOriginalEndLine,
         size_t& outOriginalEndCol
     );
+
+    // Internal search logic - moved to public for Command access
+    bool performSearchLogic(
+        const std::string& searchTerm, 
+        bool caseSensitive, 
+        bool forward,
+        size_t& outFoundLine, 
+        size_t& outFoundCol
+    );
+    // --- End Potentially public helpers ---
+
+    virtual void detectAndSetHighlighter();
+    std::shared_ptr<SyntaxHighlighter> getCurrentHighlighter() const;
+    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles();
+    virtual std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const;
     
+    // Invalidate syntax highlighting cache after buffer modifications
+    void invalidateHighlightingCache();
+
+protected:
+    // Helper methods
+    bool isWordChar(char c) const;
+    void validateAndClampCursor(); // Makes sure cursor is within valid bounds
+    std::string constructLine(const std::string&) const; // For view (stub for now)
+    
+    // Helper for search functionality
+    bool findMatchInLine(const std::string& line, const std::string& term,
+                         size_t startPos, bool caseSensitive, 
+                         size_t& outMatchPos, size_t& outMatchLength);
+
+    void updateHighlightingCache();
+
+    // Modify buffer and cursor, and invalidate highlighting for range
+    void updateBufferWith(const std::string& text, size_t startLine, size_t startCol, 
+                         size_t endLine, size_t endCol, 
+                         int cursorLineDelta, int cursorColDelta);
+
     // Viewport/Display related (placeholders)
     size_t getTopVisibleLine() const { return topVisibleLine_; }
     void setTopVisibleLine(size_t line) { topVisibleLine_ = line; }
@@ -159,29 +197,20 @@ protected:
     // Syntax highlighting state
     bool syntaxHighlightingEnabled_ = false;
     std::string filename_ = "untitled.txt"; // Initialized
-    SyntaxHighlighter* currentHighlighter_ = nullptr; // Initialized
+    std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr; // Changed to shared_ptr 
     mutable std::vector<std::vector<SyntaxStyle>> cachedHighlightStyles_;
     mutable bool highlightingStylesCacheValid_ = false; // Renamed from highlightingCacheValid_ for clarity
-    void updateHighlightingCache() const; // Kept protected
-
-    // Viewport, Display Dimensions, and modification status
-    size_t topVisibleLine_ = 0;
+    
+    // Modified flag
     bool modified_ = false;
-    size_t commandLineHeight_ = 1;   // Added
-    size_t statusLineHeight_ = 1;    // Added
-    size_t displayWidth_ = 80;       // Added (default, will be calculated)
-    size_t displayHeight_ = 24;      // Added (default, will be calculated)
-    size_t viewableLines_ = 22;      // Added (default, will be calculated: displayHeight - cmd - status)
-
-    // Helper to validate and clamp cursor position
-    void validateAndClampCursor();
     
-    // Helper for word boundaries
-    bool isWordChar(char c) const;
-    
-    // Helper for search operations
-    bool findMatchInLine(const std::string& line, const std::string& term, 
-                        size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength);
+    // Display dimensions (for view calculations)
+    int displayWidth_ = 80;
+    int displayHeight_ = 24;
+    size_t topVisibleLine_ = 0;
+    size_t viewableLines_ = 22; // Default, calculated in constructor based on display height
+    size_t commandLineHeight_ = 1;
+    size_t statusLineHeight_ = 1;
 };
 
 #endif // EDITOR_H 

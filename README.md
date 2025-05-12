@@ -29,6 +29,7 @@ cmake ..
 cmake --build . # Or: make / msbuild TextEditor.sln (depending on generator)
 # Executable typically in: build/src/TextEditor, build/bin/TextEditor, or build/TextEditor
 ```
+(For more detailed instructions, see [docs/BUILD_AND_TEST.md](docs/BUILD_AND_TEST.md).)
 
 Alternative (Windows Batch for building and testing):
 ```batch
@@ -44,6 +45,7 @@ Using CTest (after CMake build, from `build` directory):
 ```bash
 ctest -C Debug # Or Release, etc.
 ```
+(For more detailed instructions, see [docs/BUILD_AND_TEST.md](docs/BUILD_AND_TEST.md).)
 
 Alternative (Windows Batch for unit tests):
 ```batch
@@ -77,13 +79,13 @@ It provides an interactive command prompt. Key commands:
 ## Project Documentation
 
 - **Core Principles & Practices:**
-  - [`STABILITY.MD`](STABILITY.md): Editor stability principles.
-  - [`THREAD_SAFETY.MD`](THREAD_SAFETY.md): Thread safety patterns.
-  - [`REFINEMENTS.MD`](REFINEMENTS.md): C++ code refinements and best practices.
+  - [`docs/STABILITY.MD`](docs/STABILITY.md): Editor stability principles.
+  - [`docs/THREAD_SAFETY.MD`](docs/THREAD_SAFETY.md): Thread safety patterns.
+  - [`docs/REFINEMENTS.MD`](docs/REFINEMENTS.md): C++ code refinements and best practices.
+  - [`docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.MD`](docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.md): Technical investigation of the syntax highlighting manager.
 - **Development & Progress:**
   - [`ROADMAP.MD`](ROADMAP.md): Project development roadmap.
   - [`FUTURE_IMPROVEMENTS.MD`](FUTURE_IMPROVEMENTS.md): Ideas for future enhancements.
-  - [`PROGRESS.MD`](PROGRESS.md): Key milestones achieved.
 - **Features:**
   - [`docs/SearchFeature.md`](docs/SearchFeature.md): User guide for search/replace.
   - [`docs/SearchImplementationSummary.md`](docs/SearchImplementationSummary.md): Technical details of search.

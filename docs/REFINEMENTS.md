@@ -247,34 +247,4 @@ This section details architectural and API improvements specific to this text ed
 
 Apply to relevant modules like `Editor.cpp`, `TextBuffer.cpp`, and Commands.
 - **Input Validation:**
-    - Always check for empty input after `std::getline` before processing (e.g., in `main.cpp`, `Editor::run()`).
-- **Arithmetic Safety:**
-    - Prevent potential division by zero in `Editor::Editor()` when calculating `displayWidth_` and `displayHeight_` if `getTerminalWidth()`/`Height()` can return 0 or 1. Add checks and provide safe defaults.
-- **`TextBuffer` Operations:**
-    - Ensure all `TextBuffer` methods (`deleteLine`, `insertLine`, `joinLines`, `splitLine`, etc.) are robust against edge cases (empty buffer, invalid indices, operations at buffer/line boundaries).
-    - Consistently use `TextBufferException` (or other appropriate `EditorException` derivatives) for reporting errors from `TextBuffer` operations.
-- **Command Logic Safety:**
-    - `InsertTextCommand::undo()`: As mentioned in 8.1, improve efficiency to avoid issues with very large undo operations.
-
-## 10. Testing Strategy (Project Specific)
-
-The current `src/EditorTest.cpp` is a basic driver program and should be expanded into a formal testing suite.
-
-- **Adopt a Unit Testing Framework:**
-    - Integrate a standard C++ unit testing framework such as GoogleTest or Catch2. This provides structure, assertions, test discovery, and clear reporting.
-- **Comprehensive Test Coverage:**
-    - **`TextBuffer`:** Test all methods with various inputs, including empty buffer, single/multiple lines, operations at start/middle/end of lines and buffer. Verify line content, line count, and cursor/selection state (if applicable via an `Editor` wrapper).
-    - **Commands:** For each command:
-        - Test `execute()`: Verify correct buffer modification, cursor positioning, selection changes, and clipboard state (for copy/cut).
-        - Test `undo()`: Verify that `undo()` perfectly reverses the state changes made by `execute()`.
-        - Test with edge cases (e.g., command on empty buffer, at boundaries).
-    - **`CommandManager`:** Test undo/redo stack limits, correct sequencing of undo/redo for single and compound commands.
-    - **`Editor` Facade:** Test `Editor` methods, potentially mocking or using test doubles for dependencies like file system or complex UI interactions if necessary. Test command dispatching.
-    - **Syntax Highlighting:** Test `SyntaxHighlighter` implementations with various code snippets. Test `SyntaxHighlightingManager` caching, invalidation, and timeout logic.
-    - **File I/O:** Test `Editor::openFile` and `Editor::saveFile` with valid and invalid paths, empty files, and different content. (May require file system interaction, plan accordingly).
-- **Remove Test-Specific Code from Production Logic:**
-    - As highlighted for `CutCommand`, ensure no production code paths are conditional on specific test string literals or hardcoded states. Tests must verify the generic, production behavior.
-- **Use Assertions for Verification:**
-    - Utilize the chosen framework's assertion macros (e.g., `ASSERT_EQ`, `EXPECT_TRUE`, `ASSERT_THROWS`) to automatically verify expected outcomes rather than relying on manual `std::cout` inspection.
-- **Error Handling in Tests:**
-    - Correct the `try-catch` block structure in the existing `EditorTest.cpp` (or its replacement test files) to properly catch and report exceptions.
+    - Always check for empty input after `std::getline` before processing (e.g., in `main.cpp`, `Editor::run()`). 

@@ -32,6 +32,14 @@ add_library(EditorLib STATIC ${EDITOR_LIB_SOURCES})
 # This also applies to the library itself for its own internal includes.
 target_include_directories(EditorLib PUBLIC src)
 
+# Explicitly set C++17 standard for the compiler
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+    target_compile_options(EditorLib PRIVATE -std=c++17)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options(EditorLib PRIVATE -std=c++17)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_compile_options(EditorLib PRIVATE /std:c++17)
+endif()
 
 # --- Main Editor Executable (TextEditor) ---
 # Now only includes main.cpp and links against EditorLib
@@ -57,18 +65,38 @@ endif()
 # --- GoogleTest Integration ---
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip # Or a specific commit/tag
-  # For more robust builds, consider specifying URL_HASH SHA256 <hash_value>
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG    release-1.12.1 # Or a version compatible with your main project
 )
-
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# For GTest versions >= 1.10, set these to avoid building tests/samples if not needed
+# For older versions, these might not be available or might be named differently.
+set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
+set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
+# Depending on GTest version, these might also be useful:
+set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
+set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
+# set(gtest_build_tests OFF CACHE INTERNAL "Disable building gtest's own tests")
+# set(gtest_build_samples OFF CACHE INTERNAL "Disable building gtest's samples")
+# set(gmock_build_tests OFF CACHE INTERNAL "Disable building gmock's own tests")
 
 FetchContent_MakeAvailable(googletest)
 
 # --- Testing ---
 enable_testing()
-add_subdirectory(tests) # This will contain CMakeLists.txt for tests
+# The add_subdirectory(tests) command will now find and process tests/CMakeLists.txt
+# which should define its own targets (e.g., runTests) and link them against GTest::gtest etc.
+add_subdirectory(tests) 
 
 # Optional: Print a message
-message(STATUS "Configured TextEditor project with EditorLib and GoogleTest.") 
+message(STATUS "Configured TextEditor project with EditorLib and GoogleTest.")
+
+# The section for runMcve and gmock_mcve.cpp has been removed.
+
+# The following complex find_package and linking logic for runMcve is removed
+# as FetchContent_MakeAvailable should make GTest targets directly usable.
+# // ... existing code ... (from original find_package(GTest CONFIG) down to its endif)
+# // ... existing code ... (from original linking logic for runMcve down to its endif)
+# // ... existing code ... (original message about MCVE configuration)
+
+# Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
+set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST) 

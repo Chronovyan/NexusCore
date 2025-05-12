@@ -113,7 +113,7 @@ private:
 namespace TestAssert {
     // Assert that two values are equal
     template<typename T>
-    bool areEqual(const T& expected, const T& actual, std::string& message) {
+    inline bool areEqual(const T& expected, const T& actual, std::string& message) {
         if (expected != actual) {
             std::stringstream ss;
             ss << "Expected: " << expected << ", Actual: " << actual;
@@ -124,7 +124,7 @@ namespace TestAssert {
     }
     
     // Assert that a string contains a substring
-    bool stringContains(const std::string& str, const std::string& substr, std::string& message) {
+    inline bool stringContains(const std::string& str, const std::string& substr, std::string& message) {
         if (str.find(substr) == std::string::npos) {
             std::stringstream ss;
             ss << "String does not contain expected substring '" << substr << "'";

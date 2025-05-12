@@ -60,6 +60,10 @@ size_t Editor::getCursorCol() const {
     return cursorCol_;
 }
 
+bool Editor::hasSelection() const {
+    return hasSelection_;
+}
+
 void Editor::printView(std::ostream& os) const {
     if (buffer_.isEmpty()) {
         os << "(Buffer is empty)" << '\n';
@@ -206,11 +210,7 @@ void Editor::printView(std::ostream& os) const {
         // Let's refine this to be clearer or remove if redundant with clamping display.
         // For now, let's ensure it prints if cursorLine_ suggests it's on a "new" line that doesn't exist yet.
         // This message might be less relevant now that validateAndClampCursor keeps it in bounds.
-        // os << "Debug: Cursor after loop at: [" << cursorLine_ << ", " << cursorCol_ << "] (Clamped to end of buffer)" << '\n';
     }
-    // An alternative or additional display for explicit cursor position:
-    // os << "----" << '\n';
-    // os << "Cursor at: [" << cursorLine_ << ", " << cursorCol_ << "]" << '\n';
 }
 
 // --- Editor-level operations (pass-through for now, but can add cursor logic) ---
@@ -245,7 +245,7 @@ void Editor::typeText(const std::string& textToInsert) {
 
     // Check if there's a selection that needs to be deleted first
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
     }
 
     // For single character or simple text, create and execute a command
@@ -417,7 +417,7 @@ void Editor::moveCursorToPrevWord() {
 // Text editing operations
 void Editor::typeChar(char ch) {
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
     }
     
     if (ch == '\n') {
@@ -434,7 +434,7 @@ void Editor::typeChar(char ch) {
 
 void Editor::backspace() {
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
         return;
     }
     
@@ -448,7 +448,7 @@ void Editor::backspace() {
 
 void Editor::deleteForward() {
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
         return;
     }
     
@@ -467,7 +467,7 @@ void Editor::deleteForward() {
 
 void Editor::newLine() {
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
     }
     
     auto command = std::make_unique<NewLineCommand>();
@@ -525,12 +525,6 @@ void Editor::setSelectionRange(size_t startLine, size_t startCol, size_t endLine
     hasSelection_ = true;
 }
 
-bool Editor::hasSelection() const {
-    return hasSelection_ && 
-           (selectionStartLine_ != selectionEndLine_ || 
-            selectionStartCol_ != selectionEndCol_);
-}
-
 void Editor::clearSelection() {
     hasSelection_ = false;
 }
@@ -565,87 +559,15 @@ std::string Editor::getSelectedText() const {
     return result;
 }
 
-void Editor::deleteSelectedText() {
-    if (!hasSelection_) {
+void Editor::deleteSelection() {
+    if (!hasSelection_) { // Or use the hasSelection() method
         return;
     }
-    
-    // Create a compound command for undo/redo
-    auto compoundCommand = std::make_unique<CompoundCommand>();
-    
-    // Function to order selection points
-    auto orderSelection = [&]() {
-        if (selectionStartLine_ > selectionEndLine_ || 
-            (selectionStartLine_ == selectionEndLine_ && selectionStartCol_ > selectionEndCol_)) {
-            // Swap start and end if needed
-            std::swap(selectionStartLine_, selectionEndLine_);
-            std::swap(selectionStartCol_, selectionEndCol_);
-        }
-    };
-    
-    // Ensure selection points are in order
-    orderSelection();
-    
-    // If selection spans multiple lines
-    if (selectionStartLine_ != selectionEndLine_) {
-        // Handle first line partially
-        std::string firstLine = buffer_.getLine(selectionStartLine_);
-        std::string firstLineStart = firstLine.substr(0, selectionStartCol_);
-        
-        // Handle last line partially
-        std::string lastLine = buffer_.getLine(selectionEndLine_);
-        std::string lastLineEnd = lastLine.substr(selectionEndCol_);
-        
-        // Delete all fully selected lines between first and last
-        // Iterate downwards to avoid index invalidation issues with DeleteLineCommand
-        for (size_t i = selectionEndLine_; i > selectionStartLine_; --i) {
-            // Note: DeleteLineCommand needs to be robust and its execute/undo must invalidate cache.
-            auto deleteLineCmd = std::make_unique<DeleteLineCommand>(i);
-            // These are executed directly as part of building the compound command.
-            // The CompoundCommand's undo will call undo on these sub-commands.
-            deleteLineCmd->execute(*this); 
-            compoundCommand->addCommand(std::move(deleteLineCmd));
-        }
-        
-        // Replace first line with combination of firstLineStart + lastLineEnd
-        // Note: ReplaceLineCommand needs to be robust and its execute/undo must invalidate cache.
-        auto replaceLineCmd = std::make_unique<ReplaceLineCommand>(
-            selectionStartLine_, firstLineStart + lastLineEnd);
-        replaceLineCmd->execute(*this); 
-        compoundCommand->addCommand(std::move(replaceLineCmd));
-        
-        // Set cursor at join point
-        setCursor(selectionStartLine_, selectionStartCol_);
-    } 
-    // Selection within a single line
-    else {
-        std::string line = buffer_.getLine(selectionStartLine_);
-        std::string newLine = line.substr(0, selectionStartCol_) + 
-                            line.substr(selectionEndCol_);
-        
-        // Note: ReplaceLineCommand needs to be robust and its execute/undo must invalidate cache.
-        auto replaceLineCmd = std::make_unique<ReplaceLineCommand>(
-            selectionStartLine_, newLine);
-        replaceLineCmd->execute(*this); 
-        compoundCommand->addCommand(std::move(replaceLineCmd));
-        
-        // Set cursor at deletion point
-        setCursor(selectionStartLine_, selectionStartCol_);
-    }
-    
-    // Clear selection state
-    clearSelection();
-    
-    // Add the compound command to the command manager
-    // This assumes CompoundCommand itself doesn't call invalidateHighlightingCache, 
-    // but its constituent commands do.
-    commandManager_.addCommand(std::move(compoundCommand));
-    
-    // Invalidate the highlighting cache AFTER the compound command is fully built and its parts executed.
-    // However, if sub-commands already invalidate, this might be redundant or cause multiple invalidations.
-    // It's safer if individual commands (DeleteLine, ReplaceLine) called by execute() above handle it.
-    // The current refactor of those commands in EditorCommands.h ensures they do.
-    // So, no explicit invalidateHighlightingCache() here is needed if sub-commands are correct.
+    // Use ReplaceSelectionCommand with an empty string to delete the selection
+    auto command = std::make_unique<ReplaceSelectionCommand>(""); 
+    commandManager_.executeCommand(std::move(command), *this);
+    // The command itself should handle clearing the selection state (hasSelection_ = false)
+    // and cursor positioning after execution.
 }
 
 void Editor::copySelectedText() {
@@ -656,7 +578,7 @@ void Editor::cutSelectedText() {
     if (!hasSelection()) return;
     
     clipboard_ = getSelectedText();
-    deleteSelectedText();
+    deleteSelection();
 }
 
 void Editor::pasteText() {
@@ -666,7 +588,7 @@ void Editor::pasteText() {
     
     // Delete any selected text first
     if (hasSelection_) {
-        deleteSelectedText();
+        deleteSelection();
     }
     
     // Use typeText to handle multiline paste
@@ -679,7 +601,7 @@ void Editor::deleteWord() {
     if (buffer_.isEmpty()) return;
     
     if (hasSelection()) {
-        deleteSelectedText();
+        deleteSelection();
         return;
     }
     
@@ -699,7 +621,7 @@ void Editor::deleteWord() {
     setSelectionEnd();
     
     // Delete the selection
-    deleteSelectedText();
+    deleteSelection();
 }
 
 void Editor::selectWord() {
@@ -767,14 +689,6 @@ bool Editor::redo() {
     return commandManager_.redo(*this);
 }
 
-bool Editor::canUndo() const {
-    return commandManager_.canUndo();
-}
-
-bool Editor::canRedo() const {
-    return commandManager_.canRedo();
-}
-
 // Search operations implementation
 bool Editor::findMatchInLine(const std::string& line, const std::string& term,
                            size_t startPos, bool caseSensitive, size_t& matchPos, size_t& matchLength) {
@@ -818,7 +732,13 @@ bool Editor::findMatchInLine(const std::string& line, const std::string& term,
     }
 }
 
-bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitive, bool isNewSearch) {
+bool Editor::performSearchLogic(
+    const std::string& searchTerm, 
+    bool caseSensitive, 
+    bool forward, // Changed from isNewSearch
+    size_t& outFoundLine, // Added
+    size_t& outFoundCol   // Added
+) {
     if (searchTerm.empty() || buffer_.isEmpty()) {
         return false;
     }
@@ -826,7 +746,7 @@ bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitiv
     // Define search start position
     size_t startLine, startCol;
     
-    if (isNewSearch) {
+    if (forward) {
         // New search: start from current cursor position
         currentSearchTerm_ = searchTerm;
         currentSearchCaseSensitive_ = caseSensitive;
@@ -902,7 +822,6 @@ bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitiv
             const std::string& lineText = buffer_.getLine(line);
             
             // Determine how far to search in this line
-            // size_t endCol = (line == lastSearchLine_) ? lastSearchCol_ : lineText.length();
             
             if (findMatchInLine(lineText, currentSearchTerm_, 0, currentSearchCaseSensitive_, matchPos, matchLength)) {
                 // If this line is the original start line, make sure we're not finding beyond our start col
@@ -931,10 +850,13 @@ bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitiv
         // Set cursor to end of match (important for test expectations)
         setCursor(matchEndLine, matchEndCol);
         
+        outFoundLine = matchEndLine;
+        outFoundCol = matchEndCol;
+        
         return true;
     } else {
         // No match found
-        if (isNewSearch) {
+        if (forward) {
             // For new search, leave cursor where it was and clear selection
             clearSelection();
         }
@@ -942,9 +864,10 @@ bool Editor::performSearchLogic(const std::string& searchTerm, bool caseSensitiv
     }
 }
 
-bool Editor::search(const std::string& searchTerm, bool caseSensitive) {
+bool Editor::search(const std::string& searchTerm, bool caseSensitive, bool forward) {
     // Directly use performSearchLogic instead of creating a SearchCommand to avoid recursion
-    return performSearchLogic(searchTerm, caseSensitive, true);
+    size_t foundLine, foundCol; // Dummy vars to satisfy performSearchLogic signature
+    return performSearchLogic(searchTerm, caseSensitive, forward, foundLine, foundCol);
 }
 
 bool Editor::searchNext() {
@@ -976,7 +899,8 @@ bool Editor::searchNext() {
     
     // For "searchNext", we call performSearchLogic with isNewSearch = false.
     // This reuses the currentSearchTerm_ and other search state.
-    return performSearchLogic(currentSearchTerm_, currentSearchCaseSensitive_, false /*isNewSearch*/);
+    size_t foundLine, foundCol; // Dummy vars to satisfy performSearchLogic signature
+    return performSearchLogic(currentSearchTerm_, currentSearchCaseSensitive_, true, foundLine, foundCol); // Assuming searchNext is forward
 }
 
 // Helper to delete a range of text directly from the buffer.
@@ -1235,22 +1159,27 @@ void Editor::detectAndSetHighlighter() {
         return;
     }
     
-    // Get a shared_ptr to the highlighter for the file's extension
-    std::shared_ptr<SyntaxHighlighter> highlighter = 
-        SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension(filename_);
-    
-    // Set the highlighter in the manager and keep raw pointer for compatibility
-    syntaxHighlightingManager_.setHighlighter(highlighter);
-    currentHighlighter_ = highlighter.get();
-    
-    invalidateHighlightingCache();
+    try {
+        // Get a shared_ptr to the highlighter for the file's extension
+        currentHighlighter_ = SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension(filename_);
+        
+        // Set the highlighter in the manager
+        syntaxHighlightingManager_.setHighlighter(currentHighlighter_);
+        
+        invalidateHighlightingCache();
+    } catch (const std::exception& e) {
+        std::cerr << "Error detecting highlighter: " << e.what() << std::endl;
+        currentHighlighter_ = nullptr;
+        syntaxHighlightingManager_.setHighlighter(nullptr);
+        invalidateHighlightingCache();
+    }
 }
 
-SyntaxHighlighter* Editor::getCurrentHighlighter() const {
+std::shared_ptr<SyntaxHighlighter> Editor::getCurrentHighlighter() const {
     return currentHighlighter_;
 }
 
-std::vector<std::vector<SyntaxStyle>> Editor::getHighlightingStyles() const {
+std::vector<std::vector<SyntaxStyle>> Editor::getHighlightingStyles() {
     if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
         return std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
     }
@@ -1261,6 +1190,48 @@ std::vector<std::vector<SyntaxStyle>> Editor::getHighlightingStyles() const {
     }
     
     return cachedHighlightStyles_;
+}
+
+std::vector<std::vector<SyntaxStyle>> Editor::getHighlightingStyles() const {
+    if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
+        // Return a vector of empty style lists, one for each line in the buffer
+        return std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
+    }
+
+    // If the editor's specific highlighting cache is valid and populated, prefer that.
+    // This assumes 'cachedHighlightStyles_' is correctly sized to buffer_.lineCount()
+    // when highlightingStylesCacheValid_ is true.
+    if (highlightingStylesCacheValid_) {
+        return cachedHighlightStyles_;
+    }
+
+    // Fallback: If editor's cache is not valid, get (potentially less fresh) styles 
+    // directly from the syntax highlighting manager's own cache via its const method.
+    // This won't update the Editor's 'cachedHighlightStyles_' or 'highlightingStylesCacheValid_'.
+    if (buffer_.isEmpty()) {
+        return std::vector<std::vector<SyntaxStyle>>(0);
+    }
+
+    size_t actualStartLine = topVisibleLine_;
+    // Ensure startLine is within buffer bounds
+    if (actualStartLine >= buffer_.lineCount()) {
+        actualStartLine = buffer_.lineCount() - 1;
+    }
+
+    size_t actualEndLine = actualStartLine + viewableLines_ - 1;
+    if (actualEndLine >= buffer_.lineCount()) {
+        actualEndLine = buffer_.lineCount() - 1;
+    }
+    // Ensure endLine is not before startLine (can happen if viewableLines_ is 0 or buffer is tiny)
+    // and also handle the case where buffer might have become empty after check but before use (unlikely here).
+    if (buffer_.lineCount() > 0 && actualEndLine < actualStartLine) {
+         actualEndLine = actualStartLine;
+    }
+
+    // The manager's const getHighlightingStyles might return styles for a different range
+    // or might not cover all lines if its internal cache is sparse. We expect it to return
+    // styles for the requested [actualStartLine, actualEndLine] (inclusive) range based on its *own* cache.
+    return syntaxHighlightingManager_.getHighlightingStyles(actualStartLine, actualEndLine);
 }
 
 void Editor::invalidateHighlightingCache() {
@@ -1274,20 +1245,26 @@ void Editor::invalidateHighlightingCache() {
     syntaxHighlightingManager_.invalidateLines(startLine, endLine);
 }
 
-void Editor::updateHighlightingCache() const {
-    if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
-        cachedHighlightStyles_ = std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
-    } else {
-        // Calculate visible range (simplification)
-        size_t startLine = topVisibleLine_;
-        size_t endLine = std::min(buffer_.lineCount(), topVisibleLine_ + viewableLines_) - 1;
+void Editor::updateHighlightingCache() {
+    try {
+        if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
+            cachedHighlightStyles_ = std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
+        } else {
+            // Calculate visible range
+            size_t startLine = topVisibleLine_;
+            size_t endLine = std::min(buffer_.lineCount(), topVisibleLine_ + viewableLines_) - 1;
+            
+            // Set visible range in manager and get styles from it
+            syntaxHighlightingManager_.setVisibleRange(startLine, endLine);
+            cachedHighlightStyles_ = syntaxHighlightingManager_.getHighlightingStyles(startLine, endLine);
+        }
         
-        // Set visible range in manager and get styles from it
-        syntaxHighlightingManager_.setVisibleRange(startLine, endLine);
-        cachedHighlightStyles_ = syntaxHighlightingManager_.getHighlightingStyles(startLine, endLine);
+        highlightingStylesCacheValid_ = true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error updating highlighting cache: " << e.what() << std::endl;
+        cachedHighlightStyles_ = std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
+        highlightingStylesCacheValid_ = true; // Set to true to prevent continuous retries
     }
-    
-    highlightingStylesCacheValid_ = true;
 }
 
 // --- Stubbed Terminal Dimension Getters ---
@@ -1338,4 +1315,30 @@ bool Editor::saveFile(const std::string& newFilename /* = "" */) {
     }
     std::cerr << "Error: Could not save file to \"" << fileToSave << "\"" << std::endl;
     return false;
+}
+
+// Public getters for selection coordinates
+size_t Editor::getSelectionStartLine() const {
+    return selectionStartLine_;
+}
+
+size_t Editor::getSelectionStartCol() const {
+    return selectionStartCol_;
+}
+
+size_t Editor::getSelectionEndLine() const {
+    return selectionEndLine_;
+}
+
+size_t Editor::getSelectionEndCol() const {
+    return selectionEndCol_;
+}
+
+// Clipboard text accessors
+std::string Editor::getClipboardText() const {
+    return clipboard_;
+}
+
+void Editor::setClipboardText(const std::string& text) {
+    clipboard_ = text;
 } 

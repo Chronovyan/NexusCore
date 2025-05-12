@@ -6,9 +6,10 @@
 
 // Test undo/redo operations
 TestResult testUndoRedo() {
-    EditorTestable editor;
-    IORedirector io;
+    // EditorTestable editor; // No instance needed for static method calls
+    // IORedirector io; // Output will be captured directly from runWithInputs
     std::string message;
+    std::string captured_output; // To store output from runWithInputs
     
     // Test typing and undoing
     std::vector<std::string> inputs = {
@@ -26,33 +27,33 @@ TestResult testUndoRedo() {
         "view"       // Should show all three lines again
     };
     
-    editor.runCommands(inputs);
-    std::string output = io.getOutput();
+    // editor.runCommands(inputs);
+    // std::string output = io.getOutput();
+    EditorTestable::runWithInputs(inputs, captured_output);
     
     // Verify the output contains the correct number of lines after each operation
-    if (output.find("Total lines: 3") == std::string::npos) {
+    if (captured_output.find("Total lines: 3") == std::string::npos) {
         message = "Failed to add three lines or display them correctly";
         return TestResult(false, message);
     }
     
-    if (output.find("Total lines: 2") == std::string::npos) {
+    if (captured_output.find("Total lines: 2") == std::string::npos) {
         message = "Undo did not correctly remove the third line";
         return TestResult(false, message);
     }
     
-    if (output.find("Total lines: 1") == std::string::npos) {
+    if (captured_output.find("Total lines: 1") == std::string::npos) {
         message = "Undo did not correctly remove the second line";
         return TestResult(false, message);
     }
     
-    if (output.find("Action redone") == std::string::npos) {
+    if (captured_output.find("Action redone") == std::string::npos) {
         message = "Redo command did not execute successfully";
         return TestResult(false, message);
     }
     
     // More complex test with typing, backspace, and undo/redo
-    io.clearOutput();
-    editor = EditorTestable(); // Reset the editor
+    captured_output.clear(); // Clear the string for the next run
     
     std::vector<std::string> complexInputs = {
         "add Hello world",
@@ -72,26 +73,27 @@ TestResult testUndoRedo() {
         "view"
     };
     
-    editor.runCommands(complexInputs);
-    output = io.getOutput();
+    // editor.runCommands(complexInputs);
+    // output = io.getOutput();
+    EditorTestable::runWithInputs(complexInputs, captured_output);
     
     // Check for the expected contents after each operation
-    if (output.find("Hello, amazing world") == std::string::npos) {
+    if (captured_output.find("Hello, amazing world") == std::string::npos) {
         message = "Failed to properly type text at cursor position";
         return TestResult(false, message);
     }
     
-    if (output.find("Hello, amazi world") == std::string::npos) {
+    if (captured_output.find("Hello, amazi world") == std::string::npos) {
         message = "Backspace did not properly delete characters";
         return TestResult(false, message);
     }
     
-    if (output.find("Hello, amazin world") == std::string::npos) {
+    if (captured_output.find("Hello, amazin world") == std::string::npos) {
         message = "Undo did not properly restore deleted character";
         return TestResult(false, message);
     }
     
-    if (output.find("Hello world") == std::string::npos) {
+    if (captured_output.find("Hello world") == std::string::npos) {
         message = "Undo did not properly remove typed text";
         return TestResult(false, message);
     }
@@ -164,20 +166,4 @@ TestResult testSyntaxHighlighting() {
     std::cout << "Note: Syntax highlighting test is a stub for future implementation." << std::endl;
     
     return TestResult(true, "Placeholder for syntax highlighting test");
-}
-
-// Main function for running future feature tests directly
-int main() {
-    TestFramework framework;
-    
-    // Register future feature tests
-    framework.registerTest("Undo/Redo Operations", testUndoRedo);
-    framework.registerTest("Search Operations", testSearch);
-    framework.registerTest("Replace Operations", testReplace);
-    framework.registerTest("Syntax Highlighting", testSyntaxHighlighting);
-    
-    // Run all tests
-    framework.runAllTests();
-    
-    return 0;
 } 
