@@ -1316,7 +1316,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterBufferEdit) {
 TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
     // Set up a buffer with a large number of lines to test cache growth
     text_buffer_ = TextBuffer();
-    const size_t NUM_LINES = 1000;
+    const size_t NUM_LINES = SyntaxHighlightingManager::MAX_CACHE_LINES + 100;
     for (size_t i = 0; i < NUM_LINES; i++) {
         text_buffer_.addLine("Line " + std::to_string(i));
     }
@@ -1349,11 +1349,11 @@ TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
     // Second pass: Request lines beyond MAX_CACHE_LINES
     // This tests our fix for handling lines beyond cache capacity
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
-    size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
+    size_t highLineEnd = highLineStart + 50; // Since NUM_LINES = MAX_CACHE_LINES + 100, this is within range
     auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
     
-    // In this test, the high line start (10000) is less than high line end (10050)
-    // so we expect correct styles returned, not an empty result
+    // In this test, high line start (10000) is less than high line end (10050)
+    // since NUM_LINES = MAX_CACHE_LINES + 100, so we expect styles to be returned
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
@@ -1432,11 +1432,11 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEvictionAndCleanup) {
     // Second pass: Request lines beyond MAX_CACHE_LINES
     // This tests our fix for handling lines beyond cache capacity
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
-    size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
+    size_t highLineEnd = highLineStart + 50; // Since NUM_LINES = MAX_CACHE_LINES + 100, this is within range
     auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
     
-    // In this test, the high line start (10000) is less than high line end (10050)
-    // so we expect correct styles returned, not an empty result
+    // In this test, high line start (10000) is less than high line end (10050)
+    // since NUM_LINES = MAX_CACHE_LINES + 100, so we expect styles to be returned
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
