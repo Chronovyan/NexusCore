@@ -400,6 +400,10 @@ TEST_F(SyntaxHighlighterRegistryTest, ThreadSafety) {
 TEST(SyntaxHighlighterTest, GetHighlighterForExtension) {
     auto& registry = SyntaxHighlighterRegistry::getInstance(); // Changed to auto&
     
+    // Register a CppHighlighter for test stability (handles case where registry was cleared by another test)
+    registry.clearRegistry(); // First clear to ensure clean state
+    registry.registerHighlighter(std::make_unique<CppHighlighter>());
+    
     // Test C++ file extension
     auto highlighter = registry.getSharedHighlighterForExtension("test.cpp");
     ASSERT_NE(highlighter, nullptr);
@@ -431,6 +435,10 @@ protected:
     TestEditor editor;
     
     void SetUp() override {
+        // Make sure the registry has the C++ highlighter registered for test stability
+        SyntaxHighlighterRegistry::getInstance().clearRegistry();
+        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::make_unique<CppHighlighter>());
+        
         ON_CALL(mockHighlighter, getSupportedExtensions())
             .WillByDefault([]() {
                 return std::vector<std::string>{".test", ".txt"};
