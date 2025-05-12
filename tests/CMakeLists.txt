@@ -55,6 +55,8 @@ add_executable(RunAllTests
     command_new_line_test.cpp
     command_delete_line_test.cpp
     command_clipboard_operations_test.cpp
+    command_find_replace_test.cpp
+    command_compound_test.cpp
 )
 
 # Add GMock to RunAllTests

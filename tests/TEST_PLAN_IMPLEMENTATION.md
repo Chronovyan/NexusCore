@@ -107,6 +107,8 @@ The test consolidation effort has made significant progress with the following a
    - `command_new_line_test.cpp` - Tests for NewLineCommand
    - `command_delete_line_test.cpp` - Tests for DeleteLineCommand
    - `command_clipboard_operations_test.cpp` - Tests for CopyCommand, PasteCommand, and CutCommand
+   - `command_find_replace_test.cpp` - Tests for SearchCommand, ReplaceCommand, and ReplaceAllCommand
+   - `command_compound_test.cpp` - Tests for CompoundCommand (In Progress)
 
 3. **Migration Strategy Implementation**
    - Created consistent test fixture patterns for editor initialization
@@ -114,8 +116,23 @@ The test consolidation effort has made significant progress with the following a
    - Added more comprehensive test cases beyond the original coverage
    - Ensured proper test isolation with SetUp/TearDown methods
 
-4. **Next Commands for Migration**
-   - Search/Replace Commands
+4. **Standardized Test Utilities Implementation ✓ (Completed)**
+   - Created `EditorCommandTestBase` and `ClipboardOperationsTestBase` in `TestUtilities.h`
+   - Successfully refactored all command test files to use these standardized utilities:
+     - `command_delete_line_test.cpp`
+     - `command_insert_text_test.cpp`
+     - `command_new_line_test.cpp`
+     - `command_join_lines_test.cpp`
+     - `command_delete_char_test.cpp`
+     - `command_replace_test.cpp`
+     - `command_clipboard_operations_test.cpp`
+     - `command_find_replace_test.cpp`
+   - All tests verify buffer content, cursor positions, selections, and clipboard content using consistent utility methods
+   - Significantly improved readability, consistency, and maintainability across all command tests
+
+5. **Next Commands for Migration**
+   - More specialized command tests as needed
+   - Compound command tests for complex operations
 
 #### Migration Approach
 
@@ -151,10 +168,10 @@ Initial planning for dedicated unit tests for Editor facade methods is underway,
 Based on the comprehensive test plan, the following items will be addressed in order of priority:
 
 1. **Complete Test Consolidation (High Priority)**
-   - Continue migrating remaining command tests from CommandLogicTests.cpp
-   - Migrate tests for complex operations (search, replace)
-   - Create adapter patterns for complex test scenarios if needed
-   - Implement standardized test fixtures and helper utilities
+   - ~~Continue migrating remaining command tests from CommandLogicTests.cpp~~ ✓ (Completed)
+   - ~~Migrate tests for complex operations (search, replace)~~ ✓ (Completed)
+   - ~~Create adapter patterns for complex test scenarios if needed~~ ✓ (In Progress - CompoundCommand)
+   - ~~Implement standardized test fixtures and helper utilities~~ ✓ (Completed for command tests)
 
 2. **SyntaxHighlightingManager Tests (Medium Priority)**
    - Implement comprehensive unit tests for cache logic
