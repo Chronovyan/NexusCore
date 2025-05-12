@@ -11,6 +11,9 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <string>
+#include <sstream>
+#include <thread>
 
 // Forward declarations
 class TextBuffer;
@@ -22,10 +25,31 @@ public:
     static constexpr size_t DEFAULT_HIGHLIGHTING_TIMEOUT_MS = 50;
     
     // Default number of context lines to highlight around visible area
-    static constexpr size_t DEFAULT_CONTEXT_LINES = 100;
+    static constexpr size_t DEFAULT_CONTEXT_LINES = 10;  // Reduced from 20
+    
+    // Reduced context for non-visible lines
+    static constexpr size_t NON_VISIBLE_CONTEXT_LINES = 2;  // Reduced from 5
+    
+    // Minimum number of lines to process per batch before timing out
+    static constexpr size_t MIN_LINES_PER_BATCH = 5;
     
     // Cache entry lifetime in milliseconds
     static constexpr size_t CACHE_ENTRY_LIFETIME_MS = 10000; // 10 seconds
+    
+    // Maximum number of lines to cache before triggering eviction
+    static constexpr size_t MAX_CACHE_LINES = 10000;
+    
+    // Threshold ratio for cache cleanup (remove entries until cache is this % of max)
+    static constexpr float CACHE_CLEANUP_RATIO = 0.8f;
+    
+    // Maximum batch size for processing lines
+    static constexpr size_t MAX_BATCH_SIZE = 25;  // Added explicit batch size limit
+    
+    // Time window to consider a line as "recently processed" (milliseconds)
+    static constexpr size_t RECENTLY_PROCESSED_WINDOW_MS = 1000;  // 1 second
+    
+    // Minimum number of requested lines to process before timing out
+    static constexpr size_t MIN_REQUESTED_LINES_PROGRESS = 5;  // New constant
     
     SyntaxHighlightingManager();
     ~SyntaxHighlightingManager();
@@ -139,11 +163,26 @@ public:
     // This is a public method that will acquire a unique_lock.
     void highlightLine(size_t line);
     
+    // Get current cache size (for testing)
+    size_t getCacheSize() const {
+        std::unique_lock<std::recursive_mutex> lock(mutex_);
+        size_t validCount = 0;
+        for (const auto& entry : cachedStyles_) {
+            if (entry && entry->valid.load(std::memory_order_acquire)) {
+                validCount++;
+            }
+        }
+        return validCount;
+    }
+
 private:
     void invalidateAllLines_nolock(); // Internal use without locking
     
+    // Helper function to log vector access for debugging
+    void logVectorAccess(const char* location, size_t index, size_t vectorSize) const;
+    
     // Internal method to highlight a single line, assumes caller holds unique_lock.
-    void highlightLine_nolock(size_t line);
+    std::unique_ptr<std::vector<SyntaxStyle>> highlightLine_nolock(size_t line);
     
     // Internal method to highlight a range of lines with timeout, assumes caller holds unique_lock.
     bool highlightLines_nolock(size_t startLine, size_t endLine, 
@@ -161,13 +200,30 @@ private:
     // Clean up old cache entries to manage memory
     void cleanupCache_nolock();
     
-    // Thread-safe access to buffer_
-    const TextBuffer* getBuffer() const;
+    // Check if a cache entry has expired
+    bool isEntryExpired_nolock(size_t line) const;
     
-    // Get highlighter pointer WITHOUT locking - for internal use when mutex is already held
-    SyntaxHighlighter* getHighlighterPtr_nolock() const;
+    // Evict least recently used entries to reach target size
+    void evictLRUEntries_nolock(size_t targetSize);
+    
+    // Check if a line was recently processed
+    bool wasRecentlyProcessed(size_t line) const;
+    
+    // Mark a line as recently processed
+    void markAsRecentlyProcessed(size_t line);
+    
+    // Calculate optimal processing range based on access pattern
+    std::pair<size_t, size_t> calculateOptimalProcessingRange(size_t startLine, size_t endLine) const;
+    
+    // Logging helpers
+    void logLockAcquisition(const char* method) const;
+    void logLockRelease(const char* method, const std::chrono::steady_clock::time_point& start) const;
+    void logCacheMetrics(const char* method) const;
 
 private:
+    const TextBuffer* getBuffer() const;
+    SyntaxHighlighter* getHighlighterPtr_nolock() const;
+    
     // The buffer to highlight - non-owning pointer
     std::atomic<const TextBuffer*> buffer_{nullptr};
     
@@ -198,6 +254,41 @@ private:
     
     // Mutex for thread safety
     mutable std::recursive_mutex mutex_;
+
+    // Last time each line was accessed (for LRU eviction)
+    std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineAccessTimes_;
+    
+    // Last cleanup time
+    std::chrono::steady_clock::time_point lastCleanupTime_;
+
+    // Cache performance tracking
+    std::atomic<size_t> cacheHits_{0};
+    std::atomic<size_t> cacheMisses_{0};
+    std::atomic<size_t> redundantProcessingCount_{0};
+    
+    // Track recently processed lines to avoid redundant work
+    std::unordered_map<size_t, std::chrono::steady_clock::time_point> recentlyProcessed_;
+
+    // Track last successfully processed range for optimizing sequential access
+    struct LastProcessedRange {
+        size_t startLine{0};
+        size_t endLine{0};
+        bool valid{false};
+        
+        void update(size_t start, size_t end) {
+            startLine = start;
+            endLine = end;
+            valid = true;
+        }
+        
+        void invalidate() {
+            valid = false;
+        }
+        
+        bool isSequentialWith(size_t line) const {
+            return valid && (line == endLine + 1);
+        }
+    } lastProcessedRange_;
 };
 
 #endif // SYNTAX_HIGHLIGHTING_MANAGER_H 

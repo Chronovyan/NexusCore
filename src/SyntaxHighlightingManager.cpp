@@ -551,20 +551,49 @@ bool SyntaxHighlightingManager::highlightLines_nolock(size_t startLine, size_t e
                             evictLRUEntries_nolock(targetSize);
                         }
                         
-                        size_t newSize = line + 1; // Safe because we verified line < MAX_CACHE_LINES
+                        // Calculate a safe new size - avoid huge jumps in resizing
+                        size_t currentSize = cachedStyles_.size();
+                        size_t newSize;
                         
-                        logManagerMessage(EditorException::Severity::Warning,
-                                        "SyntaxHighlightingManager::highlightLines_nolock",
-                                        "Resizing cachedStyles_ from %zu to %zu for line %zu (max: %zu)",
-                                        cachedStyles_.size(), newSize, line, MAX_CACHE_LINES);
-                        
-                        // Reserve capacity first to reduce potential allocation failures
-                        if (newSize > cachedStyles_.capacity()) {
-                            cachedStyles_.reserve(newSize);
+                        if (line >= currentSize * 10) {
+                            // For very large jumps, grow in increments to avoid excessive allocations
+                            logManagerMessage(EditorException::Severity::Warning,
+                                            "SyntaxHighlightingManager::highlightLines_nolock",
+                                            "Very large gap detected. Incrementally resizing.");
+                            
+                            // For very large jumps, use the line number directly but only cache the specific line 
+                            // instead of growing the full array
+                            if (cachedStyles_.capacity() < line + 1) {
+                                // Only reserve capacity if needed
+                                cachedStyles_.reserve(std::min(line + 1, MAX_CACHE_LINES));
+                            }
+                            
+                            // Insert only the entry we care about, keeping sparse representation
+                            while (cachedStyles_.size() <= line) {
+                                cachedStyles_.push_back(nullptr);
+                            }
+                            
+                            logManagerMessage(EditorException::Severity::Warning,
+                                            "SyntaxHighlightingManager::highlightLines_nolock",
+                                            "Created sparse representation for large line %zu",
+                                            line);
+                        } else {
+                            // For smaller jumps, just resize normally
+                            newSize = line + 1; // Safe because we verified line < MAX_CACHE_LINES
+                            
+                            logManagerMessage(EditorException::Severity::Warning,
+                                            "SyntaxHighlightingManager::highlightLines_nolock",
+                                            "Resizing cachedStyles_ from %zu to %zu for line %zu (max: %zu)",
+                                            cachedStyles_.size(), newSize, line, MAX_CACHE_LINES);
+                            
+                            // Reserve capacity first to reduce potential allocation failures
+                            if (newSize > cachedStyles_.capacity()) {
+                                cachedStyles_.reserve(newSize);
+                            }
+                            
+                            // Now do the actual resize
+                            cachedStyles_.resize(newSize);
                         }
-                        
-                        // Now do the actual resize
-                        cachedStyles_.resize(newSize);
                         
                         logManagerMessage(EditorException::Severity::Warning,
                                         "SyntaxHighlightingManager::highlightLines_nolock",
@@ -776,12 +805,22 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
     auto lockStart = std::chrono::steady_clock::now();
     std::unique_lock<std::recursive_mutex> lock(mutex_);
     
-        logManagerMessage(EditorException::Severity::Warning,
+    logManagerMessage(EditorException::Severity::Warning,
                      "SyntaxHighlightingManager::getHighlightingStyles",
                      "[ENTRY] Called for lines %zu to %zu.",
                      startLine, endLine);
     
     logCacheMetrics("SyntaxHighlightingManager::getHighlightingStyles");
+    
+    // Check for invalid range (startLine > endLine)
+    if (startLine > endLine) {
+        logManagerMessage(EditorException::Severity::Warning,
+                         "SyntaxHighlightingManager::getHighlightingStyles",
+                         "Invalid range: startLine %zu > endLine %zu, returning empty result",
+                         startLine, endLine);
+        logLockRelease("SyntaxHighlightingManager::getHighlightingStyles", lockStart);
+        return std::vector<std::vector<SyntaxStyle>>();
+    }
     
     const TextBuffer* buffer = getBuffer();
     SyntaxHighlighter* highlighter = getHighlighterPtr_nolock();
@@ -1612,6 +1651,16 @@ void SyntaxHighlightingManager::markAsRecentlyProcessed(size_t line) {
 std::pair<size_t, size_t> SyntaxHighlightingManager::calculateOptimalProcessingRange(
     size_t requestedStart, size_t requestedEnd) const {
     
+    // Check for invalid range (startLine > endLine)
+    if (requestedStart > requestedEnd) {
+        logManagerMessage(EditorException::Severity::Warning,
+                         "SyntaxHighlightingManager::calculateOptimalProcessingRange",
+                         "Invalid range detected: startLine %zu > endLine %zu, using endLine for both",
+                         requestedStart, requestedEnd);
+        // Return a valid range using the endLine for both to avoid processing issues
+        return {requestedEnd, requestedEnd};
+    }
+
     // Get buffer bounds
     const TextBuffer* buffer = getBuffer();
     size_t maxLine = buffer ? buffer->lineCount() - 1 : requestedEnd;
