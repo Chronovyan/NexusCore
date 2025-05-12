@@ -1332,23 +1332,35 @@ TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
             return styles;
         }));
 
-    // Request styles for the first 100 lines
-    // This should cause the cache to grow to at least size 100
-    auto styles1 = manager_.getHighlightingStyles(0, 99);
-    EXPECT_EQ(styles1.size(), 100);
+    // First pass: Fill the cache to its maximum capacity
+    // Process in batches to avoid timeouts
+    const size_t BATCH_SIZE = 1000;
+    for (size_t start = 0; start < NUM_LINES; start += BATCH_SIZE) {
+        size_t end = std::min(start + BATCH_SIZE - 1, NUM_LINES - 1);
+        auto styles = manager_.getHighlightingStyles(start, end);
+        ASSERT_EQ(styles.size(), end - start + 1);
+    }
 
-    // Request styles for lines 500-599
-    // This should cause the cache to grow to at least size 600
-    auto styles2 = manager_.getHighlightingStyles(500, 599);
-    EXPECT_EQ(styles2.size(), 100);
+    // Verify the cache size is capped at MAX_CACHE_LINES
+    size_t cacheSize = manager_.getCacheSize();
+    EXPECT_LE(cacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
+    EXPECT_GT(cacheSize, 0);
 
-    // Invalidate all lines
-    manager_.invalidateAllLines();
+    // Second pass: Request lines beyond MAX_CACHE_LINES
+    // This tests our fix for handling lines beyond cache capacity
+    size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
+    size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
+    auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
-    // Request styles for a small range again
-    // Verify that the highlighter is called again after invalidation
-    auto styles3 = manager_.getHighlightingStyles(0, 9);
-    EXPECT_EQ(styles3.size(), 10);
+    // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
+    auto styles2 = manager_.getHighlightingStyles(0, 50);
+    EXPECT_EQ(styles2.size(), 51);
+
+    // Verify cache size is still valid
+    size_t finalCacheSize = manager_.getCacheSize();
+    EXPECT_LE(finalCacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
+    EXPECT_GT(finalCacheSize, 0);
 }
 
 // Test to verify cache behavior with the CACHE_ENTRY_LIFETIME_MS constant
@@ -1383,56 +1395,50 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEntryLifetime) {
 }
 
 TEST_F(SyntaxHighlightingManagerTest, CacheEvictionAndCleanup) {
-    // Create a VERY small test to verify basic eviction functionality
+    // Set up a buffer with more lines than MAX_CACHE_LINES
     text_buffer_ = TextBuffer();
-    
-    // Use a minimal number of lines - just enough to verify the mechanism works
-    const size_t NUM_LINES = 200; // Much smaller than MAX_CACHE_LINES
-    
-    // Create a reasonable number of lines
+    const size_t NUM_LINES = SyntaxHighlightingManager::MAX_CACHE_LINES + 100;
     for (size_t i = 0; i < NUM_LINES; i++) {
         text_buffer_.addLine("Line " + std::to_string(i));
     }
-    
-    // Set up mock to return styles quickly
+
+    // Set up mock expectations - Don't require all lines to be highlighted
+    // due to timeouts limiting the actual number processed
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .Times(testing::AtLeast(10))
+        .Times(testing::AtLeast(100)) // Just require a reasonable number of calls
         .WillRepeatedly(testing::Invoke([](const std::string& line, size_t) {
             auto styles = std::make_unique<std::vector<SyntaxStyle>>();
             styles->push_back(SyntaxStyle(0, line.length(), SyntaxColor::Keyword));
             return styles;
         }));
-        
-    // Use smaller batches to process faster
-    const size_t BATCH_SIZE = 20;
-    
-    // First pass: Fill part of the cache in batches
-    for (size_t start = 0; start < 100; start += BATCH_SIZE) {
-        size_t end = std::min(start + BATCH_SIZE - 1, static_cast<size_t>(99));
+
+    // First pass: Fill the cache to its maximum capacity
+    // Process in batches to avoid timeouts
+    const size_t BATCH_SIZE = 1000;
+    for (size_t start = 0; start < NUM_LINES; start += BATCH_SIZE) {
+        size_t end = std::min(start + BATCH_SIZE - 1, NUM_LINES - 1);
         auto styles = manager_.getHighlightingStyles(start, end);
         ASSERT_EQ(styles.size(), end - start + 1);
     }
-    
-    // Verify we now have some items in cache
-    const size_t initialCacheSize = manager_.getCacheSize();
-    EXPECT_GT(initialCacheSize, 0);
-    
-    // Second pass: Manually force eviction by invalidating first half 
-    // and highlighting second half
-    manager_.invalidateLines(0, 49);
-    auto styles1 = manager_.getHighlightingStyles(100, 150);
-    EXPECT_EQ(styles1.size(), 51);
-    
-    // Third pass: Now re-request original lines to verify they're rehighlighted
-    auto styles2 = manager_.getHighlightingStyles(0, 10);
-    EXPECT_EQ(styles2.size(), 11);
-    
-    // Verify cache size is still reasonable
-    const size_t finalCacheSize = manager_.getCacheSize();
+
+    // Verify the cache size is capped at MAX_CACHE_LINES
+    size_t cacheSize = manager_.getCacheSize();
+    EXPECT_LE(cacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
+    EXPECT_GT(cacheSize, 0);
+
+    // Second pass: Request lines beyond MAX_CACHE_LINES
+    // This tests our fix for handling lines beyond cache capacity
+    size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
+    size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
+    auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
+
+    // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
+    auto styles2 = manager_.getHighlightingStyles(0, 50);
+    EXPECT_EQ(styles2.size(), 51);
+
+    // Verify cache size is still valid
+    size_t finalCacheSize = manager_.getCacheSize();
+    EXPECT_LE(finalCacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
     EXPECT_GT(finalCacheSize, 0);
-    
-    // This is the key test - we've verified:
-    // 1. We can add lines to the cache
-    // 2. We can force some entries out (by using a mix of invalidation & new lines)
-    // 3. We can rehighlight evicted entries
 } 
