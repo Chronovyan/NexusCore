@@ -498,7 +498,39 @@ bool SyntaxHighlightingManager::highlightLines_nolock(size_t startLine, size_t e
             
             // Get the line content and highlight it - ALWAYS DO THIS regardless of cache status
             std::string lineContent = buffer->getLine(line);
-            auto styles = highlighter_->highlightLine(lineContent, line);
+            
+            // Call the highlighter but wrap in try-catch to handle any exceptions
+            std::unique_ptr<std::vector<SyntaxStyle>> styles;
+            
+            // Get the highlighter pointer safely via the getter
+            SyntaxHighlighter* highlighter = getHighlighterPtr_nolock();
+            
+            // First check if highlighter is null
+            if (!highlighter) {
+                logManagerMessage(EditorException::Severity::Warning,
+                                 "SyntaxHighlightingManager::highlightLines_nolock",
+                                 "Highlighter is null for line %zu - returning empty styles",
+                                 line);
+                styles = std::make_unique<std::vector<SyntaxStyle>>();
+            } else {
+                try {
+                    styles = highlighter->highlightLine(lineContent, line);
+                } catch (const std::exception& ex) {
+                    logManagerMessage(EditorException::Severity::Error,
+                                     "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Exception from highlighter for line %zu: %s",
+                                     line, ex.what());
+                    // Create empty style vector on exception
+                    styles = std::make_unique<std::vector<SyntaxStyle>>();
+                } catch (...) {
+                    logManagerMessage(EditorException::Severity::Error,
+                                     "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Unknown exception from highlighter for line %zu",
+                                     line);
+                    // Create empty style vector on exception
+                    styles = std::make_unique<std::vector<SyntaxStyle>>();
+                }
+            }
             
             // Define whether we can cache this line
             bool canCacheThisLine = (line < MAX_CACHE_LINES);
@@ -752,9 +784,19 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
     logCacheMetrics("SyntaxHighlightingManager::getHighlightingStyles");
     
     const TextBuffer* buffer = getBuffer();
-    if (!buffer) {
+    SyntaxHighlighter* highlighter = getHighlighterPtr_nolock();
+    if (!buffer || !highlighter || !enabled_.load(std::memory_order_acquire)) {
+        // Create a result with the appropriate size but empty vectors for each line
+        std::vector<std::vector<SyntaxStyle>> emptyResult;
+        emptyResult.resize(endLine - startLine + 1);
+        logManagerMessage(EditorException::Severity::Warning,
+                         "SyntaxHighlightingManager::getHighlightingStyles",
+                         "Not highlighting - buffer is %s, highlighter is %s, enabled is %s",
+                         buffer ? "available" : "null",
+                         highlighter ? "available" : "null",
+                         enabled_.load(std::memory_order_acquire) ? "true" : "false");
         logLockRelease("SyntaxHighlightingManager::getHighlightingStyles", lockStart);
-        return std::vector<std::vector<SyntaxStyle>>();
+        return emptyResult;
     }
     
     // Calculate optimal processing range based on access pattern
