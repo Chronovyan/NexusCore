@@ -221,25 +221,53 @@ void TextBuffer::joinLines(size_t lineIndex) {
 }
 
 void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::string& text) {
+    // ADD LOGGING FOR PARAMETERS
+
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for insertString", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for insertString (lineIndex)", EditorException::Severity::Error);
+    }
+    if (colIndex > lines_[lineIndex].length()) {
+        throw TextBufferException("Index out of range for insertString (colIndex)", EditorException::Severity::Error);
+    }
+
+    size_t currentPosInInputText = 0; 
+    size_t lastNewlinePosInInputText = std::string::npos;
+
+    for (size_t i = 0; i < text.length(); ++i) {
+        if (text[i] == '\n') {
+
+            std::string textAfterNewline = lines_[lineIndex].substr(colIndex + currentPosInInputText);
+            lines_[lineIndex].erase(colIndex + currentPosInInputText);
+            
+            lines_[lineIndex] += text.substr(lastNewlinePosInInputText == std::string::npos ? 0 : lastNewlinePosInInputText + 1, i - (lastNewlinePosInInputText == std::string::npos ? 0 : lastNewlinePosInInputText + 1));
+            
+            lineIndex++; 
+            lines_.insert(lines_.begin() + lineIndex, textAfterNewline); 
+            
+
+            colIndex = 0; 
+            currentPosInInputText = 0; 
+            lastNewlinePosInInputText = i;
+        } else {
+            currentPosInInputText++;
+        }
     }
     
-    std::string& line = lines_[lineIndex];
+    std::string remainingTextToInsert = text.substr(lastNewlinePosInInputText == std::string::npos ? 0 : lastNewlinePosInInputText + 1);
     
-    // Allow inserting at the very end of the line (colIndex == line.length())
-    if (colIndex > line.length()) {
-        // Instead of throwing, we could optionally extend the line with spaces
-        // line.append(colIndex - line.length(), ' ');
-        throw TextBufferException("Column index out of range for insertString", EditorException::Severity::Error);
+    if (!remainingTextToInsert.empty()) {
+        if (lineIndex >= lines_.size()) { 
+             throw TextBufferException("Index out of range for insertString final (lineIndex)", EditorException::Severity::Error);
+        }
+        if (colIndex > lines_[lineIndex].length()){ 
+            throw TextBufferException("Index out of range for insertString final (colIndex)", EditorException::Severity::Error);
+        }
+
+        
+        lines_[lineIndex].insert(colIndex, remainingTextToInsert); 
+        
+    } else {
     }
-    
-    // Simple insertion of a string without newlines
-    line.insert(colIndex, text);
-    
-    // Note: This simplified version doesn't handle newlines in the inserted text
-    // For multi-line insertions, a more complex implementation would be needed
-    // That would involve splitting the insert text at each newline and creating new lines
 }
 
 std::string TextBuffer::getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const {

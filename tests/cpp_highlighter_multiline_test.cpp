@@ -8,7 +8,7 @@
 #include <iostream>
 
 // Helper function to check if a specific style is applied to a range
-bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, SyntaxColor color) {
+static bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, SyntaxColor color) {
     for (const auto& style : styles) {
         // For strings, allow a little flexibility in the exact positions
         if (color == SyntaxColor::String) {
@@ -30,7 +30,7 @@ bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, 
 }
 
 // Helper function to verify if a line is completely highlighted as a comment
-bool isFullLineCommented(const std::vector<SyntaxStyle>& styles, const std::string& line) {
+static bool isFullLineCommented(const std::vector<SyntaxStyle>& styles, const std::string& line) {
     if (styles.empty()) return false;
     
     for (const auto& style : styles) {

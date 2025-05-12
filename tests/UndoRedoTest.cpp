@@ -201,19 +201,4 @@ TestResult testLineOperationsUndoRedo() {
     }
     
     return TestResult(true, "Undo/redo with line operations works correctly");
-}
-
-// Main function for running undo/redo tests directly
-int main() {
-    TestFramework framework;
-    
-    // Register undo/redo tests
-    framework.registerTest("Basic Undo/Redo Operations", testBasicUndoRedo);
-    framework.registerTest("Text Editing Undo/Redo", testTextEditingUndoRedo);
-    framework.registerTest("Line Operations Undo/Redo", testLineOperationsUndoRedo);
-    
-    // Run all tests
-    framework.runAllTests();
-    
-    return 0;
 } 

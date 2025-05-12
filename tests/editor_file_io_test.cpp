@@ -52,8 +52,8 @@ protected:
         
         std::remove(read_only_file.c_str());
         
-        // Try to remove the test directory (will only succeed if empty)
-        std::filesystem::remove(test_dir);
+        // Try to remove the test directory and its contents
+        std::filesystem::remove_all(test_dir);
     }
 };
 

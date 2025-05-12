@@ -68,27 +68,27 @@ public:
 class ErrorReporter {
 public:
     // Log an exception to std::cerr (could be extended to log to file)
-    static void logException(const EditorException& ex) {
+    static inline void logException(const EditorException& ex) {
         std::cerr << ex.getFormattedMessage() << std::endl;
     }
 
     // Log a general exception
-    static void logException(const std::exception& ex) {
+    static inline void logException(const std::exception& ex) {
         std::cerr << "Exception: " << ex.what() << std::endl;
     }
 
     // Log an unknown exception
-    static void logUnknownException(const std::string& context) {
+    static inline void logUnknownException(const std::string& context) {
         std::cerr << "Unknown exception in " << context << std::endl;
     }
 
     // Log a general error message
-    static void logError(const std::string& message) {
+    static inline void logError(const std::string& message) {
         std::cerr << "Error: " << message << std::endl;
     }
 
     // Log a warning message
-    static void logWarning(const std::string& message) {
+    static inline void logWarning(const std::string& message) {
         std::cerr << "Warning: " << message << std::endl;
     }
 };

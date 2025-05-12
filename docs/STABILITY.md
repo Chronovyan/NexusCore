@@ -110,4 +110,4 @@ Stability is ensured through a multi-faceted approach:
 
 ## Conclusion
 
-These principles, combined with robust concurrency control (detailed in `THREAD_SAFETY.MD`), form the foundation for a stable and reliable text editor. Diligent application of RAII, disciplined error handling, `const`-correctness, and comprehensive, multi-layered testing are paramount.
+These principles, combined with robust concurrency control (detailed in `THREAD_SAFETY.MD`), form the foundation for a stable and reliable text editor. Diligent application of RAII, disciplined error handling, `const`-correctness, and comprehensive, multi-layered testing are paramount. 

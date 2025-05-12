@@ -42,11 +42,52 @@ public:
         std::chrono::steady_clock::time_point timestamp;
         std::atomic<bool> valid{true};
         
-        CacheEntry() : timestamp(std::chrono::steady_clock::now()) {}
+        CacheEntry() noexcept : timestamp(std::chrono::steady_clock::now()) {}
         
-        CacheEntry(std::vector<SyntaxStyle> s) 
+        CacheEntry(const std::vector<SyntaxStyle>& s) noexcept
+            : styles(s), 
+              timestamp(std::chrono::steady_clock::now()) {}
+              
+        CacheEntry(std::vector<SyntaxStyle>&& s) noexcept
             : styles(std::move(s)), 
               timestamp(std::chrono::steady_clock::now()) {}
+              
+        // Simplified copy constructor that doesn't allocate memory unnecessarily
+        CacheEntry(const CacheEntry& other) noexcept
+            : styles(other.styles),
+              timestamp(other.timestamp),
+              valid(other.valid.load(std::memory_order_acquire)) {}
+              
+        // Simplified assignment operator
+        CacheEntry& operator=(const CacheEntry& other) noexcept {
+            if (this != &other) {
+                styles = other.styles;
+                timestamp = other.timestamp;
+                valid.store(other.valid.load(std::memory_order_acquire), 
+                           std::memory_order_release);
+            }
+            return *this;
+        }
+        
+        // Simplified move constructor
+        CacheEntry(CacheEntry&& other) noexcept
+            : styles(std::move(other.styles)),
+              timestamp(other.timestamp),
+              valid(other.valid.load(std::memory_order_acquire)) {}
+              
+        // Simplified move assignment
+        CacheEntry& operator=(CacheEntry&& other) noexcept {
+            if (this != &other) {
+                styles = std::move(other.styles);
+                timestamp = other.timestamp;
+                valid.store(other.valid.load(std::memory_order_acquire), 
+                           std::memory_order_release);
+            }
+            return *this;
+        }
+        
+        // No exception-throwing destructor
+        ~CacheEntry() noexcept {}
     };
     
     // Set the active highlighter
@@ -80,7 +121,7 @@ public:
     void invalidateAllLines();
     
     // Set the visible range (for prioritizing highlighting)
-    void setVisibleRange(size_t startLine, size_t endLine);
+    void setVisibleRange(size_t startLine, size_t endLine) const;
     
     // Set the highlighting timeout in milliseconds
     void setHighlightingTimeout(size_t timeoutMs);
@@ -146,8 +187,8 @@ private:
     std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineTimestamps_;
     
     // The current visible range
-    std::atomic<size_t> visibleStartLine_{0};
-    std::atomic<size_t> visibleEndLine_{0};
+    mutable std::atomic<size_t> visibleStartLine_{0};
+    mutable std::atomic<size_t> visibleEndLine_{0};
     
     // Highlighting timeout in milliseconds
     std::atomic<size_t> highlightingTimeoutMs_{DEFAULT_HIGHLIGHTING_TIMEOUT_MS};

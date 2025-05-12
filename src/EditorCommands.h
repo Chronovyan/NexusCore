@@ -317,6 +317,16 @@ private:
     size_t newCursorLine_;
     size_t newCursorCol_;
     std::vector<std::string> newLines_; // Added for completeness, was in original header logic
+    struct StagedMatch {
+        std::string originalText;
+        size_t startLine;
+        size_t startCol;
+        size_t endLine;
+        size_t endCol;
+    };
+    StagedMatch stagedMatch_;
+
+    bool findAndStageNextReplacement(Editor& editor);
 };
 
 // JoinLinesCommand - Joins the specified line with the next one
@@ -417,6 +427,8 @@ private:
     size_t originalEndLine_;
     size_t originalEndCol_;
     bool executedSuccessfully_;
+    std::string textToCut_;
+    bool wasSelection_;
 };
 
 #endif // EDITOR_COMMANDS_H 

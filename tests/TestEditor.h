@@ -2,14 +2,20 @@
 #define TEST_EDITOR_H
 
 #include "../src/Editor.h"
+#include "TestSyntaxHighlightingManager.h"
 
-// Test-specific editor class that allows unrestricted cursor positioning
+// Test-specific editor class that allows unrestricted cursor positioning and uses TestSyntaxHighlightingManager
 class TestEditor : public Editor {
 public:
-    TestEditor() : Editor() {}
+    TestEditor() : Editor() {
+        // Replace the production SyntaxHighlightingManager with our test version
+        testSyntaxHighlightingManager_ = std::make_unique<TestSyntaxHighlightingManager>();
+        testSyntaxHighlightingManager_->setBuffer(&buffer_);
+        testSyntaxHighlightingManager_->setEnabled(syntaxHighlightingEnabled_);
+    }
 
     // Override setCursor to bypass validation in tests
-    void setCursor(size_t line, size_t col) {
+    void setCursor(size_t line, size_t col) override {
         // Direct access to protected member variables of Editor
         cursorLine_ = line;
         cursorCol_ = col;
@@ -26,6 +32,43 @@ public:
     using Editor::selectionEndCol_;
     using Editor::clipboard_;
 
+    // Override getHighlightingStyles to use TestSyntaxHighlightingManager
+    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const override {
+        if (!syntaxHighlightingEnabled_ || !currentHighlighter_) {
+            return std::vector<std::vector<SyntaxStyle>>(buffer_.lineCount());
+        }
+        
+        size_t startLine = topVisibleLine_;
+        size_t endLine = std::min(buffer_.lineCount(), topVisibleLine_ + viewableLines_) - 1;
+        
+        testSyntaxHighlightingManager_->setVisibleRange(startLine, endLine);
+        return testSyntaxHighlightingManager_->getHighlightingStyles(startLine, endLine);
+    }
+    
+    // Override detectAndSetHighlighter to use TestSyntaxHighlightingManager
+    void detectAndSetHighlighter() override {
+        currentHighlighter_ = nullptr;
+        
+        if (filename_.empty() || !syntaxHighlightingEnabled_) {
+            testSyntaxHighlightingManager_->setHighlighter(nullptr);
+            return;
+        }
+        
+        try {
+            currentHighlighter_ = SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension(filename_);
+            testSyntaxHighlightingManager_->setHighlighter(currentHighlighter_);
+        } catch (...) {
+            currentHighlighter_ = nullptr;
+            testSyntaxHighlightingManager_->setHighlighter(nullptr);
+        }
+    }
+    
+    // Override enableSyntaxHighlighting to use TestSyntaxHighlightingManager
+    void enableSyntaxHighlighting(bool enable = true) override {
+        syntaxHighlightingEnabled_ = enable;
+        testSyntaxHighlightingManager_->setEnabled(enable);
+    }
+    
     // Access methods for testing selection
     bool hasSelection() const {
         return Editor::hasSelection();
@@ -40,10 +83,6 @@ public:
         return Editor::isSyntaxHighlightingEnabled();
     }
     
-    void enableSyntaxHighlighting(bool enable = true) {
-        Editor::enableSyntaxHighlighting(enable);
-    }
-    
     void setFilename(const std::string& filename) {
         Editor::setFilename(filename);
     }
@@ -52,13 +91,12 @@ public:
         return Editor::getFilename();
     }
     
-    SyntaxHighlighter* getCurrentHighlighter() const {
+    std::shared_ptr<SyntaxHighlighter> getCurrentHighlighter() const {
         return Editor::getCurrentHighlighter();
     }
-    
-    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const {
-        return Editor::getHighlightingStyles();
-    }
+
+private:
+    std::unique_ptr<TestSyntaxHighlightingManager> testSyntaxHighlightingManager_;
 };
 
 #endif // TEST_EDITOR_H 
