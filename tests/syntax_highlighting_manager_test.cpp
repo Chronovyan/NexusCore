@@ -1351,6 +1351,9 @@ TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
     size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
     auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    
+    // In this test, the high line start (10000) is less than high line end (10050)
+    // so we expect correct styles returned, not an empty result
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
@@ -1431,6 +1434,9 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEvictionAndCleanup) {
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
     size_t highLineEnd = std::min(highLineStart + 50, NUM_LINES - 1);
     auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    
+    // In this test, the high line start (10000) is less than high line end (10050)
+    // so we expect correct styles returned, not an empty result
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
