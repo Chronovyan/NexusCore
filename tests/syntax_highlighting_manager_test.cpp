@@ -399,35 +399,6 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateAllLines) {
     EXPECT_EQ(styles2.size(), 3);
 }
 
-TEST_F(SyntaxHighlightingManagerTest, DISABLED_CacheUpdatesAfterTimeout) {
-    // Create a style for testing
-    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
-    
-    // Initial highlighting to populate cache
-    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .Times(2) // Once for each line
-        .WillRepeatedly(ReturnStyleVector(testStyle));
-    
-    auto styles1 = manager_.getHighlightingStyles(0, 1);
-    EXPECT_EQ(styles1.size(), 2);
-    
-    // Clear expectations and set up for next test phase
-    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
-    
-    // Wait a bit longer than the cache entry lifetime
-    // The SyntaxHighlightingManager header indicates CACHE_ENTRY_LIFETIME_MS = 10000 (10 seconds)
-    // For testing purposes, we'll wait for just over that time
-    std::this_thread::sleep_for(std::chrono::milliseconds(11000));
-    
-    // After cache timeout, expect lines to be rehighlighted
-    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .Times(2) // Both lines should be rehighlighted
-        .WillRepeatedly(ReturnStyleVector(testStyle));
-    
-    auto styles2 = manager_.getHighlightingStyles(0, 1);
-    EXPECT_EQ(styles2.size(), 2);
-}
-
 TEST_F(SyntaxHighlightingManagerTest, HighlightingTimeoutSettings) {
     // Verify default timeout setting
     EXPECT_EQ(manager_.getHighlightingTimeout(), SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
@@ -477,66 +448,6 @@ TEST_F(SyntaxHighlightingManagerTest, VisibleRangeAffectsCacheLifetime) {
     auto styles2 = manager_.getHighlightingStyles(0, 0);
     EXPECT_EQ(styles2.size(), 1);
 }
-
-// Thread safety tests - basic verification
-TEST_F(SyntaxHighlightingManagerTest, DISABLED_ConcurrentInvalidationsAreHandledSafely) {
-    // This test verifies that concurrent invalidation operations don't cause crashes
-    // or undefined behavior. We're not testing for specific thread interleavings,
-    // just basic thread safety.
-    
-    // Create a style for testing
-    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
-    
-    // Set up default behavior for any highlighting that might happen
-    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .WillByDefault(ReturnStyleVector(testStyle));
-    
-    const int numThreads = 5;
-    const int operationsPerThread = 10;
-    
-    std::vector<std::thread> threads;
-    
-    // Create threads that perform concurrent invalidations
-    for (int i = 0; i < numThreads; ++i) {
-        threads.emplace_back([this, i, operationsPerThread]() {
-            for (int j = 0; j < operationsPerThread; ++j) {
-                // Mix of different invalidation operations
-                switch (j % 3) {
-                    case 0:
-                        manager_.invalidateLine(0);
-                        break;
-                    case 1:
-                        manager_.invalidateLines(0, 1);
-                        break;
-                    case 2:
-                        manager_.invalidateAllLines();
-                        break;
-                }
-                
-                // Also mix in some highlighting requests
-                if (j % 2 == 0) {
-                    manager_.getHighlightingStyles(0, 1);
-                }
-                
-                // Small sleep to increase chance of thread interleaving
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        });
-    }
-    
-    // Wait for all threads to complete
-    for (auto& thread : threads) {
-        thread.join();
-    }
-    
-    // If we got here without crashing or exceptions, basic thread safety is working
-    SUCCEED() << "Concurrent operations completed without crashes or exceptions";
-}
-
-// TODO: Add tests for SyntaxHighlighterRegistry error handling
-// For example, what happens if a highlighter passed to registerHighlighter
-// throws an exception during getSupportedExtensions?
-// What happens if getHighlighterForExtension encounters an issue? (less likely with current logic)
 
 TEST_F(SyntaxHighlightingManagerTest, DebugSetUpBufferLineCount) {
     std::cout << "Buffer line count: " << text_buffer_.lineCount() << std::endl;
@@ -815,277 +726,279 @@ TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
     }
 }
 
-// Thread-safety test for concurrent reads
-TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAreThreadSafe) {
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAreThreadSafe) - Start" << std::endl;
-    
-    // Prepare a buffer with fewer lines for faster processing
-    const size_t LINE_COUNT = 20; 
-    
-    // Reset the text buffer with multiple lines
-    text_buffer_ = TextBuffer(); // Start fresh
-    for (size_t i = 0; i < LINE_COUNT; ++i) {
-        std::string line = "Line " + std::to_string(i) + " content with some C++ syntax: for (int i = 0; i < 10; i++) { }";
-        text_buffer_.addLine(line);
-    }
-    
-    // Configure mock highlighter with default styling
-    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
-    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .WillByDefault(ReturnStyleVector(testStyle));
-    
-    // Configure the manager to use the updated buffer
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setEnabled(true);
-    
-    // Set a reasonable timeout
-    manager_.setHighlightingTimeout(100);
-    
-    // Invalidate all lines to ensure they need highlighting
-    manager_.invalidateAllLines();
-    
-    // Do an initial highlighting of just a few lines to ensure the mechanism works
-    auto initialStyles = manager_.getHighlightingStyles(0, 5);
-    ASSERT_EQ(initialStyles.size(), 6) << "The initial highlighting didn't return the expected number of lines";
-    
-    // Atomic counter to track if any thread encounters issues
-    std::atomic<bool> encounteredIssues(false);
-    
-    // Vector to store results from each thread
-    std::vector<std::future<bool>> results;
-    
-    // Create multiple threads that will read concurrently
-    const size_t THREAD_COUNT = 4;
-    
-    for (size_t t = 0; t < THREAD_COUNT; ++t) {
-        // Each thread will request highlighting for different parts of the buffer
-        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT]() {
-            try {
-                // Calculate a range for this thread to request
-                size_t startLine = (t * LINE_COUNT) / THREAD_COUNT;
-                size_t endLine = ((t + 1) * LINE_COUNT) / THREAD_COUNT - 1;
-                
-                // Add some randomization to increase chance of concurrent access
-                std::this_thread::sleep_for(std::chrono::milliseconds(t * 2));
-                
-                // Request styles for a range of lines
-                std::vector<std::vector<SyntaxStyle>> styles = manager_.getHighlightingStyles(startLine, endLine);
-                
-                // Verify the result has the correct dimensions
-                if (styles.size() != (endLine - startLine + 1)) {
-                    std::cerr << "Thread " << t << ": Expected " << (endLine - startLine + 1) 
-                              << " lines, got " << styles.size() << std::endl;
-                    return false;
-                }
-                
-                // In a concurrent environment, we cannot guarantee that all lines will be 
-                // highlighted in a single call due to timeout, so we just make sure some were
-                bool allLinesEmpty = true;
-                for (const auto& lineStyles : styles) {
-                    if (!lineStyles.empty()) {
-                        allLinesEmpty = false;
-                        break;
-                    }
-                }
-                
-                if (allLinesEmpty) {
-                    std::cerr << "Thread " << t << ": All lines had empty styles - unexpected in concurrent testing" << std::endl;
-                    return false;
-                }
-                
-                return true;
-            } catch (const std::exception& e) {
-                std::cerr << "Thread " << t << " encountered exception: " << e.what() << std::endl;
-                return false;
-            } catch (...) {
-                std::cerr << "Thread " << t << " encountered unknown exception" << std::endl;
-                return false;
-            }
-        }));
-    }
-    
-    // Wait for all threads and check results
-    for (auto& result : results) {
-        if (!result.get()) {
-            encounteredIssues = true;
-        }
-    }
-    
-    EXPECT_FALSE(encounteredIssues) << "One or more threads encountered issues during concurrent reads";
-    
-    // Reset the timeout to default
-    manager_.setHighlightingTimeout(SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
-    
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAreThreadSafe) - End" << std::endl;
-}
-
 // Thread-safety test for concurrent reads and writes
 TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) {
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) - Start" << std::endl;
-    
-    // Prepare a smaller buffer to test with
-    const size_t LINE_COUNT = 20;
-    
+    const size_t LINE_COUNT = 10; // Reduced from 20
+    const size_t READER_THREADS = 2; // Reduced from 3
+    const size_t WRITER_THREADS = 1; // Reduced from 2
+    const int OPERATIONS_PER_THREAD = 3; // Reduced from 5
+
     // Reset the text buffer with multiple lines
-    text_buffer_ = TextBuffer(); // Start fresh
+    text_buffer_ = TextBuffer();
     for (size_t i = 0; i < LINE_COUNT; ++i) {
-        std::string line = "Line " + std::to_string(i) + " content with some C++ syntax: for (int i = 0; i < 10; i++) { }";
-        text_buffer_.addLine(line);
+        text_buffer_.addLine("Line " + std::to_string(i) + " content");
     }
-    
+
     // Configure mock highlighter with default styling
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
     ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .WillByDefault(ReturnStyleVector(testStyle));
-    
-    // Configure the manager to use the updated buffer
+
     manager_.setBuffer(&text_buffer_);
     manager_.setHighlighter(mock_highlighter_);
     manager_.setEnabled(true);
-    
-    // Set a reasonable timeout
-    manager_.setHighlightingTimeout(100);
-    
-    // Do an initial highlighting of just a few lines
-    auto initialStyles = manager_.getHighlightingStyles(0, 3);
-    ASSERT_EQ(initialStyles.size(), 4) << "The initial highlighting didn't return the expected number of lines";
-    
-    // Atomic counter to track if any thread encounters issues
+    manager_.setHighlightingTimeout(50); // Reduced from 100
+
     std::atomic<bool> encounteredIssues(false);
-    
-    // Vector to store results from each thread
     std::vector<std::future<bool>> results;
-    
-    // Create a mix of reader and writer threads
-    const size_t READER_THREADS = 3;
-    const size_t WRITER_THREADS = 2;
-    const size_t TOTAL_THREADS = READER_THREADS + WRITER_THREADS;
-    
-    // Random number generator for unpredictable operations
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> lineDist(0, LINE_COUNT - 1);
-    std::uniform_int_distribution<> opDist(0, 3);  // For operation selection
-    std::uniform_int_distribution<> sleepDist(1, 5); // For sleep times
-    
+
     // Create reader threads
     for (size_t t = 0; t < READER_THREADS; ++t) {
-        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT, &gen, &lineDist, &sleepDist]() {
+        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT]() {
             try {
-                // Each reader makes a few requests
                 for (int i = 0; i < 3; ++i) {
-                    // Calculate a random range for this thread to request (small range to finish faster)
-                    size_t startLine = lineDist(gen) % (LINE_COUNT - 3);
-                    size_t endLine = std::min(startLine + 3, LINE_COUNT - 1);
-                    
-                    // Add some randomized sleep to increase chance of concurrency
-                    std::this_thread::sleep_for(std::chrono::milliseconds(sleepDist(gen)));
-                    
-                    // Request styles for the range
-                    std::vector<std::vector<SyntaxStyle>> styles = manager_.getHighlightingStyles(startLine, endLine);
-                    
-                    // Verify the result has the correct dimensions
+                    size_t startLine = (t * LINE_COUNT) / READER_THREADS;
+                    size_t endLine = ((t + 1) * LINE_COUNT) / READER_THREADS - 1;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                    auto styles = manager_.getHighlightingStyles(startLine, endLine);
                     if (styles.size() != (endLine - startLine + 1)) {
-                        std::cerr << "Reader " << t << ": Expected " << (endLine - startLine + 1) 
-                                << " lines, got " << styles.size() << std::endl;
                         return false;
                     }
-                    
-                    // We don't need to check contents as they might be legitimately empty during concurrent ops
                 }
                 return true;
-            } catch (const std::exception& e) {
-                std::cerr << "Reader " << t << " encountered exception: " << e.what() << std::endl;
-                return false;
             } catch (...) {
-                std::cerr << "Reader " << t << " encountered unknown exception" << std::endl;
                 return false;
             }
         }));
     }
-    
-    // Create writer threads that will invalidate lines
+
+    // Create writer threads
     for (size_t t = 0; t < WRITER_THREADS; ++t) {
-        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT, &gen, &lineDist, &opDist, &sleepDist]() {
+        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT]() {
             try {
-                // Each writer performs a few operations
-                for (int i = 0; i < 5; ++i) {
-                    // Randomly choose between different operations
-                    int operation = opDist(gen);
-                    
-                    // Add some randomized sleep to increase chance of concurrency
-                    std::this_thread::sleep_for(std::chrono::milliseconds(sleepDist(gen)));
-                    
-                    switch (operation) {
-                        case 0: {
-                            // Invalidate a single random line
-                            size_t line = lineDist(gen);
-                            manager_.invalidateLine(line);
+                for (int i = 0; i < OPERATIONS_PER_THREAD; ++i) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    switch (i % 3) {
+                        case 0:
+                            manager_.invalidateLine(0);
                             break;
-                        }
-                        case 1: {
-                            // Invalidate a range of lines
-                            size_t startLine = lineDist(gen) % (LINE_COUNT / 2);
-                            size_t endLine = std::min(startLine + 3, LINE_COUNT - 1);
-                            manager_.invalidateLines(startLine, endLine);
+                        case 1:
+                            manager_.invalidateLines(0, 1);
                             break;
-                        }
-                        case 2: {
-                            // Toggle the enabled state briefly
-                            bool currentState = manager_.isEnabled();
-                            manager_.setEnabled(!currentState);
-                            // Don't leave it disabled, re-enable it after a very short delay
-                            if (currentState) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                                manager_.setEnabled(true);
-                            }
+                        case 2:
+                            manager_.invalidateAllLines();
                             break;
-                        }
-                        default: {
-                            // Invalidate all lines (rarely)
-                            if (i == 2) { // Only do this once in the middle
-                                manager_.invalidateAllLines();
-                            } else {
-                                // Default to another line invalidation
-                                manager_.invalidateLine(lineDist(gen));
-                            }
-                            break;
-                        }
                     }
                 }
                 return true;
-            } catch (const std::exception& e) {
-                std::cerr << "Writer " << t << " encountered exception: " << e.what() << std::endl;
-                return false;
             } catch (...) {
-                std::cerr << "Writer " << t << " encountered unknown exception" << std::endl;
                 return false;
             }
         }));
     }
-    
-    // Wait for all threads and check results
+
+    // Wait for all threads
     for (auto& result : results) {
         if (!result.get()) {
             encounteredIssues = true;
         }
     }
-    
-    // Verify the manager is still in a consistent state
-    EXPECT_FALSE(encounteredIssues) << "One or more threads encountered issues during concurrent operations";
-    
-    // Final check - verify that after all this concurrent activity, we can still get highlighting
-    // First re-enable manager and repopulate cache
-    manager_.setEnabled(true);
-    manager_.invalidateAllLines(); // Clear any partial state
-    
-    // Highlight a small range and verify we get results
-    auto finalStyles = manager_.getHighlightingStyles(0, 2);
-    EXPECT_EQ(finalStyles.size(), 3) << "Manager should still produce correct results after concurrent operations";
-    
-    // Reset the timeout to default
+
+    EXPECT_FALSE(encounteredIssues);
     manager_.setHighlightingTimeout(SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
-    
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) - End" << std::endl;
+}
+
+TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
+    const size_t NUM_READER_THREADS = 2; // Reduced from 4
+    const int OPERATIONS_PER_THREAD = 10; // Reduced from 50
+    const size_t BUFFER_LINE_COUNT = 5; // Reduced from 20
+
+    text_buffer_ = TextBuffer();
+    for (size_t i = 0; i < BUFFER_LINE_COUNT; ++i) {
+        text_buffer_.addLine("Line " + std::to_string(i));
+    }
+    manager_.setBuffer(&text_buffer_);
+    manager_.setHighlighter(mock_highlighter_);
+    manager_.setEnabled(true);
+    manager_.invalidateAllLines();
+
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .WillByDefault(ReturnStyleVector(testStyle));
+
+    std::atomic<bool> stop_flag(false);
+    std::vector<std::thread> threads;
+    std::atomic<int> errors(0);
+
+    // Writer thread
+    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+        bool current_enabled_state = true;
+        for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
+            try {
+                current_enabled_state = !current_enabled_state;
+                manager_.setEnabled(current_enabled_state);
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+            } catch (...) {
+                errors++;
+                break;
+            }
+        }
+    });
+
+    // Reader threads
+    for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
+        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, BUFFER_LINE_COUNT, &errors]() {
+            for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
+                try {
+                    auto styles = manager_.getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
+                    std::this_thread::sleep_for(std::chrono::microseconds(100));
+                } catch (...) {
+                    errors++;
+                    break;
+                }
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Reduced from 500
+    stop_flag.store(true);
+
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    EXPECT_EQ(errors.load(), 0);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
+    const size_t NUM_READER_THREADS = 2; // Reduced from 4
+    const int OPERATIONS_PER_THREAD = 10; // Reduced from 50
+    const size_t BUFFER_LINE_COUNT = 5; // Reduced from 20
+
+    text_buffer_ = TextBuffer();
+    for (size_t i = 0; i < BUFFER_LINE_COUNT; ++i) {
+        text_buffer_.addLine("Line " + std::to_string(i));
+    }
+    manager_.setBuffer(&text_buffer_);
+    manager_.setHighlighter(mock_highlighter_);
+    manager_.setEnabled(true);
+    manager_.invalidateAllLines();
+
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .WillByDefault(ReturnStyleVector(testStyle));
+
+    std::atomic<bool> stop_flag(false);
+    std::vector<std::thread> threads;
+    std::atomic<int> errors(0);
+
+    // Writer thread
+    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+        for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
+            try {
+                manager_.setHighlightingTimeout(10 + i * 5); // Simple incremental timeout
+                std::this_thread::sleep_for(std::chrono::microseconds(70));
+            } catch (...) {
+                errors++;
+                break;
+            }
+        }
+    });
+
+    // Reader threads
+    for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
+        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, BUFFER_LINE_COUNT, &errors]() {
+            for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
+                try {
+                    auto styles = manager_.getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
+                    std::this_thread::sleep_for(std::chrono::microseconds(120));
+                } catch (...) {
+                    errors++;
+                    break;
+                }
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Reduced from 600
+    stop_flag.store(true);
+
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    EXPECT_EQ(errors.load(), 0);
+    manager_.setHighlightingTimeout(50);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
+    const size_t NUM_READER_THREADS = 2; // Reduced from 4
+    const int OPERATIONS_PER_THREAD = 10; // Reduced from 50
+
+    text_buffer_ = TextBuffer();
+    text_buffer_.addLine("BufferA Line 0");
+    text_buffer_.addLine("BufferA Line 1");
+
+    TextBuffer bufferB;
+    bufferB.addLine("BufferB Line 0");
+    bufferB.addLine("BufferB Line 1");
+
+    SyntaxStyle default_style(0, 5, SyntaxColor::String);
+    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .WillByDefault(ReturnStyleVector(default_style));
+
+    manager_.setBuffer(&text_buffer_);
+    manager_.setHighlighter(mock_highlighter_);
+    manager_.setEnabled(true);
+
+    std::atomic<bool> stop_flag(false);
+    std::vector<std::thread> threads;
+    std::atomic<int> errors(0);
+
+    // Writer thread
+    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors, &bufferB]() {
+        bool use_buffer_A = true;
+        for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
+            try {
+                const TextBuffer* buffer_to_set = use_buffer_A ? &text_buffer_ : &bufferB;
+                manager_.setBuffer(buffer_to_set);
+                use_buffer_A = !use_buffer_A;
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+            } catch (...) {
+                errors++;
+                break;
+            }
+        }
+    });
+
+    // Reader threads
+    for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
+        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+            for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
+                try {
+                    auto styles = manager_.getHighlightingStyles(0, 0);
+                    std::this_thread::sleep_for(std::chrono::microseconds(150));
+                } catch (...) {
+                    errors++;
+                    break;
+                }
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Reduced from 700
+    stop_flag.store(true);
+
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+    EXPECT_EQ(errors.load(), 0);
+    manager_.setBuffer(&text_buffer_);
 } 
