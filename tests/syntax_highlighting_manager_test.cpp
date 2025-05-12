@@ -5,26 +5,89 @@
 #include "TextBuffer.h"              // For TextBuffer
 #include "EditorError.h"             // For ErrorReporter (to verify logging context if possible)
 #include <memory>
+#include <chrono>
+#include <thread>
 #include <iostream> // Added for std::cout
+
+// Custom action for returning a unique_ptr<vector<SyntaxStyle>>
+ACTION_P(ReturnStyleVector, style) {
+    auto result = std::make_unique<std::vector<SyntaxStyle>>();
+    result->push_back(style);
+    return result;
+}
 
 // Mock SyntaxHighlighter that can be configured to throw
 class MockSyntaxHighlighter : public SyntaxHighlighter {
 public:
-    MOCK_CONST_METHOD2(highlightLine, std::vector<SyntaxStyle>(const std::string& line, size_t lineIndex));
-    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const TextBuffer& buffer));
-    MOCK_CONST_METHOD0(getSupportedExtensions, std::vector<std::string>());
-    MOCK_CONST_METHOD0(getLanguageName, std::string());
+    MockSyntaxHighlighter() {
+        // Set up default behavior
+        ON_CALL(*this, highlightLine(testing::_, testing::_))
+            .WillByDefault([this](const std::string& line, size_t lineIndex) -> std::unique_ptr<std::vector<SyntaxStyle>> {
+                try {
+                    if (throw_on_highlight_line_) {
+                        // Use logic_error which doesn't need heap allocation
+                        throw std::logic_error(exception_message_);
+                    }
+                    
+                    // Generate a simple style vector based on line content for testing
+                    auto styles = std::make_unique<std::vector<SyntaxStyle>>();
+                    if (!line.empty()) {
+                        // Add a simple style that covers the entire line
+                        styles->push_back(SyntaxStyle(0, line.length(), SyntaxColor::Keyword));
+                    }
+                    // Return by moving the unique_ptr to avoid potential memory issues
+                    return styles;
+                } catch (const std::exception& e) {
+                    // Rethrow with a clear message
+                    throw std::logic_error(std::string("Mock exception: ") + e.what());
+                } catch (...) {
+                    // Convert unknown exceptions to standard ones
+                    throw std::logic_error("Unknown exception in mock");
+                }
+            });
+        
+        ON_CALL(*this, getSupportedExtensions())
+            .WillByDefault([]() {
+                return std::vector<std::string>{".cpp", ".h"};
+            });
+        
+        ON_CALL(*this, getLanguageName())
+            .WillByDefault([]() {
+                return "C++";
+            });
+            
+        ON_CALL(*this, highlightBuffer(testing::_))
+            .WillByDefault([this](const TextBuffer& buffer) -> std::vector<std::vector<SyntaxStyle>> {
+                try {
+                    // Create a vector of vector for each line
+                    std::vector<std::vector<SyntaxStyle>> result;
+                    result.reserve(buffer.lineCount()); // Pre-reserve to avoid reallocations
+                    
+                    for (size_t i = 0; i < buffer.lineCount(); ++i) {
+                        const std::string& line = buffer.getLine(i);
+                        std::vector<SyntaxStyle> lineStyles;
+                        if (!line.empty() && !throw_on_highlight_line_) {
+                            lineStyles.push_back(SyntaxStyle(0, line.length(), SyntaxColor::Keyword));
+                        }
+                        result.push_back(std::move(lineStyles)); // Move to avoid copies
+                    }
+                    return result;
+                } catch (const std::exception& e) {
+                    // Log the error and return an empty result
+                    std::cerr << "Exception in highlightBuffer mock: " << e.what() << std::endl;
+                    return std::vector<std::vector<SyntaxStyle>>();
+                }
+            });
+    }
+
+    MOCK_METHOD(std::unique_ptr<std::vector<SyntaxStyle>>, highlightLine, (const std::string& line, size_t lineIndex), (const, override));
+    MOCK_METHOD(std::vector<std::vector<SyntaxStyle>>, highlightBuffer, (const TextBuffer& buffer), (const, override));
+    MOCK_METHOD(std::vector<std::string>, getSupportedExtensions, (), (const, override));
+    MOCK_METHOD(std::string, getLanguageName, (), (const, override));
 
     void setThrowOnHighlightLine(bool should_throw, const std::string& exception_message = "Test Exception") {
         throw_on_highlight_line_ = should_throw;
         exception_message_ = exception_message;
-        if (should_throw) {
-            ON_CALL(*this, highlightLine)
-                .WillByDefault(testing::Throw(std::runtime_error(exception_message_)));
-        } else {
-            ON_CALL(*this, highlightLine)
-                .WillByDefault(testing::Return(std::vector<SyntaxStyle>{})); // Default non-throwing behavior
-        }
     }
 
 private:
@@ -40,70 +103,180 @@ protected:
 
     void SetUp() override {
         std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - Start" << std::endl;
-        mock_highlighter_ = std::make_shared<testing::NiceMock<MockSyntaxHighlighter>>();
-        manager_.setHighlighter(mock_highlighter_);
-        text_buffer_.addLine("Hello World");
-        text_buffer_.addLine("Test line for highlighting");
-        manager_.setBuffer(&text_buffer_);
-        manager_.setEnabled(true);
-        std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - End" << std::endl;
+        
+        try {
+            // Create new buffer with known content
+            text_buffer_ = TextBuffer(); // Reset the buffer
+            // TextBuffer starts with an empty line at index 0
+            text_buffer_.addLine("Line 1 content");
+            text_buffer_.addLine("Line 2 content");
+            
+            // Create the mock with NiceMock to suppress irrelevant warnings
+            mock_highlighter_ = std::make_shared<testing::NiceMock<MockSyntaxHighlighter>>();
+            
+            // Set up the test environment
+            manager_.setHighlighter(mock_highlighter_);
+            manager_.setBuffer(&text_buffer_);
+            manager_.setEnabled(true);
+            
+            std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - End" << std::endl;
+        } catch (const std::exception& e) {
+            std::cout << "[ERROR] Exception in SetUp: " << e.what() << std::endl;
+            throw; // Re-throw to let the test framework know setup failed
+        }
     }
 
     void TearDown() override {
         std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - Start" << std::endl;
-        ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-            .WillByDefault(testing::Return(std::vector<SyntaxStyle>{})); // Reset to default non-throwing behavior
-        manager_.setHighlighter(nullptr);
-        manager_.setBuffer(nullptr); // Also null out buffer
-        mock_highlighter_.reset(); // Release the mock
-        std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - Mock highlighter reset and detached." << std::endl;
-        std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - End" << std::endl;
+        
+        try {
+            // Clean up resources in reverse order of acquisition
+            manager_.setHighlighter(nullptr);
+            manager_.setBuffer(nullptr);
+            mock_highlighter_.reset();
+            
+            std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - End" << std::endl;
+        } catch (const std::exception& e) {
+            std::cout << "[ERROR] Exception in TearDown: " << e.what() << std::endl;
+            // We don't re-throw in TearDown as it would mask test failures
+        }
     }
 };
 
-TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlighter) {
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlighter) - Start" << std::endl;
-    mock_highlighter_->setThrowOnHighlightLine(true, "Highlighter failed!");
+TEST_F(SyntaxHighlightingManagerTest, InitialStateIsEnabled) {
+    // Verify default initial state is enabled
+    EXPECT_TRUE(manager_.isEnabled());
+}
 
-    // The manager's highlightLine method is private, it's called internally by getHighlightingStyles.
-    // We expect getHighlightingStyles to catch the exception from the mock_highlighter_,
-    // log it (implicitly via ErrorReporter), and return empty styles for the problematic line.
+TEST_F(SyntaxHighlightingManagerTest, EnableDisableToggleWorks) {
+    // Initially the manager is enabled (from SetUp)
+    EXPECT_TRUE(manager_.isEnabled());
     
-    // Invalidate to ensure highlighting is attempted
-    manager_.invalidateLine(0);
-    std::vector<std::vector<SyntaxStyle>> styles = manager_.getHighlightingStyles(0, 0);
+    // Test disabling
+    manager_.setEnabled(false);
+    EXPECT_FALSE(manager_.isEnabled());
+    
+    // Validate that getHighlightingStyles returns empty when disabled
+    auto styles = manager_.getHighlightingStyles(0, 0);
+    EXPECT_EQ(styles.size(), 1);
+    EXPECT_TRUE(styles[0].empty());
+    
+    // Re-enable and verify
+    manager_.setEnabled(true);
+    EXPECT_TRUE(manager_.isEnabled());
+}
 
+TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlighter) {
+    // Create a non-mocked highlighter that will throw controlled exceptions
+    class DirectExceptionHighlighter : public SyntaxHighlighter {
+    public:
+        std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string&, size_t) const override {
+            // Always throw exception - no heap manipulation in the exception path
+            throw std::runtime_error("Direct exception without mock framework"); 
+        }
+        
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
+            throw std::runtime_error("Direct exception without mock framework");
+        }
+        
+        std::vector<std::string> getSupportedExtensions() const override {
+            return {".cpp"};
+        }
+        
+        std::string getLanguageName() const override {
+            return "DirectTest";
+        }
+    };
+    
+    // Create a separate SyntaxHighlightingManager instance to avoid any test fixture state issues
+    SyntaxHighlightingManager localManager;
+    TextBuffer localBuffer;
+    
+    // Add some content to the buffer
+    localBuffer.addLine("Test content");
+    
+    // Set up a local highlighter that will throw
+    auto directHighlighter = std::make_shared<DirectExceptionHighlighter>();
+    
+    // Apply the highlighter and buffer to the manager
+    localManager.setBuffer(&localBuffer);
+    localManager.setHighlighter(directHighlighter);
+    localManager.setEnabled(true);
+    
+    // Test exception handling
+    std::vector<std::vector<SyntaxStyle>> styles;
+    ASSERT_NO_THROW({
+        // Invalidate line 0 to ensure highlighting will be attempted
+        localManager.invalidateLine(0);
+        
+        // Get styles which should trigger highlighting and catch the exception
+        styles = localManager.getHighlightingStyles(0, 0);
+    });
+    
+    // Verify result is valid but empty due to exception
     ASSERT_EQ(styles.size(), 1);
-    EXPECT_TRUE(styles[0].empty()); // Expect empty styles due to exception
-
-    // Further testing could involve redirecting stderr to check for ErrorReporter output,
-    // but that's more complex. For now, we verify graceful handling.
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlighter) - End" << std::endl;
+    EXPECT_TRUE(styles[0].empty());
+    
+    // Explicitly clean up resources
+    localManager.setHighlighter(nullptr);
+    localManager.setBuffer(nullptr);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, GetHighlightingStylesReturnsEmptyWhenHighlighterThrows) {
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, GetHighlightingStylesReturnsEmptyWhenHighlighterThrows) - Start" << std::endl;
-    // Configure the mock highlighter to throw an exception when highlightLine is called.
-    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
-        .WillByDefault(testing::Throw(std::runtime_error("Mock highlighter failed")));
-
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setBuffer(&text_buffer_);
-    manager_.setEnabled(true);
-    manager_.invalidateAllLines(); // Ensure highlighting is attempted
-
-    std::vector<std::vector<SyntaxStyle>> result;
-    // We expect this call not to throw an exception itself, but to handle the one from the mock.
+    // Create a non-mocked highlighter that will throw controlled exceptions
+    class DirectExceptionHighlighter2 : public SyntaxHighlighter {
+    public:
+        std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string&, size_t) const override {
+            // Always throw exception - no heap manipulation in the exception path
+            throw std::runtime_error("Direct exception without mock framework");
+        }
+        
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
+            throw std::runtime_error("Direct exception without mock framework");
+        }
+        
+        std::vector<std::string> getSupportedExtensions() const override {
+            return {".cpp"};
+        }
+        
+        std::string getLanguageName() const override {
+            return "DirectTest2";
+        }
+    };
+    
+    // Create a separate SyntaxHighlightingManager instance to avoid any test fixture state issues
+    SyntaxHighlightingManager localManager;
+    TextBuffer localBuffer;
+    
+    // Add some content to the buffer
+    localBuffer.addLine("Test content");
+    localBuffer.addLine("More test content");
+    
+    // Set up a local highlighter that will throw
+    auto directHighlighter = std::make_shared<DirectExceptionHighlighter2>();
+    
+    // Apply the highlighter and buffer to the manager
+    localManager.setBuffer(&localBuffer);
+    localManager.setHighlighter(directHighlighter);
+    localManager.setEnabled(true);
+    
+    // Make sure all lines will be highlighted
+    localManager.invalidateAllLines();
+    
+    // Test get styles with exception handling
+    std::vector<std::vector<SyntaxStyle>> styles;
     ASSERT_NO_THROW({
-        result = manager_.getHighlightingStyles(0, text_buffer_.lineCount() - 1);
+        styles = localManager.getHighlightingStyles(0, 1);
     });
-
-    // Check that the result contains empty styles for all lines due to the error.
-    ASSERT_EQ(result.size(), text_buffer_.lineCount());
-    for (const auto& line_styles : result) {
-        EXPECT_TRUE(line_styles.empty());
-    }
-    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, GetHighlightingStylesReturnsEmptyWhenHighlighterThrows) - End" << std::endl;
+    
+    // Verify result has right size but both lines are empty due to exception
+    ASSERT_EQ(styles.size(), 2);
+    EXPECT_TRUE(styles[0].empty());
+    EXPECT_TRUE(styles[1].empty());
+    
+    // Explicitly clean up resources
+    localManager.setHighlighter(nullptr);
+    localManager.setBuffer(nullptr);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) {
@@ -117,8 +290,522 @@ TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) {
     std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) - End" << std::endl;
 }
 
+// Tests for Cache Logic
+TEST_F(SyntaxHighlightingManagerTest, CacheHitsAfterHighlighting) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Set expectations with specific behavior
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // Once for each line (lines 0, 1, and 2)
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    // Initial highlighting should call the highlighter for all three lines
+    manager_.invalidateAllLines();
+    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles1.size(), 3);
+    
+    // Second request without invalidation should use cache (no more calls to highlighter)
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(0); // Should not be called again if cache is used
+    
+    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles2.size(), 3);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLine) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Initial highlighting to populate cache - expect all lines to be highlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3) // Once for each line
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles1.size(), 3);
+    
+    // Clear expectations and set up for next test phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Invalidate line 0 and expect only that line to be rehighlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 0))
+        .Times(1)
+        .WillOnce(ReturnStyleVector(testStyle));
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 1))
+        .Times(0); // Line 1 should still be in cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 2))
+        .Times(0); // Line 2 should still be in cache
+    
+    manager_.invalidateLine(0);
+    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles2.size(), 3);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLines) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Initial highlighting to populate cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3) // Once for each line
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles1.size(), 3);
+    
+    // Clear expectations and set up for next test phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Invalidate a range of lines and expect them to be rehighlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(2) // Lines 0 and 1 should be rehighlighted
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    manager_.invalidateLines(0, 1);
+    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles2.size(), 3);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateAllLines) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Initial highlighting to populate cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3) // Once for each line
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles1.size(), 3);
+    
+    // Clear expectations and set up for next test phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Invalidate all lines and expect all to be rehighlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3) // All lines should be rehighlighted
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    manager_.invalidateAllLines();
+    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles2.size(), 3);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, DISABLED_CacheUpdatesAfterTimeout) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Initial highlighting to populate cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(2) // Once for each line
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles1 = manager_.getHighlightingStyles(0, 1);
+    EXPECT_EQ(styles1.size(), 2);
+    
+    // Clear expectations and set up for next test phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Wait a bit longer than the cache entry lifetime
+    // The SyntaxHighlightingManager header indicates CACHE_ENTRY_LIFETIME_MS = 10000 (10 seconds)
+    // For testing purposes, we'll wait for just over that time
+    std::this_thread::sleep_for(std::chrono::milliseconds(11000));
+    
+    // After cache timeout, expect lines to be rehighlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(2) // Both lines should be rehighlighted
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles2 = manager_.getHighlightingStyles(0, 1);
+    EXPECT_EQ(styles2.size(), 2);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, HighlightingTimeoutSettings) {
+    // Verify default timeout setting
+    EXPECT_EQ(manager_.getHighlightingTimeout(), SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+    
+    // Set a custom timeout
+    size_t customTimeout = 100;
+    manager_.setHighlightingTimeout(customTimeout);
+    EXPECT_EQ(manager_.getHighlightingTimeout(), customTimeout);
+}
+
+TEST_F(SyntaxHighlightingManagerTest, ContextLinesSettings) {
+    // Verify default context lines setting
+    EXPECT_EQ(manager_.getContextLines(), SyntaxHighlightingManager::DEFAULT_CONTEXT_LINES);
+    
+    // Set custom context lines
+    size_t customContextLines = 50;
+    manager_.setContextLines(customContextLines);
+    EXPECT_EQ(manager_.getContextLines(), customContextLines);
+}
+
+// Tests for Visible Range functionality
+TEST_F(SyntaxHighlightingManagerTest, VisibleRangeAffectsCacheLifetime) {
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Set a visible range and ensure it affects which lines are prioritized
+    manager_.setVisibleRange(0, 0); // Only line 0 is visible
+    
+    // Initial highlighting for all lines
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3) // Once for each line
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    EXPECT_EQ(styles1.size(), 3);
+    
+    // Clear expectations and set up for next test phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // After a cache cleanup, the non-visible lines might be cleaned up first
+    // This is implementation-dependent, but we can verify the behavior
+    
+    // Request highlighting for just the visible line
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 0))
+        .Times(0); // Line 0 should still be in cache as it's in the visible range
+    
+    auto styles2 = manager_.getHighlightingStyles(0, 0);
+    EXPECT_EQ(styles2.size(), 1);
+}
+
+// Thread safety tests - basic verification
+TEST_F(SyntaxHighlightingManagerTest, DISABLED_ConcurrentInvalidationsAreHandledSafely) {
+    // This test verifies that concurrent invalidation operations don't cause crashes
+    // or undefined behavior. We're not testing for specific thread interleavings,
+    // just basic thread safety.
+    
+    // Create a style for testing
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // Set up default behavior for any highlighting that might happen
+    ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .WillByDefault(ReturnStyleVector(testStyle));
+    
+    const int numThreads = 5;
+    const int operationsPerThread = 10;
+    
+    std::vector<std::thread> threads;
+    
+    // Create threads that perform concurrent invalidations
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([this, i, operationsPerThread]() {
+            for (int j = 0; j < operationsPerThread; ++j) {
+                // Mix of different invalidation operations
+                switch (j % 3) {
+                    case 0:
+                        manager_.invalidateLine(0);
+                        break;
+                    case 1:
+                        manager_.invalidateLines(0, 1);
+                        break;
+                    case 2:
+                        manager_.invalidateAllLines();
+                        break;
+                }
+                
+                // Also mix in some highlighting requests
+                if (j % 2 == 0) {
+                    manager_.getHighlightingStyles(0, 1);
+                }
+                
+                // Small sleep to increase chance of thread interleaving
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        });
+    }
+    
+    // Wait for all threads to complete
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    
+    // If we got here without crashing or exceptions, basic thread safety is working
+    SUCCEED() << "Concurrent operations completed without crashes or exceptions";
+}
 
 // TODO: Add tests for SyntaxHighlighterRegistry error handling
 // For example, what happens if a highlighter passed to registerHighlighter
 // throws an exception during getSupportedExtensions?
-// What happens if getHighlighterForExtension encounters an issue? (less likely with current logic) 
+// What happens if getHighlighterForExtension encounters an issue? (less likely with current logic)
+
+TEST_F(SyntaxHighlightingManagerTest, DebugSetUpBufferLineCount) {
+    std::cout << "Buffer line count: " << text_buffer_.lineCount() << std::endl;
+    for (size_t i = 0; i < text_buffer_.lineCount(); ++i) {
+        std::cout << "Line " << i << ": \"" << text_buffer_.getLine(i) << "\"" << std::endl;
+    }
+    SUCCEED();
+}
+
+// Simple exception-throwing highlighter without using mocks
+class ExceptionThrowingHighlighter : public SyntaxHighlighter {
+public:
+    ExceptionThrowingHighlighter() = default;
+    
+    std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(
+        const std::string&, size_t) const override {
+        // Use logic_error to avoid heap allocation during exception
+        throw std::logic_error("Intentional exception from ExceptionThrowingHighlighter");
+    }
+    
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(
+        const TextBuffer&) const override {
+        throw std::logic_error("Intentional exception from ExceptionThrowingHighlighter");
+    }
+    
+    std::vector<std::string> getSupportedExtensions() const override {
+        return {".test"};
+    }
+    
+    std::string getLanguageName() const override {
+        return "TestLanguage";
+    }
+};
+
+// Test specifically for exception handling without using mocks
+TEST_F(SyntaxHighlightingManagerTest, ExceptionThrowingHighlighterTest) {
+    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ExceptionThrowingHighlighterTest) - Start" << std::endl;
+    
+    // Create and set a dedicated exception-throwing highlighter
+    auto exceptionHighlighter = std::make_shared<ExceptionThrowingHighlighter>();
+    manager_.setHighlighter(exceptionHighlighter);
+    
+    // Test that the exception is properly caught by the manager
+    std::vector<std::vector<SyntaxStyle>> styles;
+    ASSERT_NO_THROW({
+        manager_.invalidateLine(0);
+        styles = manager_.getHighlightingStyles(0, 0);
+    });
+    
+    // Verify the result is valid but contains empty styles due to the exception
+    ASSERT_EQ(styles.size(), 1);
+    EXPECT_TRUE(styles[0].empty());
+    
+    std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, ExceptionThrowingHighlighterTest) - End" << std::endl;
+}
+
+// Test without fixture to completely isolate exception handling
+TEST(StandaloneExceptionTest, HighlightingManagerHandlesExceptions) {
+    std::cout << "[DEBUG] Standalone exception test starting..." << std::endl;
+    
+    // Create all objects locally to control lifetime
+    SyntaxHighlightingManager manager;
+    TextBuffer buffer;
+    
+    buffer.addLine("Line 1 for testing");
+    buffer.addLine("Line 2 for testing");
+    
+    // Create a highlighter that always throws
+    class SimpleExceptionHighlighter : public SyntaxHighlighter {
+    public:
+        std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string&, size_t) const override {
+            throw std::logic_error("Simple test exception");
+        }
+        
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
+            throw std::logic_error("Simple test exception");
+        }
+        
+        std::vector<std::string> getSupportedExtensions() const override {
+            return {".txt"};
+        }
+        
+        std::string getLanguageName() const override {
+            return "Test";
+        }
+    };
+    
+    // Setup manager with the exception-throwing highlighter
+    auto highlighter = std::make_shared<SimpleExceptionHighlighter>();
+    manager.setBuffer(&buffer);
+    manager.setHighlighter(highlighter);
+    
+    // Try to get highlighting styles - should not throw
+    std::vector<std::vector<SyntaxStyle>> styles;
+    ASSERT_NO_THROW({
+        styles = manager.getHighlightingStyles(0, 1);
+    });
+    
+    // Verify styles are valid but empty
+    ASSERT_EQ(styles.size(), 2);
+    EXPECT_TRUE(styles[0].empty());
+    EXPECT_TRUE(styles[1].empty());
+    
+    // Clean up explicitly
+    manager.setHighlighter(nullptr);
+    manager.setBuffer(nullptr);
+    
+    std::cout << "[DEBUG] Standalone exception test completed successfully" << std::endl;
+}
+
+TEST_F(SyntaxHighlightingManagerTest, DisabledStateReturnsEmptyStyles) {
+    // Test that a disabled manager returns empty styling
+    manager_.setEnabled(false);
+    
+    // Create some test expectations for verification
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // When disabled, the highlighter should not be called at all
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(0);
+    
+    // Request styling while disabled
+    auto styles = manager_.getHighlightingStyles(0, 2);
+    
+    // Verify we got the right number of lines back
+    ASSERT_EQ(styles.size(), 3);
+    
+    // Each line should have empty styling when manager is disabled
+    for (const auto& lineStyles : styles) {
+        EXPECT_TRUE(lineStyles.empty());
+    }
+}
+
+TEST_F(SyntaxHighlightingManagerTest, ReenabledStateResumesHighlighting) {
+    // Test that when re-enabled after being disabled, highlighting works again
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // First disable the manager
+    manager_.setEnabled(false);
+    
+    // Request styling while disabled (should not call highlighter)
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(0);
+    auto disabledStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Re-enable the manager
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    manager_.setEnabled(true);
+    
+    // Now the highlighter should be called for each line
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // For lines 0, 1, and 2
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    // Request styling while enabled
+    auto enabledStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Verify we got the right number of lines back
+    ASSERT_EQ(enabledStyles.size(), 3);
+    
+    // Each line should have non-empty styling when manager is enabled
+    for (const auto& lineStyles : enabledStyles) {
+        EXPECT_FALSE(lineStyles.empty());
+        ASSERT_EQ(lineStyles.size(), 1);
+        EXPECT_EQ(lineStyles[0].color, SyntaxColor::Keyword);
+    }
+}
+
+TEST_F(SyntaxHighlightingManagerTest, InvalidateLineRemovesFromCache) {
+    // Test that invalidateLine removes a specific line from the cache
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // First request highlighting to populate the cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // For lines 0, 1, and 2
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Clear expectations for the next phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Now, invalidate just line 1
+    manager_.invalidateLine(1);
+    
+    // Set expectations for the next request - only line 1 should be re-highlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 0))
+        .Times(0);  // Line 0 should still be cached
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 1))
+        .Times(1)   // Line 1 was invalidated and needs re-highlighting
+        .WillOnce(ReturnStyleVector(testStyle));
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 2))
+        .Times(0);  // Line 2 should still be cached
+    
+    // Request highlighting again
+    auto updatedStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Verify the result
+    ASSERT_EQ(updatedStyles.size(), 3);
+    for (const auto& lineStyles : updatedStyles) {
+        ASSERT_EQ(lineStyles.size(), 1);
+        EXPECT_EQ(lineStyles[0].color, SyntaxColor::Keyword);
+    }
+}
+
+TEST_F(SyntaxHighlightingManagerTest, VerifyInvalidateAllLinesCleanupBehavior) {
+    // Test specific behavior of invalidateAllLines and verify it cleans up properly
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // First request highlighting to populate the cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // For lines 0, 1, and 2
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Verify initial cache state
+    ASSERT_EQ(initialStyles.size(), 3);
+    for (const auto& lineStyles : initialStyles) {
+        ASSERT_EQ(lineStyles.size(), 1);
+    }
+    
+    // Clear expectations for the next phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Now, invalidate all lines - this should clear the entire cache
+    manager_.invalidateAllLines();
+    
+    // Expect all lines to be re-highlighted
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // Lines 0, 1, and 2 will all need to be re-highlighted
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    // Request highlighting again
+    auto updatedStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Verify that the manager properly re-highlighted all lines
+    ASSERT_EQ(updatedStyles.size(), 3);
+    for (const auto& lineStyles : updatedStyles) {
+        ASSERT_EQ(lineStyles.size(), 1);
+        EXPECT_EQ(lineStyles[0].color, SyntaxColor::Keyword);
+    }
+}
+
+TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
+    // Test that buffer changes are properly handled by the cache
+    SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
+    
+    // First request highlighting to populate the cache
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(3)  // For lines 0, 1, and 2
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    
+    // Clear expectations for the next phase
+    testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
+    
+    // Simulate a buffer change - this would normally happen through the editor
+    // We'll simulate this by updating the buffer and invalidating the lines
+    text_buffer_.addLine("New line content");  // Add a new line, now we have 4 lines
+    
+    // Invalidate the affected range (the whole buffer in this simple case)
+    manager_.invalidateAllLines();
+    
+    // Expect all lines to be re-highlighted, now including the new line
+    EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
+        .Times(4)  // Now we have 4 lines (0-3)
+        .WillRepeatedly(ReturnStyleVector(testStyle));
+    
+    // Request highlighting for all lines
+    auto updatedStyles = manager_.getHighlightingStyles(0, 3);
+    
+    // Verify that the manager properly handled the buffer change
+    ASSERT_EQ(updatedStyles.size(), 4);  // Should now have 4 lines of styles
+    for (const auto& lineStyles : updatedStyles) {
+        ASSERT_EQ(lineStyles.size(), 1);
+        EXPECT_EQ(lineStyles[0].color, SyntaxColor::Keyword);
+    }
+} 
