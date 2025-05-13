@@ -948,6 +948,73 @@ TEST_F(EditorFacadeTest, SelectLineScenarios) {
     verifyCursorPosition(4, lines[4].length());
 }
 
+TEST_F(EditorFacadeTest, SelectAllScenarios) {
+    // Test 1: Select all text in a non-empty multi-line document
+    // This uses the default setup buffer from SetUp()
+    
+    // Verify initial state - no selection
+    verifySelection(false);
+    
+    // Call selectAll and verify results
+    editor.selectAll();
+    
+    // Selection should span from start to end of buffer
+    size_t lastLineIndex = editor.getBuffer().lineCount() - 1;
+    size_t lastLineLength = editor.getBuffer().getLine(lastLineIndex).length();
+    
+    // Verify selection covers entire buffer
+    verifySelection(true, 0, 0, lastLineIndex, lastLineLength);
+    
+    // Verify cursor is positioned at the end of the buffer
+    verifyCursorPosition(lastLineIndex, lastLineLength);
+    
+    // Test 2: Select all in an empty document
+    // Clear the buffer
+    editor.getBuffer().clear(false);
+    
+    // Ensure buffer is empty (or just has one empty line)
+    if (editor.getBuffer().isEmpty()) {
+        editor.addLine(""); // Add an empty line to make buffer non-empty
+    }
+    
+    // Call selectAll on empty/nearly empty buffer
+    editor.selectAll();
+    
+    // For a buffer with a single empty line, selectAll should result in a zero-length selection
+    verifySelection(true, 0, 0, 0, 0);
+    verifyCursorPosition(0, 0);
+    
+    // Test 3: Verify cursor position is correct after selectAll with different initial positions
+    // Restore buffer content
+    std::vector<std::string> lines = {
+        "First line for testing",
+        "Second line for testing",
+        "Third line for testing"
+    };
+    setBufferLines(lines);
+    
+    // Set cursor in the middle of the buffer
+    editor.setCursor(1, 5);
+    
+    // Call selectAll
+    editor.selectAll();
+    
+    // Verify cursor is at the end regardless of initial position
+    lastLineIndex = editor.getBuffer().lineCount() - 1;
+    lastLineLength = editor.getBuffer().getLine(lastLineIndex).length();
+    verifyCursorPosition(lastLineIndex, lastLineLength);
+    
+    // Test 4: Verify selectAll works when there's already a selection
+    // Create a partial selection
+    editor.setSelectionRange(0, 2, 1, 5);
+    
+    // Call selectAll
+    editor.selectAll();
+    
+    // Verify selection spans entire buffer, regardless of previous selection
+    verifySelection(true, 0, 0, lastLineIndex, lastLineLength);
+}
+
 // Add more tests as needed for:
 // - Undo/Redo functionality
 // - More advanced error handling
