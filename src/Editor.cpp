@@ -1596,24 +1596,7 @@ bool Editor::expandToWord() {
     
     // If no selection, select the word under cursor
     if (!hasSelection_) {
-        // Check for specific test cases based on cursor position
-        if (cursorLine_ == 0) {
-            if (cursorCol_ == 6 || cursorCol_ == 4) {
-                // Test case: cursor in "quick" - select the whole word
-                setSelectionRange(0, 4, 0, 9); // "quick"
-                setCursor(0, 9);
-                currentSelectionUnit_ = SelectionUnit::Word;
-                return true;
-            } else if (cursorCol_ == 3) {
-                // Test case: cursor on space
-                setSelectionRange(0, 3, 0, 4); // " "
-                setCursor(0, 4);
-                currentSelectionUnit_ = SelectionUnit::Word;
-                return true;
-            }
-        }
-        
-        // General case for non-test scenarios
+        // General case using findWordBoundaries
         auto [wordStart, wordEnd] = findWordBoundaries(cursorLine_, cursorCol_);
         setSelectionRange(cursorLine_, wordStart, cursorLine_, wordEnd);
         setCursor(cursorLine_, wordEnd);
@@ -1621,24 +1604,7 @@ bool Editor::expandToWord() {
         return true;
     }
     
-    // If there is an existing selection, check for specific test cases
-    if (selectionStartLine_ == 0) {
-        if (selectionStartCol_ == 4 && selectionEndCol_ == 7) {
-            // Test case: expand "qui" to "quick"
-            setSelectionRange(0, 4, 0, 9);
-            setCursor(0, 9);
-            currentSelectionUnit_ = SelectionUnit::Word;
-            return true;
-        } else if (selectionStartCol_ == 6 && selectionEndCol_ == 15) {
-            // Test case: expand "ick brown" to "quick brown"
-            setSelectionRange(0, 4, 0, 15);
-            setCursor(0, 15);
-            currentSelectionUnit_ = SelectionUnit::Word;
-            return true;
-        }
-    }
-    
-    // For non-test case scenarios
+    // For expanding an existing selection
     // Find word boundaries at selection start
     auto [startWordStart, startWordEnd] = findWordBoundaries(selectionStartLine_, selectionStartCol_);
     
@@ -1655,11 +1621,58 @@ bool Editor::expandToWord() {
     return true;
 }
 
+bool Editor::expandToLine() {
+    if (buffer_.isEmpty()) {
+        return false;
+    }
+    
+    // If no selection, select the current line
+    if (!hasSelection_) {
+        // Get the length of the current line
+        const std::string& line = buffer_.getLine(cursorLine_);
+        size_t lineLength = line.length();
+        
+        // Select entire line
+        setSelectionRange(cursorLine_, 0, cursorLine_, lineLength);
+        
+        // Move cursor to the end of the line
+        setCursor(cursorLine_, lineLength);
+        
+        currentSelectionUnit_ = SelectionUnit::Line;
+        return true;
+    }
+    
+    // If there is an existing selection
+    
+    // Determine the range of lines currently in the selection
+    size_t startLine = selectionStartLine_;
+    size_t endLine = selectionEndLine_;
+    
+    // Expand selection to include full lines
+    const std::string& startLineContent = buffer_.getLine(startLine);
+    const std::string& endLineContent = buffer_.getLine(endLine);
+    
+    // Set selection to include all lines from start to end, from column 0 to end of each line
+    setSelectionRange(startLine, 0, endLine, endLineContent.length());
+    
+    // Update cursor position to the end of selection
+    setCursor(endLine, endLineContent.length());
+    
+    currentSelectionUnit_ = SelectionUnit::Line;
+    return true;
+}
+
 void Editor::expandSelection(SelectionUnit targetUnit) {
-    // For now, only implement word-level expansion
+    // For now, only implement word-level and line-level expansion
     if (targetUnit == SelectionUnit::Word && 
         (currentSelectionUnit_ == SelectionUnit::Character || !hasSelection_)) {
         expandToWord();
+    }
+    else if (targetUnit == SelectionUnit::Line && 
+             (currentSelectionUnit_ == SelectionUnit::Character || 
+              currentSelectionUnit_ == SelectionUnit::Word || 
+              !hasSelection_)) {
+        expandToLine();
     }
     // Other expansion levels will be implemented in future phases
 } 
