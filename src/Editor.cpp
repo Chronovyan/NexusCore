@@ -640,7 +640,9 @@ void Editor::selectWord() {
 }
 
 bool Editor::isWordChar(char c) const {
-    return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+    // Consider alphanumeric characters and underscore as word chars
+    // Also include some common symbol characters that may be part of identifiers in various languages
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-' || c == '.' || c == '$' || c == '@';
 }
 
 // --- Private Helper Methods ---
@@ -1560,13 +1562,44 @@ std::pair<size_t, size_t> Editor::findWordBoundaries(size_t line, size_t col) co
     
     const std::string& lineContent = buffer_.getLine(line);
     
-    // Handle cases where column is at or beyond line length
+    // Handle empty line case
     if (lineContent.empty()) {
         return {0, 0};
     }
     
+    // Handle case where column is at or beyond line length
     if (col >= lineContent.length()) {
         col = lineContent.length() - 1;
+    }
+    
+    // Special case: if col points to whitespace, find the nearest word
+    if (std::isspace(lineContent[col])) {
+        // Look right for a word
+        size_t rightPos = col;
+        while (rightPos < lineContent.length() && std::isspace(lineContent[rightPos])) {
+            rightPos++;
+        }
+        
+        // Look left for a word
+        size_t leftPos = col;
+        while (leftPos > 0 && std::isspace(lineContent[leftPos-1])) {
+            leftPos--;
+        }
+        
+        // Decide whether to use the word to the left or right
+        // If at the beginning or end of line, or closer to one word than the other, pick accordingly
+        if (rightPos >= lineContent.length() || 
+            (leftPos > 0 && (col - leftPos) <= (rightPos - col))) {
+            // Use word to the left if we're not at start of line
+            if (leftPos > 0) {
+                col = leftPos - 1; // Position at the last character of the word to the left
+            } else {
+                return {leftPos, rightPos}; // Return the space itself if at start of line
+            }
+        } else {
+            // Use word to the right
+            col = rightPos;
+        }
     }
     
     // Case 1: If the character at col is not a word character, return just that character
@@ -1680,25 +1713,32 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
               !hasSelection_)) {
         expandToExpression();
     }
+    else if (targetUnit == SelectionUnit::Paragraph &&
+             (currentSelectionUnit_ == SelectionUnit::Character ||
+              currentSelectionUnit_ == SelectionUnit::Word ||
+              currentSelectionUnit_ == SelectionUnit::Line ||
+              currentSelectionUnit_ == SelectionUnit::Expression ||
+              !hasSelection_)) {
+        expandToParagraph();
+    }
     // Other expansion levels will be implemented in future phases
 }
 
 void Editor::shrinkSelection(SelectionUnit targetUnit) {
     if (!hasSelection_) return;
     
-    // Simple direct approach: Reduce the selection unit by one level
+    // Call the appropriate helper method based on current selection unit
     if (currentSelectionUnit_ == SelectionUnit::Line) {
         // Line -> Word
-        currentSelectionUnit_ = SelectionUnit::Word;
+        shrinkToWord();
     }
     else if (currentSelectionUnit_ == SelectionUnit::Word) {
         // Word -> Character
-        currentSelectionUnit_ = SelectionUnit::Character;
-        hasSelection_ = false; // At character level, we have no selection
+        shrinkToCharacter();
     }
     else if (currentSelectionUnit_ == SelectionUnit::Expression) {
         // Expression -> Word
-        currentSelectionUnit_ = SelectionUnit::Word;
+        shrinkToWord();
     }
 }
 
@@ -1716,17 +1756,69 @@ bool Editor::shrinkToCharacter() {
 bool Editor::shrinkToWord() {
     if (!hasSelection_) return false;
     
-    // Remember original cursor position, as we'll need to restore the cursor to something sensible
-    size_t origCursorLine = cursorLine_;
-    size_t origCursorCol = cursorCol_;
+    // Remember original cursor position
+    size_t targetLine = cursorLine_;
+    size_t targetCol = cursorCol_;
     
-    // Find a word at the original cursor position
-    std::pair<size_t, size_t> wordBoundaries = findWordBoundaries(origCursorLine, origCursorCol);
+    // Store the selection bounds
+    size_t origSelStartLine = selectionStartLine_;
+    size_t origSelStartCol = selectionStartCol_;
+    size_t origSelEndLine = selectionEndLine_;
+    size_t origSelEndCol = selectionEndCol_;
+    
+    // Ensure the target position is within the selection
+    bool cursorInSelection = true;
+    
+    // Check if cursor is not within selection bounds
+    if (targetLine < origSelStartLine || 
+        (targetLine == origSelStartLine && targetCol < origSelStartCol) ||
+        targetLine > origSelEndLine ||
+        (targetLine == origSelEndLine && targetCol > origSelEndCol)) {
+        cursorInSelection = false;
+    }
+    
+    // If cursor is not within the selection, use a position inside the selection
+    if (!cursorInSelection) {
+        // Choose a position within the selection - middle of the first line is a good default
+        targetLine = origSelStartLine;
+        
+        const std::string& line = buffer_.getLine(targetLine);
+        
+        // If we're at line level, try to find a word - skip whitespace
+        if (currentSelectionUnit_ == SelectionUnit::Line) {
+            // Start at selection start column and find first non-whitespace
+            targetCol = origSelStartCol;
+            while (targetCol < line.length() && std::isspace(line[targetCol])) {
+                targetCol++;
+            }
+            
+            // If we're at the end of the line or couldn't find non-whitespace,
+            // default to middle of visible text
+            if (targetCol >= line.length()) {
+                if (line.length() > 0) {
+                    targetCol = line.length() / 2;
+                } else {
+                    targetCol = 0;
+                }
+            }
+        } else {
+            // For other selection types, middle of selection is a good guess
+            if (origSelStartLine == origSelEndLine) {
+                targetCol = (origSelStartCol + origSelEndCol) / 2;
+            } else {
+                // For multi-line selections, use the first line
+                targetCol = (origSelStartCol + line.length()) / 2;
+            }
+        }
+    }
+    
+    // Find word boundaries at the target position
+    std::pair<size_t, size_t> wordBoundaries = findWordBoundaries(targetLine, targetCol);
     
     // Create a word selection
-    selectionStartLine_ = origCursorLine;
+    selectionStartLine_ = targetLine;
     selectionStartCol_ = wordBoundaries.first;
-    selectionEndLine_ = origCursorLine;
+    selectionEndLine_ = targetLine;
     selectionEndCol_ = wordBoundaries.second;
     
     // Update selection state
@@ -2367,4 +2459,141 @@ bool Editor::expandToExpression() {
     }
     
     return false; // No enclosing expression found
+}
+
+bool Editor::expandToParagraph() {
+    if (buffer_.isEmpty()) {
+        // Handle empty buffer case
+        setSelectionRange(0, 0, 0, 0);
+        currentSelectionUnit_ = SelectionUnit::Paragraph;
+        return true;
+    }
+    
+    // If no selection exists, start from cursor position
+    size_t startLine = hasSelection_ ? selectionStartLine_ : cursorLine_;
+    size_t endLine = hasSelection_ ? selectionEndLine_ : cursorLine_;
+    
+    // Ensure we're within buffer bounds
+    if (startLine >= buffer_.lineCount()) startLine = buffer_.lineCount() - 1;
+    if (endLine >= buffer_.lineCount()) endLine = buffer_.lineCount() - 1;
+    
+    // Find paragraph start by searching up from start line
+    // A paragraph starts at line 0 or after an empty line
+    size_t paragraphStart = startLine;
+    while (paragraphStart > 0) {
+        const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+        if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
+            // Found an empty line or line with only whitespace
+            break;
+        }
+        paragraphStart--;
+    }
+    
+    // Find paragraph end by searching down from end line
+    // A paragraph ends at the last line or before an empty line
+    size_t paragraphEnd = endLine;
+    while (paragraphEnd < buffer_.lineCount() - 1) {
+        const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+        if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
+            // Found an empty line or line with only whitespace
+            break;
+        }
+        paragraphEnd++;
+    }
+    
+    // Special case: if cursor is on an empty line or if the selection starts on an empty line
+    bool isEmptyLine = buffer_.getLine(startLine).empty() || 
+                      buffer_.getLine(startLine).find_first_not_of(" \t") == std::string::npos;
+    
+    if (!hasSelection_ && isEmptyLine) {
+        // Look for the nearest non-empty paragraph
+        // First, try to find a paragraph below
+        size_t nextParagraphStart = startLine + 1;
+        while (nextParagraphStart < buffer_.lineCount() && 
+               (buffer_.getLine(nextParagraphStart).empty() || 
+                buffer_.getLine(nextParagraphStart).find_first_not_of(" \t") == std::string::npos)) {
+            nextParagraphStart++;
+        }
+        
+        if (nextParagraphStart < buffer_.lineCount()) {
+            // Found a paragraph below, expand to it
+            paragraphStart = nextParagraphStart;
+            
+            // Find the end of this paragraph
+            paragraphEnd = paragraphStart;
+            while (paragraphEnd < buffer_.lineCount() - 1) {
+                const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+                if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
+                    break;
+                }
+                paragraphEnd++;
+            }
+        } else {
+            // No paragraph below, try to find one above
+            size_t prevParagraphEnd = startLine;
+            while (prevParagraphEnd > 0 && 
+                   (buffer_.getLine(prevParagraphEnd).empty() || 
+                    buffer_.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
+                prevParagraphEnd--;
+            }
+            
+            if (prevParagraphEnd < buffer_.lineCount() && 
+                !(buffer_.getLine(prevParagraphEnd).empty() || 
+                  buffer_.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
+                // Found a paragraph above, expand to it
+                paragraphEnd = prevParagraphEnd;
+                
+                // Find the start of this paragraph
+                paragraphStart = paragraphEnd;
+                while (paragraphStart > 0) {
+                    const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+                    if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
+                        break;
+                    }
+                    paragraphStart--;
+                }
+            } else {
+                // No paragraphs found, just select the current empty line
+                paragraphStart = paragraphEnd = startLine;
+            }
+        }
+    } else if (hasSelection_ && (endLine > startLine)) {
+        // For a multi-line selection, ensure we capture complete paragraphs
+        // Find the start of the first paragraph
+        paragraphStart = startLine;
+        while (paragraphStart > 0) {
+            const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+            if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
+                break;
+            }
+            paragraphStart--;
+        }
+        
+        // Find the end of the last paragraph
+        paragraphEnd = endLine;
+        while (paragraphEnd < buffer_.lineCount() - 1) {
+            const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+            if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
+                break;
+            }
+            paragraphEnd++;
+        }
+    }
+    
+    // Handle edge case where we're at the end of the buffer
+    size_t lineLength = 0;
+    if (paragraphEnd < buffer_.lineCount()) {
+        lineLength = buffer_.getLine(paragraphEnd).length();
+    }
+    
+    // Set selection to cover the paragraph(s)
+    setSelectionRange(paragraphStart, 0, paragraphEnd, lineLength);
+    
+    // Move cursor to the end of selection
+    setCursor(paragraphEnd, lineLength);
+    
+    // Update selection unit
+    currentSelectionUnit_ = SelectionUnit::Paragraph;
+    
+    return true;
 } 
