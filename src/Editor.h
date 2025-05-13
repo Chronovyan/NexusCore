@@ -220,6 +220,7 @@ protected:
     bool expandToExpression();
     bool expandToParagraph();
     bool expandToBlock();
+    bool expandToDocument();
     bool shrinkToWord();
     bool shrinkToCharacter();
     bool shrinkToExpression();

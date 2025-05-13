@@ -1553,4 +1553,72 @@ TEST_F(EditorFacadeTest, ExpandSelectionToBlockEmptyBuffer) {
     EXPECT_EQ(SelectionUnit::Character, editor.getCurrentSelectionUnit());
 }
 
+// Test for document level expansion
+TEST_F(EditorFacadeTest, ExpandSelectionToDocument) {
+    // Test 1: Standard case - non-empty buffer
+    std::vector<std::string> lines = {
+        "Line 1",
+        "Line 2",
+        "Line 3"
+    };
+    setBufferLines(lines);
+    
+    // Position cursor somewhere in the buffer
+    editor.setCursor(1, 2);
+    
+    // Expand to document
+    editor.expandSelection(SelectionUnit::Document);
+    
+    // Verify entire document is selected
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Document, editor.getCurrentSelectionUnit());
+    
+    // Verify selection spans the entire document
+    verifySelection(true, 0, 0, 2, lines[2].length());
+    
+    // Verify cursor is at the end of document
+    verifyCursorPosition(2, lines[2].length());
+    
+    // Test 2: When a selection already exists
+    // Add an existing selection
+    editor.clearSelection();
+    editor.setSelectionRange(0, 1, 1, 3);
+    
+    // Expand to document
+    editor.expandSelection(SelectionUnit::Document);
+    
+    // Verify selection expands to entire document
+    verifySelection(true, 0, 0, 2, lines[2].length());
+    
+    // Test 3: Single-line document
+    setBufferContent("Single line document");
+    editor.setCursor(0, 5);
+    
+    // Expand to document
+    editor.expandSelection(SelectionUnit::Document);
+    
+    // Verify entire document is selected
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Document, editor.getCurrentSelectionUnit());
+    verifySelection(true, 0, 0, 0, 20); // "Single line document" is 20 chars
+}
+
+// Test for document level expansion with empty buffer
+TEST_F(EditorFacadeTest, ExpandSelectionToDocumentEmptyBuffer) {
+    // Set up a buffer with just a single empty line
+    editor.getBuffer().clear(false);
+    editor.addLine(""); // Add empty line
+    
+    // Position cursor at beginning
+    editor.setCursor(0, 0);
+    
+    // Expand to document
+    editor.expandSelection(SelectionUnit::Document);
+    
+    // Verify selection behavior on empty document
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Document, editor.getCurrentSelectionUnit());
+    verifySelection(true, 0, 0, 0, 0);
+}
+
 } // anonymous namespace 
