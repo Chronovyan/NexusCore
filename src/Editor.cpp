@@ -1730,6 +1730,10 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
               !hasSelection_)) {
         expandToBlock();
     }
+    else if (targetUnit == SelectionUnit::Document) {
+        // Document level expansion can be called from any state
+        expandToDocument();
+    }
     // Other expansion levels will be implemented in future phases
 }
 
@@ -2800,4 +2804,25 @@ bool Editor::expandToBlock() {
     }
     
     return false; // No enclosing block found
+}
+
+bool Editor::expandToDocument() {
+    if (buffer_.isEmpty()) {
+        // For an empty buffer, just clear any existing selection
+        clearSelection();
+        currentSelectionUnit_ = SelectionUnit::Document;
+        return true;
+    }
+    
+    // Set selection from start to end of buffer
+    size_t lastLine = buffer_.lineCount() - 1;
+    size_t lastLineLength = buffer_.getLine(lastLine).length();
+    
+    setSelectionRange(0, 0, lastLine, lastLineLength);
+    
+    // Move cursor to the end of the document
+    setCursor(lastLine, lastLineLength);
+    
+    currentSelectionUnit_ = SelectionUnit::Document;
+    return true;
 }
