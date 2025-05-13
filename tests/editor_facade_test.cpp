@@ -892,6 +892,62 @@ TEST_F(EditorFacadeTest, DecreaseIndent) {
     verifySelection(true, 0, 6, 0, 10); // Our implementation doesn't adjust selection correctly
 }
 
+TEST_F(EditorFacadeTest, SelectLineScenarios) {
+    // Setup buffer with varied content including an empty line
+    std::vector<std::string> lines = {
+        "First line with content",
+        "Second line that is longer for testing",
+        "", // Empty line
+        "Fourth line with trailing spaces    ",
+        "Last line"
+    };
+    setBufferLines(lines);
+    
+    // Test 1: Select line with cursor at the beginning
+    editor.setCursor(0, 0);
+    editor.selectLine();
+    
+    // Verify entire first line is selected and cursor is at end
+    verifySelection(true, 0, 0, 0, lines[0].length());
+    verifyCursorPosition(0, lines[0].length());
+    
+    // Test 2: Select line with cursor in the middle
+    editor.setCursor(1, 15); // Somewhere in the middle of second line
+    editor.selectLine();
+    
+    // Verify entire second line is selected and cursor is at end
+    verifySelection(true, 1, 0, 1, lines[1].length());
+    verifyCursorPosition(1, lines[1].length());
+    
+    // Test 3: Select line with cursor at the end
+    editor.setCursor(3, lines[3].length()); // At the end of fourth line
+    editor.selectLine();
+    
+    // Verify entire fourth line is selected and cursor is at end
+    verifySelection(true, 3, 0, 3, lines[3].length());
+    verifyCursorPosition(3, lines[3].length());
+    
+    // Test 4: Select empty line
+    editor.setCursor(2, 0); // On the empty line
+    editor.selectLine();
+    
+    // Verify empty line is selected
+    // Note: For an empty line, start and end column would both be 0
+    verifySelection(true, 2, 0, 2, 0);
+    verifyCursorPosition(2, 0);
+    
+    // Test 5: Select line when a selection already exists
+    // First create a partial selection
+    editor.setSelectionRange(4, 2, 4, 7);
+    // Make sure the cursor is explicitly set to line 4 before selecting the line
+    editor.setCursor(4, 7);
+    editor.selectLine();
+    
+    // Verify that selectLine expands to full line regardless of existing selection
+    verifySelection(true, 4, 0, 4, lines[4].length());
+    verifyCursorPosition(4, lines[4].length());
+}
+
 // Add more tests as needed for:
 // - Undo/Redo functionality
 // - More advanced error handling

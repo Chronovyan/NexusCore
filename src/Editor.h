@@ -94,6 +94,7 @@ public:
     void startSelection();
     void updateSelection();
     void replaceSelection(const std::string& text);
+    void selectLine(); // Selects the entire current line
     
     // Selection coordinate getters
     size_t getSelectionStartLine() const;

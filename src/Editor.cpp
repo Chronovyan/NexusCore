@@ -1438,4 +1438,18 @@ void Editor::setSelection(const Position& start, const Position& end) {
 
 void Editor::setCursorPosition(const Position& pos) {
     setCursor(pos.line, pos.column);
+}
+
+void Editor::selectLine() {
+    if (buffer_.isEmpty()) return;
+    
+    // Get the length of the current line
+    const std::string& line = buffer_.getLine(cursorLine_);
+    size_t lineLength = line.length();
+    
+    // Select from beginning to end of the current line
+    setSelectionRange(cursorLine_, 0, cursorLine_, lineLength);
+    
+    // Move cursor to the end of the line
+    setCursor(cursorLine_, lineLength);
 } 
