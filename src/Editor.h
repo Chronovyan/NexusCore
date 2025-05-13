@@ -10,6 +10,20 @@
 #include <limits> // For std::numeric_limits
 #include <memory> // For std::shared_ptr
 
+// Position struct to represent cursor or selection position
+struct Position {
+    size_t line;
+    size_t column;
+    
+    bool operator==(const Position& other) const {
+        return line == other.line && column == other.column;
+    }
+    
+    bool operator!=(const Position& other) const {
+        return !(*this == other);
+    }
+};
+
 class Editor {
 public:
     Editor();
@@ -61,6 +75,10 @@ public:
     void newLine();          // Uses NewLineCommand
     void joinWithNextLine(); // Uses JoinLinesCommand
     // Add wordwise variants (deleteWordBackward, deleteWordForward) if needed
+    
+    // Indentation operations
+    void increaseIndent();
+    void decreaseIndent();
 
     // Undo/redo operations
     bool canUndo() const { return commandManager_.canUndo(); }
@@ -68,38 +86,45 @@ public:
     bool undo();
     bool redo();
 
-    // Selection methods
+    // Selection operations
+    bool hasSelection() const;
+    void clearSelection();
+    void setSelectionRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
+    std::string getSelectedText() const;
     void startSelection();
     void updateSelection();
-    void clearSelection();
-    bool hasSelection() const; // DECLARATION ONLY
-    std::string getSelectedText() const;
-    void setSelectionStart();
-    void setSelectionEnd();
-    void setSelectionRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
     void replaceSelection(const std::string& text);
     
-    // Public getters for selection coordinates
+    // Selection coordinate getters
     size_t getSelectionStartLine() const;
     size_t getSelectionStartCol() const;
     size_t getSelectionEndLine() const;
     size_t getSelectionEndCol() const;
     
     // Clipboard operations
-    void copySelectedText();
-    void cutSelectedText();
-    void pasteText();
-    std::string getClipboardText() const;      // Added
-    void setClipboardText(const std::string& text); // Added
+    void cutSelection();
+    void copySelection();
+    void pasteAtCursor();
+    std::string getClipboardText() const;
+    void setClipboardText(const std::string& text);
     
+    // For backwards compatibility
+    void setSelectionStart() { startSelection(); }
+    void setSelectionEnd() { updateSelection(); }
+    void copySelectedText() { copySelection(); }
+    void cutSelectedText() { cutSelection(); }
+    void pasteText() { pasteAtCursor(); }
+    
+    // Search operations
+    bool search(const std::string& searchTerm, bool caseSensitive, bool forward);
+    bool searchPrevious();
+
     // Word operations (can be grouped with text editing or selection)
     void deleteWord();
     void selectWord();
 
     // Search and replace operations
-    bool search(const std::string& searchTerm, bool caseSensitive = true, bool forward = true);
     bool searchNext();
-    bool searchPrevious();
     bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
     bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true);
 
@@ -140,6 +165,13 @@ public:
     
     // Invalidate syntax highlighting cache after buffer modifications
     void invalidateHighlightingCache();
+
+    // Helper methods for indentation commands
+    void setLine(size_t lineIndex, const std::string& text);
+    std::string getLine(size_t lineIndex) const;
+    bool isSelectionActive() const { return hasSelection_; }
+    void setSelection(const Position& start, const Position& end);
+    void setCursorPosition(const Position& pos);
 
 protected:
     // Helper methods
@@ -195,7 +227,7 @@ protected:
     bool searchWrapped_ = false;
     
     // Syntax highlighting state
-    bool syntaxHighlightingEnabled_ = false;
+    bool syntaxHighlightingEnabled_ = true;
     std::string filename_ = "untitled.txt"; // Initialized
     std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr; // Changed to shared_ptr 
     mutable std::vector<std::vector<SyntaxStyle>> cachedHighlightStyles_;

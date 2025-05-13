@@ -16,24 +16,54 @@ void InsertTextCommand::execute(Editor& editor) {
     
     // Get direct access to the buffer and insert text
     TextBuffer& buffer = editor.getBuffer();
-    buffer.insertString(cursorLine_, cursorCol_, text_);
     
-    // Update cursor position after insertion
-    editor.setCursor(cursorLine_, cursorCol_ + text_.length());
+    if (useSpecifiedPosition_) {
+        // Use the specified line and column position
+        if (linePos_ < buffer.lineCount()) {
+            buffer.insertString(linePos_, colPos_, text_);
+            
+            // Update cursor position to end of inserted text if cursor is on the modified line
+            if (cursorLine_ == linePos_ && cursorCol_ >= colPos_) {
+                // Cursor was after insertion point, move it by length of inserted text
+                editor.setCursor(cursorLine_, cursorCol_ + text_.length());
+            } else if (cursorLine_ == linePos_ && cursorCol_ < colPos_) {
+                // Cursor was before insertion point, leave it unchanged
+                editor.setCursor(cursorLine_, cursorCol_);
+            }
+        }
+    } else {
+        // Use current cursor position
+        buffer.insertString(cursorLine_, cursorCol_, text_);
+        
+        // Update cursor position after insertion
+        editor.setCursor(cursorLine_, cursorCol_ + text_.length());
+    }
+    
     editor.invalidateHighlightingCache();
 }
 
 void InsertTextCommand::undo(Editor& editor) {
-    // Restore cursor to original position
-    editor.setCursor(cursorLine_, cursorCol_);
-    
-    // Delete the inserted text
-    for (size_t i = 0; i < text_.length(); ++i) {
-        editor.getBuffer().deleteCharForward(cursorLine_, cursorCol_);
+    if (useSpecifiedPosition_) {
+        // For specified position, delete from that position
+        for (size_t i = 0; i < text_.length(); ++i) {
+            editor.getBuffer().deleteCharForward(linePos_, colPos_);
+        }
+        
+        // Restore cursor to original position
+        editor.setCursor(cursorLine_, cursorCol_);
+    } else {
+        // Restore cursor to original position
+        editor.setCursor(cursorLine_, cursorCol_);
+        
+        // Delete the inserted text
+        for (size_t i = 0; i < text_.length(); ++i) {
+            editor.getBuffer().deleteCharForward(cursorLine_, cursorCol_);
+        }
+        
+        // Ensure cursor is at the original position
+        editor.setCursor(cursorLine_, cursorCol_);
     }
     
-    // Ensure cursor is at the original position
-    editor.setCursor(cursorLine_, cursorCol_);
     editor.invalidateHighlightingCache();
 }
 
@@ -1339,3 +1369,223 @@ std::string DeleteWordAtCursorCommand::getDescription() const {
     return "Delete word at cursor";
 }
 */
+
+// IncreaseIndentCommand Implementation
+IncreaseIndentCommand::IncreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
+                                           size_t tabWidth, bool isSelectionActive, 
+                                           const Position& selectionStartPos, const Position& cursorPos)
+    : mFirstLineIndex(firstLine)
+    , mLastLineIndex(lastLine)
+    , mOldLines(lines)
+    , mTabWidth(tabWidth)
+    , mWasSelectionActive(isSelectionActive)
+    , mOldSelectionStartPos(selectionStartPos)
+    , mOldCursorPos(cursorPos) {
+    
+    // Create indent string with tabWidth spaces
+    std::string indent(mTabWidth, ' ');
+    mNewLines.reserve(mOldLines.size());
+    
+    // Add indentation to each line, regardless of existing indentation
+    for (const auto& line : mOldLines) {
+        mNewLines.push_back(indent + line);
+    }
+    
+    // Calculate new cursor position, adjusting for added indentation
+    mNewCursorPos = mOldCursorPos;
+    if (mNewCursorPos.line >= mFirstLineIndex && mNewCursorPos.line <= mLastLineIndex) {
+        mNewCursorPos.column += mTabWidth;
+    }
+    
+    // Calculate new selection start position, adjusting for added indentation
+    mNewSelectionStartPos = mOldSelectionStartPos;
+    if (mNewSelectionStartPos.line >= mFirstLineIndex && mNewSelectionStartPos.line <= mLastLineIndex) {
+        mNewSelectionStartPos.column += mTabWidth;
+    }
+}
+
+void IncreaseIndentCommand::execute(Editor& editor) {
+    for (size_t i = 0; i < mNewLines.size(); ++i) {
+        editor.setLine(mFirstLineIndex + i, mNewLines[i]);
+    }
+    
+    if (mWasSelectionActive) {
+        // Check if we need to swap positions to maintain correct selection orientation
+        // In document order, if mNewCursorPos is before mNewSelectionStartPos, we need to swap
+        if (mNewCursorPos.line < mNewSelectionStartPos.line || 
+            (mNewCursorPos.line == mNewSelectionStartPos.line && mNewCursorPos.column < mNewSelectionStartPos.column)) {
+            // The cursor is before the selection start, so we need to ensure the selection is set correctly
+            // by explicitly setting the selection range with the right order
+            editor.setSelectionRange(mNewCursorPos.line, mNewCursorPos.column, 
+                                    mNewSelectionStartPos.line, mNewSelectionStartPos.column);
+        } else {
+            // Normal case - selection start is before cursor
+            editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
+                                    mNewCursorPos.line, mNewCursorPos.column);
+        }
+    } else {
+        editor.setCursorPosition(mNewCursorPos);
+    }
+}
+
+void IncreaseIndentCommand::undo(Editor& editor) {
+    for (size_t i = 0; i < mOldLines.size(); ++i) {
+        editor.setLine(mFirstLineIndex + i, mOldLines[i]);
+    }
+    
+    if (mWasSelectionActive) {
+        editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
+                               mNewCursorPos.line, mNewCursorPos.column);
+    } else {
+        editor.setCursorPosition(mNewCursorPos);
+    }
+}
+
+std::string IncreaseIndentCommand::getDescription() const {
+    return "Increase indent";
+}
+
+// DecreaseIndentCommand Implementation
+DecreaseIndentCommand::DecreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
+                                           size_t tabWidth, bool isSelectionActive, 
+                                           const Position& selectionStartPos, const Position& cursorPos)
+    : mFirstLineIndex(firstLine)
+    , mLastLineIndex(lastLine)
+    , mOldLines(lines)
+    , mTabWidth(tabWidth)
+    , mWasSelectionActive(isSelectionActive)
+    , mOldSelectionStartPos(selectionStartPos)
+    , mOldCursorPos(cursorPos) {
+    
+    mNewLines.reserve(mOldLines.size());
+    
+    // For each line, check if it has indentation to remove
+    for (const auto& line : mOldLines) {
+        std::string newLine = line;
+        size_t spacesToRemove = 0;
+        
+        // Count leading spaces up to tabWidth
+        for (size_t i = 0; i < std::min(mTabWidth, line.size()); ++i) {
+            if (line[i] == ' ') {
+                spacesToRemove++;
+            } else {
+                break;
+            }
+        }
+        
+        // Remove leading spaces
+        if (spacesToRemove > 0) {
+            newLine = line.substr(spacesToRemove);
+        }
+        
+        mNewLines.push_back(newLine);
+    }
+    
+    // Calculate new cursor position after removing indentation
+    mNewCursorPos = mOldCursorPos;
+    if (mNewCursorPos.line >= mFirstLineIndex && mNewCursorPos.line <= mLastLineIndex) {
+        size_t lineIndex = mNewCursorPos.line - mFirstLineIndex;
+        if (lineIndex < mOldLines.size()) {
+            const auto& oldLine = mOldLines[lineIndex];
+            const auto& newLine = mNewLines[lineIndex];
+            
+            // Calculate the number of spaces actually removed from this line
+            size_t indentRemoved = oldLine.length() - newLine.length();
+            
+            // Adjust cursor column accordingly
+            if (mNewCursorPos.column >= indentRemoved) {
+                mNewCursorPos.column -= indentRemoved;
+            } else {
+                mNewCursorPos.column = 0;
+            }
+        }
+    }
+    
+    // Calculate new selection start position after removing indentation
+    mNewSelectionStartPos = mOldSelectionStartPos;
+    if (mNewSelectionStartPos.line >= mFirstLineIndex && mNewSelectionStartPos.line <= mLastLineIndex) {
+        size_t lineIndex = mNewSelectionStartPos.line - mFirstLineIndex;
+        if (lineIndex < mOldLines.size()) {
+            const auto& oldLine = mOldLines[lineIndex];
+            const auto& newLine = mNewLines[lineIndex];
+            
+            // Calculate the number of spaces actually removed from this line
+            size_t indentRemoved = oldLine.length() - newLine.length();
+            
+            // Adjust selection start column accordingly
+            if (mNewSelectionStartPos.column >= indentRemoved) {
+                mNewSelectionStartPos.column -= indentRemoved;
+            } else {
+                mNewSelectionStartPos.column = 0;
+            }
+        }
+    }
+}
+
+void DecreaseIndentCommand::execute(Editor& editor) {
+    std::vector<std::string> newLines;
+    bool anyChanges = false;
+    
+    for (size_t i = 0; i < mOldLines.size(); ++i) {
+        const std::string& oldLine = mOldLines[i];
+        std::string newLine = oldLine;
+        
+        // Only unindent if there's no selection active
+        if (!mWasSelectionActive) {
+            // Count leading spaces
+            size_t leadingSpaces = 0;
+            while (leadingSpaces < newLine.size() && newLine[leadingSpaces] == ' ') {
+                leadingSpaces++;
+            }
+            
+            // Remove up to tabWidth spaces
+            size_t spacesToRemove = std::min(leadingSpaces, mTabWidth);
+            if (spacesToRemove > 0) {
+                newLine = newLine.substr(spacesToRemove);
+                anyChanges = true;
+            }
+        }
+        
+        editor.setLine(mFirstLineIndex + i, newLine);
+        newLines.push_back(newLine);
+    }
+    
+    mNewLines = newLines;
+    
+    // Restore selection or cursor position
+    if (mWasSelectionActive) {
+        editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
+                               mNewCursorPos.line, mNewCursorPos.column);
+    } else {
+        editor.setCursorPosition(mNewCursorPos);
+    }
+}
+
+void DecreaseIndentCommand::undo(Editor& editor) {
+    for (size_t i = 0; i < mOldLines.size(); ++i) {
+        editor.setLine(mFirstLineIndex + i, mOldLines[i]);
+    }
+    
+    if (mWasSelectionActive) {
+        // Check if we need to swap positions to maintain correct selection orientation
+        // In document order, if mOldCursorPos is before mOldSelectionStartPos, we need to swap
+        if (mOldCursorPos.line < mOldSelectionStartPos.line || 
+            (mOldCursorPos.line == mOldSelectionStartPos.line && mOldCursorPos.column < mOldSelectionStartPos.column)) {
+            // The cursor is before the selection start, so we need to ensure the selection is set correctly
+            editor.setSelectionRange(mOldCursorPos.line, mOldCursorPos.column, 
+                                    mOldSelectionStartPos.line, mOldSelectionStartPos.column);
+        } else {
+            // Normal case - selection start is before cursor
+            editor.setSelectionRange(mOldSelectionStartPos.line, mOldSelectionStartPos.column,
+                                    mOldCursorPos.line, mOldCursorPos.column);
+        }
+    } else {
+        editor.setCursorPosition(mOldCursorPos);
+    }
+}
+
+std::string DecreaseIndentCommand::getDescription() const {
+    return "Decrease indent";
+}
+
+// CompoundCommand Implementation

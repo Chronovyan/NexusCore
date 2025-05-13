@@ -11,7 +11,12 @@
 // InsertTextCommand - Handles insertion of text at current cursor position
 class InsertTextCommand : public Command {
 public:
-    InsertTextCommand(const std::string& text) : text_(text) {}
+    // Default constructor - Uses current cursor position
+    InsertTextCommand(const std::string& text) : text_(text), useSpecifiedPosition_(false) {}
+    
+    // Constructor with explicit line and column position
+    InsertTextCommand(const std::string& text, size_t line, size_t col) 
+        : text_(text), linePos_(line), colPos_(col), useSpecifiedPosition_(true) {}
     
     void execute(Editor& editor) override;
     
@@ -23,6 +28,9 @@ private:
     std::string text_;
     size_t cursorLine_;
     size_t cursorCol_;
+    size_t linePos_; // Line position for specified insertion
+    size_t colPos_;  // Column position for specified insertion
+    bool useSpecifiedPosition_; // Whether to use specified position or cursor position
 };
 
 // DeleteTextCommand - Handles deletion of text (backspace)
@@ -430,5 +438,51 @@ private:
     std::string textToCut_;
     bool wasSelection_;
 };
+
+class IncreaseIndentCommand : public Command {
+public:
+    IncreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
+                         size_t tabWidth, bool isSelectionActive, 
+                         const Position& selectionStartPos, const Position& cursorPos);
+    void execute(Editor& editor) override;
+    void undo(Editor& editor) override;
+    std::string getDescription() const override;
+
+private:
+    size_t mFirstLineIndex;
+    size_t mLastLineIndex;
+    std::vector<std::string> mOldLines;
+    std::vector<std::string> mNewLines;
+    size_t mTabWidth;
+    bool mWasSelectionActive;
+    Position mOldSelectionStartPos;
+    Position mOldCursorPos;
+    Position mNewSelectionStartPos;
+    Position mNewCursorPos;
+};
+
+class DecreaseIndentCommand : public Command {
+public:
+    DecreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
+                         size_t tabWidth, bool isSelectionActive, 
+                         const Position& selectionStartPos, const Position& cursorPos);
+    void execute(Editor& editor) override;
+    void undo(Editor& editor) override;
+    std::string getDescription() const override;
+
+private:
+    size_t mFirstLineIndex;
+    size_t mLastLineIndex;
+    std::vector<std::string> mOldLines;
+    std::vector<std::string> mNewLines;
+    size_t mTabWidth;
+    bool mWasSelectionActive;
+    Position mOldSelectionStartPos;
+    Position mOldCursorPos;
+    Position mNewSelectionStartPos;
+    Position mNewCursorPos;
+};
+
+// CompoundCommand class
 
 #endif // EDITOR_COMMANDS_H 
