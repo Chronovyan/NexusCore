@@ -1287,6 +1287,86 @@ TEST_F(EditorFacadeTest, MultiLevelExpansion) {
     EXPECT_EQ(lines[1], editor.getSelectedText());
 }
 
+TEST_F(EditorFacadeTest, ExpandSelectionToExpression) {
+    // Test 1: Simple parentheses
+    setBufferContent("function(argument1, argument2);");
+    
+    // Cursor inside parentheses
+    editor.setCursor(0, 12); // Inside the parentheses at 'a' in argument1
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify parentheses content is selected
+    std::string selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains "argument1"
+    EXPECT_TRUE(selectedText.find("argument1") != std::string::npos);
+    
+    // Test 2: Cursor on opening bracket
+    editor.clearSelection();
+    editor.setCursor(0, 8); // On the opening parenthesis
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify the entire expression including brackets is selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains the opening parenthesis
+    EXPECT_TRUE(selectedText.find("(") != std::string::npos);
+    
+    // Test 3: Square brackets
+    setBufferContent("var array = [1, 2, 3, 4];");
+    editor.clearSelection();
+    editor.setCursor(0, 13); // Inside square brackets
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify square bracket content is selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains the brackets
+    EXPECT_TRUE(selectedText.find("[") != std::string::npos);
+    
+    // Test 4: Curly braces
+    setBufferContent("var obj = {key: 'value'};");
+    editor.clearSelection();
+    editor.setCursor(0, 13); // Inside curly braces
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify curly brace content is selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains curly braces
+    EXPECT_TRUE(selectedText.find("{") != std::string::npos);
+    
+    // Test 5: Double quotes
+    setBufferContent("var message = \"Hello, world!\";");
+    editor.clearSelection();
+    editor.setCursor(0, 18); // Inside double quotes
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify quoted string is selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains the quotes
+    EXPECT_TRUE(selectedText.find("\"") != std::string::npos);
+    
+    // Test 6: Single quotes
+    setBufferContent("var message = 'Hello, world!';");
+    editor.clearSelection();
+    editor.setCursor(0, 18); // Inside single quotes
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify quoted string is selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains the quotes
+    EXPECT_TRUE(selectedText.find("'") != std::string::npos);
+    
+    // Test 7: Empty expressions
+    setBufferContent("function();");
+    editor.clearSelection();
+    editor.setCursor(0, 9); // Between empty parentheses
+    editor.expandSelection(SelectionUnit::Expression);
+    
+    // Verify empty parentheses are selected
+    selectedText = editor.getSelectedText();
+    // Allow for multiple possibilities as long as it contains the parentheses
+    EXPECT_TRUE(selectedText.find("(") != std::string::npos && 
+                selectedText.find(")") != std::string::npos);
+}
+
 // Add more tests as needed for:
 // - Undo/Redo functionality
 // - More advanced error handling

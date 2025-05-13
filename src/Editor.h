@@ -216,8 +216,27 @@ protected:
     // Selection expansion/shrinking helpers
     bool expandToWord();
     bool expandToLine();
+    bool expandToExpression();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
+    // Expression handling helpers
+    struct ExpressionBoundary {
+        Position start;
+        Position end;
+        bool found;
+        
+        ExpressionBoundary() : found(false) {}
+        ExpressionBoundary(const Position& s, const Position& e) : start(s), end(e), found(true) {}
+    };
+
+    ExpressionBoundary findEnclosingExpression(const Position& startPos, const Position& endPos) const;
+    ExpressionBoundary findMatchingBracketPair(const Position& pos, char openBracket, char closeBracket) const;
+    ExpressionBoundary findEnclosingQuotes(const Position& pos, char quoteChar) const;
+    char getMatchingBracket(char bracket) const;
+    bool isOpeningBracket(char c) const;
+    bool isClosingBracket(char c) const;
+    bool isQuoteChar(char c) const;
+
     friend class Command; 
     friend class CompoundCommand;
     // Consider making TestEditor a friend if it needs to poke at internals not exposed by public API.
