@@ -224,6 +224,8 @@ protected:
     bool shrinkToWord();
     bool shrinkToCharacter();
     bool shrinkToExpression();
+    bool shrinkFromLineToWord();
+    bool shrinkFromExpressionToWord();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
     // Expression handling helpers
