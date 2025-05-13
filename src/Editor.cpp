@@ -466,10 +466,6 @@ void Editor::deleteForward() {
 }
 
 void Editor::newLine() {
-    if (hasSelection_) {
-        deleteSelection();
-    }
-    
     auto command = std::make_unique<NewLineCommand>();
     commandManager_.executeCommand(std::move(command), *this);
 }
@@ -484,25 +480,24 @@ void Editor::joinWithNextLine() {
 }
 
 // Selection operations
-void Editor::setSelectionStart() {
+void Editor::startSelection() {
+    // Start selection at current cursor position
     selectionStartLine_ = cursorLine_;
     selectionStartCol_ = cursorCol_;
-    hasSelection_ = true;
-    // At this point selectionEnd = selectionStart (no visible selection yet)
-    selectionEndLine_ = selectionStartLine_;
-    selectionEndCol_ = selectionStartCol_;
-}
-
-void Editor::setSelectionEnd() {
     selectionEndLine_ = cursorLine_;
     selectionEndCol_ = cursorCol_;
-    
-    // Ensure we have valid selection (start should be before end)
-    if (selectionStartLine_ > selectionEndLine_ || 
-        (selectionStartLine_ == selectionEndLine_ && selectionStartCol_ > selectionEndCol_)) {
-        // Swap start and end if needed
-        std::swap(selectionStartLine_, selectionEndLine_);
-        std::swap(selectionStartCol_, selectionEndCol_);
+}
+
+void Editor::updateSelection() {
+    // Update the end point of the selection to current cursor position
+    selectionEndLine_ = cursorLine_;
+    selectionEndCol_ = cursorCol_;
+}
+
+void Editor::replaceSelection(const std::string& text) {
+    if (hasSelection()) {
+        auto command = std::make_unique<ReplaceSelectionCommand>(text);
+        commandManager_.executeCommand(std::move(command), *this);
     }
 }
 
@@ -560,41 +555,33 @@ std::string Editor::getSelectedText() const {
 }
 
 void Editor::deleteSelection() {
-    if (!hasSelection_) { // Or use the hasSelection() method
-        return;
+    if (hasSelection()) {
+        auto command = std::make_unique<ReplaceSelectionCommand>("");
+        commandManager_.executeCommand(std::move(command), *this);
     }
-    // Use ReplaceSelectionCommand with an empty string to delete the selection
-    auto command = std::make_unique<ReplaceSelectionCommand>(""); 
-    commandManager_.executeCommand(std::move(command), *this);
-    // The command itself should handle clearing the selection state (hasSelection_ = false)
-    // and cursor positioning after execution.
 }
 
-void Editor::copySelectedText() {
-    clipboard_ = getSelectedText();
-}
-
-void Editor::cutSelectedText() {
-    if (!hasSelection()) return;
-    
-    clipboard_ = getSelectedText();
-    deleteSelection();
-}
-
-void Editor::pasteText() {
-    if (clipboard_.empty()) {
-        return;
+void Editor::copySelection() {
+    if (hasSelection()) {
+        clipboard_ = getSelectedText();
     }
-    
-    // Delete any selected text first
-    if (hasSelection_) {
+}
+
+void Editor::cutSelection() {
+    if (hasSelection()) {
+        // First copy the selected text to clipboard
+        clipboard_ = getSelectedText();
+        
+        // Then delete the selection
         deleteSelection();
     }
-    
-    // Use typeText to handle multiline paste
-    typeText(clipboard_);
-    
-    // No need to invalidate the cache here because typeText will do it
+}
+
+void Editor::pasteAtCursor() {
+    if (!clipboard_.empty()) {
+        auto command = std::make_unique<InsertTextCommand>(clipboard_);
+        commandManager_.executeCommand(std::move(command), *this);
+    }
 }
 
 void Editor::deleteWord() {
@@ -1341,4 +1328,114 @@ std::string Editor::getClipboardText() const {
 
 void Editor::setClipboardText(const std::string& text) {
     clipboard_ = text;
+}
+
+void Editor::increaseIndent() {
+    // Determine first and last lines to indent based on selection
+    size_t firstLineIndex, lastLineIndex;
+    
+    if (hasSelection()) {
+        // Get the range of lines covered by the selection
+        firstLineIndex = std::min(selectionStartLine_, selectionEndLine_);
+        lastLineIndex = std::max(selectionStartLine_, selectionEndLine_);
+    } else {
+        // Only indent the current line
+        firstLineIndex = lastLineIndex = cursorLine_;
+    }
+    
+    // Collect the lines to be indented
+    std::vector<std::string> linesToIndent;
+    for (size_t i = firstLineIndex; i <= lastLineIndex; i++) {
+        if (i < buffer_.lineCount()) {
+            linesToIndent.push_back(buffer_.getLine(i));
+        }
+    }
+    
+    // Create and execute the indent command
+    const size_t tabWidth = 4; // Use a constant for now, could be a member variable later
+    
+    Position selectionPos = Position{selectionStartLine_, selectionStartCol_};
+    // If there's a selection, use the selection end position as the cursor position
+    Position cursorPos = hasSelection() 
+        ? Position{selectionEndLine_, selectionEndCol_} 
+        : Position{cursorLine_, cursorCol_};
+    
+    auto command = std::make_unique<IncreaseIndentCommand>(
+        firstLineIndex, lastLineIndex, linesToIndent, tabWidth, 
+        hasSelection(), selectionPos, cursorPos
+    );
+    
+    commandManager_.executeCommand(std::move(command), *this);
+}
+
+void Editor::decreaseIndent() {
+    // Determine first and last lines to unindent based on selection
+    size_t firstLineIndex, lastLineIndex;
+    
+    if (hasSelection()) {
+        // Get the range of lines covered by the selection
+        firstLineIndex = std::min(selectionStartLine_, selectionEndLine_);
+        lastLineIndex = std::max(selectionStartLine_, selectionEndLine_);
+    } else {
+        // Only unindent the current line
+        firstLineIndex = lastLineIndex = cursorLine_;
+    }
+    
+    // Collect the lines to be unindented
+    std::vector<std::string> linesToUnindent;
+    for (size_t i = firstLineIndex; i <= lastLineIndex; i++) {
+        if (i < buffer_.lineCount()) {
+            linesToUnindent.push_back(buffer_.getLine(i));
+        }
+    }
+    
+    // Create and execute the unindent command
+    const size_t tabWidth = 4; // Use a constant for now, could be a member variable later
+    
+    Position selectionPos = Position{selectionStartLine_, selectionStartCol_};
+    // If there's a selection, use the selection end position as the cursor position
+    Position cursorPos = hasSelection() 
+        ? Position{selectionEndLine_, selectionEndCol_} 
+        : Position{cursorLine_, cursorCol_};
+    
+    auto command = std::make_unique<DecreaseIndentCommand>(
+        firstLineIndex, lastLineIndex, linesToUnindent, tabWidth, 
+        hasSelection(), selectionPos, cursorPos
+    );
+    
+    commandManager_.executeCommand(std::move(command), *this);
+}
+
+bool Editor::searchPrevious() {
+    // If no previous search, there's nothing to search for
+    if (currentSearchTerm_.empty()) {
+        return false;
+    }
+    
+    // Use the existing search mechanism but specify backward direction
+    return search(currentSearchTerm_, currentSearchCaseSensitive_, false);
+}
+
+// Helper methods for indentation commands
+void Editor::setLine(size_t lineIndex, const std::string& text) {
+    if (lineIndex < buffer_.lineCount()) {
+        buffer_.replaceLine(lineIndex, text);
+        invalidateHighlightingCache();
+        setModified(true);
+    }
+}
+
+std::string Editor::getLine(size_t lineIndex) const {
+    if (lineIndex < buffer_.lineCount()) {
+        return buffer_.getLine(lineIndex);
+    }
+    return "";
+}
+
+void Editor::setSelection(const Position& start, const Position& end) {
+    setSelectionRange(start.line, start.column, end.line, end.column);
+}
+
+void Editor::setCursorPosition(const Position& pos) {
+    setCursor(pos.line, pos.column);
 } 
