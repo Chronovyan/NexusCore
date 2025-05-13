@@ -110,6 +110,7 @@ public:
     void selectToLineStart(); // Extends selection from cursor to start of line
     void selectToLineEnd(); // Extends selection from cursor to end of line
     void expandSelection(SelectionUnit targetUnit = SelectionUnit::Word);
+    void shrinkSelection(SelectionUnit targetUnit = SelectionUnit::Word);
     SelectionUnit getCurrentSelectionUnit() const;
     
     // Selection coordinate getters
@@ -217,6 +218,9 @@ protected:
     bool expandToWord();
     bool expandToLine();
     bool expandToExpression();
+    bool shrinkToCharacter();
+    bool shrinkToWord();
+    bool shrinkToExpression();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
     // Expression handling helpers

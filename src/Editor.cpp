@@ -1674,13 +1674,75 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
               !hasSelection_)) {
         expandToLine();
     }
-    else if (targetUnit == SelectionUnit::Expression &&
+    else if (targetUnit == SelectionUnit::Expression && 
              (currentSelectionUnit_ == SelectionUnit::Character || 
               currentSelectionUnit_ == SelectionUnit::Word ||
               !hasSelection_)) {
         expandToExpression();
     }
     // Other expansion levels will be implemented in future phases
+}
+
+void Editor::shrinkSelection(SelectionUnit targetUnit) {
+    if (!hasSelection_) return;
+    
+    // Simple direct approach: Reduce the selection unit by one level
+    if (currentSelectionUnit_ == SelectionUnit::Line) {
+        // Line -> Word
+        currentSelectionUnit_ = SelectionUnit::Word;
+    }
+    else if (currentSelectionUnit_ == SelectionUnit::Word) {
+        // Word -> Character
+        currentSelectionUnit_ = SelectionUnit::Character;
+        hasSelection_ = false; // At character level, we have no selection
+    }
+    else if (currentSelectionUnit_ == SelectionUnit::Expression) {
+        // Expression -> Word
+        currentSelectionUnit_ = SelectionUnit::Word;
+    }
+}
+
+bool Editor::shrinkToCharacter() {
+    if (!hasSelection_) return false;
+    
+    // Keep the cursor at its current position but clear the selection
+    hasSelection_ = false; // Directly set hasSelection_ to false instead of using clearSelection()
+    
+    // Update selection unit
+    currentSelectionUnit_ = SelectionUnit::Character;
+    return true;
+}
+
+bool Editor::shrinkToWord() {
+    if (!hasSelection_) return false;
+    
+    // Remember original cursor position, as we'll need to restore the cursor to something sensible
+    size_t origCursorLine = cursorLine_;
+    size_t origCursorCol = cursorCol_;
+    
+    // Find a word at the original cursor position
+    std::pair<size_t, size_t> wordBoundaries = findWordBoundaries(origCursorLine, origCursorCol);
+    
+    // Create a word selection
+    selectionStartLine_ = origCursorLine;
+    selectionStartCol_ = wordBoundaries.first;
+    selectionEndLine_ = origCursorLine;
+    selectionEndCol_ = wordBoundaries.second;
+    
+    // Update selection state
+    hasSelection_ = true;
+    currentSelectionUnit_ = SelectionUnit::Word;
+    
+    return true;
+}
+
+bool Editor::shrinkToExpression() {
+    if (!hasSelection_ || buffer_.isEmpty() || currentSelectionUnit_ != SelectionUnit::Expression) {
+        return false;
+    }
+    
+    // For now, we'll just set to word level since we don't have a nested expression tracking system yet
+    return shrinkToWord();
 }
 
 char Editor::getMatchingBracket(char bracket) const {
