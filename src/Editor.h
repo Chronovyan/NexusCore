@@ -218,8 +218,9 @@ protected:
     bool expandToWord();
     bool expandToLine();
     bool expandToExpression();
-    bool shrinkToCharacter();
+    bool expandToParagraph();
     bool shrinkToWord();
+    bool shrinkToCharacter();
     bool shrinkToExpression();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     

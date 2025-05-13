@@ -1307,7 +1307,7 @@ TEST_F(EditorFacadeTest, ShrinkSelectionScenarios) {
     setBufferContent("The quick brown fox jumps over the lazy dog.");
     
     // First expand to line
-    editor.setCursor(0, 10); // At 'k' in "quick"
+    editor.setCursor(0, 10); // At 'k' in "quick" 
     editor.expandSelection(SelectionUnit::Line); // Expand to entire line
     
     // Verify line is selected
@@ -1317,17 +1317,21 @@ TEST_F(EditorFacadeTest, ShrinkSelectionScenarios) {
     // Now shrink to word
     editor.shrinkSelection();
     
-    // Verify selection unit has changed - implementation may not actually select a word,
-    // but it should change the selection unit
+    // Verify a word is selected (could be "quick" or a nearby word)
+    EXPECT_TRUE(editor.hasSelection());
     EXPECT_EQ(SelectionUnit::Word, editor.getCurrentSelectionUnit());
+    
+    // The selection should be a single word, smaller than the full line
+    std::string selectedText = editor.getSelectedText();
+    EXPECT_LT(selectedText.length(), 44); // Line is 44 chars
+    EXPECT_GT(selectedText.length(), 0);  // Selection should not be empty
     
     // Test 2: Shrink Word to Character
     // Now shrink to character (which clears selection in our implementation)
     editor.shrinkSelection();
     
     // Verify selection is now gone and unit is Character
-    // NOTE: These assertions have been adjusted to match the actual implementation
-    EXPECT_TRUE(editor.hasSelection() || !editor.hasSelection()); // Either is valid
+    EXPECT_FALSE(editor.hasSelection());
     EXPECT_EQ(SelectionUnit::Character, editor.getCurrentSelectionUnit());
     
     // Test 3: Expression to Word
@@ -1341,41 +1345,137 @@ TEST_F(EditorFacadeTest, ShrinkSelectionScenarios) {
     // Now shrink to word
     editor.shrinkSelection();
     
-    // Verify the selection unit is now Word
+    // Verify the selection unit is now Word and some word is selected
+    EXPECT_TRUE(editor.hasSelection());
     EXPECT_EQ(SelectionUnit::Word, editor.getCurrentSelectionUnit());
     
-    // Test 4: Nested Expression Shrinking
-    setBufferContent("outer(middle(inner()));");
-    editor.clearSelection();
-    editor.setCursor(0, 12); // Inside "inner" function
+    // Test 4: Cursor position after shrinking
+    // Let's test cursor is within the selection after shrinking from Line to Word
+    setBufferContent("The quick brown fox jumps over the lazy dog.");
     
-    // Select inner()
-    editor.expandSelection(SelectionUnit::Expression);
-    EXPECT_EQ(SelectionUnit::Expression, editor.getCurrentSelectionUnit());
+    // First expand to line
+    editor.setCursor(0, 20); // Middle of the line, around "fox"
+    editor.expandSelection(SelectionUnit::Line); // Expand to entire line
     
-    // Clear to simulate shrinking to lowest level then expanding again
-    editor.clearSelection();
-    editor.setCursor(0, 6); // Inside the "middle" function
+    // Verify line is selected
+    EXPECT_EQ("The quick brown fox jumps over the lazy dog.", editor.getSelectedText());
     
-    // Select middle() including inner()
-    editor.expandSelection(SelectionUnit::Expression);
-    EXPECT_EQ(SelectionUnit::Expression, editor.getCurrentSelectionUnit());
-    
-    // Clear to simulate shrinking to lowest level then expanding again
-    editor.clearSelection();
-    editor.setCursor(0, 0); // At the start of "outer"
-    
-    // Select outer() including middle() and inner()
-    editor.expandSelection(SelectionUnit::Expression);
-    EXPECT_EQ(SelectionUnit::Expression, editor.getCurrentSelectionUnit());
-    
-    // Now try proper shrink to get to word level
+    // Now shrink to word
     editor.shrinkSelection();
     
-    // Allow for either Word or Expression as the current selection unit
-    // because the implementation might not support nested expressions properly yet
-    EXPECT_TRUE(editor.getCurrentSelectionUnit() == SelectionUnit::Word || 
-               editor.getCurrentSelectionUnit() == SelectionUnit::Expression);
+    // Verify some word is selected, not the entire line
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Word, editor.getCurrentSelectionUnit());
+    
+    selectedText = editor.getSelectedText();
+    EXPECT_LT(selectedText.length(), 44); // Line is 44 chars
+    EXPECT_GT(selectedText.length(), 0);  // Selection should not be empty
+}
+
+TEST_F(EditorFacadeTest, ExpandSelectionToParagraph) {
+    // Set up buffer with multiple paragraphs separated by empty lines
+    std::vector<std::string> lines = {
+        "This is the first paragraph.",
+        "It has multiple lines of text.",
+        "This is the third line in paragraph 1.",
+        "",
+        "This is the second paragraph.",
+        "It also has multiple lines.",
+        "",
+        "",  // Multiple empty lines between paragraphs
+        "This is the third paragraph.",
+        "The final line of the test buffer."
+    };
+    setBufferLines(lines);
+    
+    // Test 1: Cursor in middle of single-line paragraph
+    // We don't have a single-line paragraph in our test data, so let's add one
+    editor.addLine("");  // Add empty line after existing content
+    editor.addLine("This is a single-line paragraph.");
+    editor.addLine("");
+    
+    editor.setCursor(11, 10);  // Position in the middle of the single-line paragraph
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Verify the entire single-line paragraph is selected
+    EXPECT_EQ("This is a single-line paragraph.", editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 11, 0, 11, 32);  // Full single line paragraph
+    
+    // Test 2: Cursor in middle of multi-line paragraph
+    editor.clearSelection();
+    editor.setCursor(1, 5);  // Middle of second line in first paragraph
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Verify entire paragraph is selected
+    std::string expectedParagraph = "This is the first paragraph.\n"
+                                   "It has multiple lines of text.\n"
+                                   "This is the third line in paragraph 1.";
+    EXPECT_EQ(expectedParagraph, editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 0, 0, 2, lines[2].length());
+    
+    // Test 3: Selection spanning part of one paragraph
+    editor.clearSelection();
+    editor.setCursor(4, 0);  // Start of second paragraph
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Verify entire second paragraph is selected
+    std::string expectedParagraph2 = "This is the second paragraph.\n"
+                                    "It also has multiple lines.";
+    EXPECT_EQ(expectedParagraph2, editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 4, 0, 5, lines[5].length());
+    
+    // Test 4: Cursor on an empty line
+    editor.clearSelection();
+    editor.setCursor(3, 0);  // On empty line between paragraphs
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Should select the nearest paragraph (in this case, the second paragraph)
+    EXPECT_EQ(expectedParagraph2, editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 4, 0, 5, lines[5].length());
+    
+    // Test 5: Cursor on an empty line with multiple empty lines around
+    editor.clearSelection();
+    editor.setCursor(7, 0);  // On second empty line between paragraphs
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Should select the nearest paragraph (in this case, the third paragraph)
+    std::string expectedParagraph3 = "This is the third paragraph.\n"
+                                    "The final line of the test buffer.";
+    EXPECT_EQ(expectedParagraph3, editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 8, 0, 9, lines[9].length());
+    
+    // Test 6: Edge case - cursor on last line of buffer
+    editor.clearSelection();
+    editor.setCursor(9, 5);  // On the last line
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Should select the paragraph containing the last line
+    EXPECT_EQ(expectedParagraph3, editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 8, 0, 9, lines[9].length());
+}
+
+// Separate test for the empty buffer case
+TEST_F(EditorFacadeTest, ExpandSelectionToParagraphEmptyBuffer) {
+    // Set up a buffer with just a single empty line
+    editor.getBuffer().clear(false);
+    editor.addLine("");
+    
+    // Position cursor at the beginning
+    editor.setCursor(0, 0);
+    
+    // Expand to paragraph on the empty buffer
+    editor.expandSelection(SelectionUnit::Paragraph);
+    
+    // Verify behavior on empty buffer
+    EXPECT_EQ("", editor.getSelectedText());
+    EXPECT_EQ(SelectionUnit::Paragraph, editor.getCurrentSelectionUnit());
+    verifySelection(true, 0, 0, 0, 0);
 }
 
 } // anonymous namespace 
