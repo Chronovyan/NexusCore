@@ -219,6 +219,7 @@ protected:
     bool expandToLine();
     bool expandToExpression();
     bool expandToParagraph();
+    bool expandToBlock();
     bool shrinkToWord();
     bool shrinkToCharacter();
     bool shrinkToExpression();
@@ -241,6 +242,14 @@ protected:
     bool isOpeningBracket(char c) const;
     bool isClosingBracket(char c) const;
     bool isQuoteChar(char c) const;
+    
+    // Block/Brace helpers
+    Position findPreviousOpeningBrace(const Position& pos) const;
+    ExpressionBoundary scanForEnclosingBraces(const Position& startPos, const Position& endPos) const;
+    ExpressionBoundary findEnclosingBracePair(const Position& startPos, const Position& endPos) const;
+    
+    // Helper to compare two positions
+    int comparePositions(const Position& a, const Position& b) const;
 
     friend class Command; 
     friend class CompoundCommand;

@@ -1721,6 +1721,15 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
               !hasSelection_)) {
         expandToParagraph();
     }
+    else if (targetUnit == SelectionUnit::Block &&
+             (currentSelectionUnit_ == SelectionUnit::Character ||
+              currentSelectionUnit_ == SelectionUnit::Word ||
+              currentSelectionUnit_ == SelectionUnit::Line ||
+              currentSelectionUnit_ == SelectionUnit::Expression ||
+              currentSelectionUnit_ == SelectionUnit::Paragraph ||
+              !hasSelection_)) {
+        expandToBlock();
+    }
     // Other expansion levels will be implemented in future phases
 }
 
@@ -2597,3 +2606,198 @@ bool Editor::expandToParagraph() {
     
     return true;
 } 
+
+int Editor::comparePositions(const Position& a, const Position& b) const {
+    if (a.line < b.line) return -1;
+    if (a.line > b.line) return 1;
+    // Lines are the same, compare columns
+    if (a.column < b.column) return -1;
+    if (a.column > b.column) return 1;
+    return 0; // Positions are identical
+}
+
+Position Editor::findPreviousOpeningBrace(const Position& pos) const {
+    if (buffer_.isEmpty()) {
+        return {SIZE_MAX, SIZE_MAX};
+    }
+    
+    Position current = pos;
+    int braceCount = 0;
+    
+    // Ensure starting position is valid
+    if (current.line >= buffer_.lineCount()) {
+        current.line = buffer_.lineCount() - 1;
+    }
+    
+    // Scan backward through the buffer
+    while (true) {
+        const std::string& line = buffer_.getLine(current.line);
+        
+        // For the first line we scan, only look before the column position
+        size_t scanStart = (current.line == pos.line) ? 
+                           std::min(current.column, line.length()) : 
+                           line.length();
+        
+        // Scan this line from right to left
+        for (int i = static_cast<int>(scanStart) - 1; i >= 0; i--) {
+            if (line[i] == '}') {
+                braceCount++;
+            } else if (line[i] == '{') {
+                if (braceCount == 0) {
+                    // Found an unmatched opening brace
+                    return {current.line, static_cast<size_t>(i)};
+                }
+                braceCount--;
+            }
+        }
+        
+        if (current.line == 0) break; // Avoid underflow
+        current.line--;
+        current.column = 0; // Reset column for next line
+    }
+    
+    // No matching opening brace found
+    return {SIZE_MAX, SIZE_MAX};
+}
+
+Editor::ExpressionBoundary Editor::scanForEnclosingBraces(const Position& startPos, const Position& endPos) const {
+    if (buffer_.isEmpty()) {
+        return ExpressionBoundary();
+    }
+    
+    // Make sure positions are valid
+    Position validatedStartPos = startPos;
+    Position validatedEndPos = endPos;
+    
+    if (validatedStartPos.line >= buffer_.lineCount()) {
+        validatedStartPos.line = buffer_.lineCount() - 1;
+    }
+    
+    if (validatedEndPos.line >= buffer_.lineCount()) {
+        validatedEndPos.line = buffer_.lineCount() - 1;
+    }
+    
+    // Search outward from the selection
+    // Start by looking for an opening brace before the selection start
+    Position openBracePos = findPreviousOpeningBrace(validatedStartPos);
+    if (openBracePos.line == SIZE_MAX) {
+        // No opening brace found before the selection
+        return ExpressionBoundary();
+    }
+    
+    // Now find the matching closing brace for this opening brace
+    ExpressionBoundary boundary = findMatchingBracketPair(openBracePos, '{', '}');
+    if (!boundary.found) {
+        return ExpressionBoundary();
+    }
+    
+    // Make sure this block actually encloses our selection/end position
+    if (comparePositions(boundary.end, validatedEndPos) < 0) {
+        // The closing brace is before our selection end, so this block doesn't enclose us
+        return ExpressionBoundary();
+    }
+    
+    return boundary;
+}
+
+Editor::ExpressionBoundary Editor::findEnclosingBracePair(const Position& startPos, const Position& endPos) const {
+    if (buffer_.isEmpty()) {
+        return ExpressionBoundary();
+    }
+    
+    // Make sure positions are valid
+    Position validatedStartPos = startPos;
+    Position validatedEndPos = endPos;
+    
+    if (validatedStartPos.line >= buffer_.lineCount()) {
+        validatedStartPos.line = buffer_.lineCount() - 1;
+    }
+    
+    if (validatedEndPos.line >= buffer_.lineCount()) {
+        validatedEndPos.line = buffer_.lineCount() - 1;
+    }
+    
+    // Get characters at start and end positions if they exist
+    char charAtStart = '\0';
+    char charAtEnd = '\0';
+    
+    const std::string& startLine = buffer_.getLine(validatedStartPos.line);
+    if (validatedStartPos.column < startLine.length()) {
+        charAtStart = startLine[validatedStartPos.column];
+    }
+    
+    const std::string& endLine = buffer_.getLine(validatedEndPos.line);
+    if (validatedEndPos.column < endLine.length()) {
+        charAtEnd = endLine[validatedEndPos.column];
+    }
+    
+    // If we're on a brace, use the existing matching bracket pair finder
+    if (charAtStart == '{') {
+        return findMatchingBracketPair(validatedStartPos, '{', '}');
+    } else if (charAtEnd == '}') {
+        // For closing brace, we need to find its matching opening brace
+        ExpressionBoundary boundary = findMatchingBracketPair(validatedEndPos, '{', '}');
+        if (boundary.found) {
+            // Swap start and end to maintain correct order
+            Position temp = boundary.start;
+            boundary.start = boundary.end;
+            boundary.end = temp;
+        }
+        return boundary;
+    }
+    
+    // Search outward for enclosing braces
+    return scanForEnclosingBraces(validatedStartPos, validatedEndPos);
+}
+
+bool Editor::expandToBlock() {
+    if (buffer_.isEmpty()) {
+        return false;
+    }
+    
+    Position cursorPos = {cursorLine_, cursorCol_};
+    Position startPos, endPos;
+    
+    if (!hasSelection_) {
+        // If no selection, start with cursor position
+        startPos = endPos = cursorPos;
+    } else {
+        // If there is an existing selection, use its boundaries
+        startPos = {selectionStartLine_, selectionStartCol_};
+        endPos = {selectionEndLine_, selectionEndCol_};
+    }
+    
+    // Find the enclosing block (curly brace pair)
+    ExpressionBoundary boundary = findEnclosingBracePair(startPos, endPos);
+    
+    if (boundary.found) {
+        // If we already have this exact block selected, try to expand to outer block
+        if (hasSelection_ && 
+            selectionStartLine_ == boundary.start.line && 
+            selectionStartCol_ == boundary.start.column &&
+            selectionEndLine_ == boundary.end.line && 
+            selectionEndCol_ == boundary.end.column) {
+            
+            // Try to find a larger enclosing block
+            Position outerStart = {boundary.start.line, boundary.start.column > 0 ? boundary.start.column - 1 : 0};
+            Position outerEnd = {boundary.end.line, boundary.end.column + 1};
+            
+            ExpressionBoundary outerBoundary = findEnclosingBracePair(outerStart, outerEnd);
+            if (outerBoundary.found) {
+                boundary = outerBoundary;
+            }
+        }
+        
+        // Set selection to the found block
+        setSelectionRange(boundary.start.line, boundary.start.column, 
+                         boundary.end.line, boundary.end.column);
+        
+        // Move cursor to the end of selection
+        setCursor(boundary.end.line, boundary.end.column);
+        
+        currentSelectionUnit_ = SelectionUnit::Block;
+        return true;
+    }
+    
+    return false; // No enclosing block found
+}
