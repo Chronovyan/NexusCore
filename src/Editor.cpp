@@ -1452,4 +1452,23 @@ void Editor::selectLine() {
     
     // Move cursor to the end of the line
     setCursor(cursorLine_, lineLength);
+}
+
+void Editor::selectAll() {
+    if (buffer_.isEmpty()) {
+        // If buffer is empty, set an empty selection at position (0,0)
+        clearSelection();
+        setCursor(0, 0);
+        return;
+    }
+    
+    // Select from (0,0) to end of buffer
+    size_t lastLineIndex = buffer_.lineCount() - 1;
+    size_t lastLineLength = buffer_.getLine(lastLineIndex).length();
+    
+    // Set selection from start to end of buffer
+    setSelectionRange(0, 0, lastLineIndex, lastLineLength);
+    
+    // Move cursor to the end of the buffer
+    setCursor(lastLineIndex, lastLineLength);
 } 
