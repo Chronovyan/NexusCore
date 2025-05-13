@@ -42,6 +42,7 @@ add_executable(RunAllTests
     ComprehensiveFunctionalityTest.cpp
     PerformanceBenchmark.cpp
     editor_file_io_test.cpp
+    editor_facade_test.cpp
     cpp_highlighter_multiline_test.cpp
     fuzz_testing.cpp
     memory_leak_test.cpp

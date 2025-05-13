@@ -636,7 +636,13 @@ TEST_F(EditorFacadeTest, ReplaceOperations) {
 TEST_F(EditorFacadeTest, UndoRedoBasicOperations) {
     // Set up buffer with a single line
     setBufferContent("Initial text");
-    editor.setCursor(0, 13); // At the end
+    editor.setCursor(0, 12); // At the end of line, not past it
+    
+    // Add debug output
+    const std::string& line = editor.getBuffer().getLine(0);
+    std::cout << "Debug - Line content: '" << line << "'" << std::endl;
+    std::cout << "Debug - Line length: " << line.length() << std::endl;
+    std::cout << "Debug - Cursor position: (" << editor.getCursorLine() << ", " << editor.getCursorCol() << ")" << std::endl;
     
     // Make a change
     editor.typeText(" added");
