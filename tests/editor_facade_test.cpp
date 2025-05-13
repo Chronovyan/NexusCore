@@ -671,6 +671,9 @@ TEST_F(EditorFacadeTest, UndoRedoMultipleOperations) {
     // Set up buffer
     setBufferContent("Start");
     
+    // Need to position cursor at the end of line "Start" before typing
+    editor.setCursor(0, 5); // Position cursor at the end of "Start"
+    
     // Perform multiple edits
     editor.typeText(" edit1");
     editor.typeText(" edit2");
