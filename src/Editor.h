@@ -215,6 +215,7 @@ protected:
 
     // Selection expansion/shrinking helpers
     bool expandToWord();
+    bool expandToLine();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
     friend class Command; 
