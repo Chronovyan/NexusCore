@@ -1674,5 +1674,635 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
               !hasSelection_)) {
         expandToLine();
     }
+    else if (targetUnit == SelectionUnit::Expression &&
+             (currentSelectionUnit_ == SelectionUnit::Character || 
+              currentSelectionUnit_ == SelectionUnit::Word ||
+              !hasSelection_)) {
+        expandToExpression();
+    }
     // Other expansion levels will be implemented in future phases
+}
+
+char Editor::getMatchingBracket(char bracket) const {
+    switch (bracket) {
+        case '(': return ')';
+        case ')': return '(';
+        case '[': return ']';
+        case ']': return '[';
+        case '{': return '}';
+        case '}': return '{';
+        default: return '\0';
+    }
+}
+
+bool Editor::isOpeningBracket(char c) const {
+    return c == '(' || c == '[' || c == '{';
+}
+
+bool Editor::isClosingBracket(char c) const {
+    return c == ')' || c == ']' || c == '}';
+}
+
+bool Editor::isQuoteChar(char c) const {
+    return c == '"' || c == '\'';
+}
+
+Editor::ExpressionBoundary Editor::findEnclosingQuotes(const Position& pos, char quoteChar) const {
+    if (buffer_.isEmpty() || pos.line >= buffer_.lineCount()) {
+        return ExpressionBoundary();
+    }
+    
+    const std::string& line = buffer_.getLine(pos.line);
+    if (pos.column >= line.length()) {
+        return ExpressionBoundary();
+    }
+    
+    // If no specific quote character is provided, use the character at cursor position
+    // or try to find any quote character
+    bool useSpecificQuote = quoteChar != '\0';
+    char currentChar = (pos.column < line.length()) ? line[pos.column] : '\0';
+    
+    // If cursor is on a quote, find the matching quote
+    if (!useSpecificQuote && isQuoteChar(currentChar)) {
+        quoteChar = currentChar;
+        useSpecificQuote = true;
+    }
+    
+    // If cursor is on a quote or specific quote is requested
+    if (useSpecificQuote) {
+        // Look for a matching quote, considering escape characters
+        bool foundMatching = false;
+        size_t matchPos = 0;
+        
+        // First, check to the right
+        bool escaped = false;
+        for (size_t i = pos.column + 1; i < line.length(); i++) {
+            if (line[i] == '\\') {
+                escaped = !escaped; // Toggle escape status
+                continue;
+            }
+            
+            if (line[i] == quoteChar && !escaped) {
+                // Found a matching quote to the right
+                foundMatching = true;
+                matchPos = i;
+                
+                Position start = {pos.line, pos.column};
+                Position end = {pos.line, matchPos + 1}; // Include the closing quote
+                return ExpressionBoundary(start, end);
+            }
+            
+            escaped = false; // Reset escape if it wasn't used for this character
+        }
+        
+        // If not found to the right, check to the left
+        escaped = false;
+        for (int i = static_cast<int>(pos.column) - 1; i >= 0; i--) {
+            if (i > 0 && line[i - 1] == '\\') {
+                escaped = !escaped;
+                continue;
+            }
+            
+            if (line[i] == quoteChar && !escaped) {
+                // Found a matching quote to the left
+                foundMatching = true;
+                matchPos = i;
+                
+                Position start = {pos.line, static_cast<size_t>(matchPos)};
+                Position end = {pos.line, pos.column + 1}; // Include the closing quote
+                return ExpressionBoundary(start, end);
+            }
+            
+            escaped = false;
+        }
+    }
+    
+    // If not on a quote or no specific quote requested, look for enclosing quotes
+    // Try with double quotes first, then single quotes if needed
+    if (!useSpecificQuote) {
+        std::vector<char> quotesToTry = {'"', '\''};
+        
+        for (char tryQuote : quotesToTry) {
+            // Look for the nearest quote to the left
+            int leftQuotePos = -1;
+            bool escapedLeft = false;
+            
+            for (int i = static_cast<int>(pos.column) - 1; i >= 0; i--) {
+                if (i > 0 && line[i - 1] == '\\') {
+                    escapedLeft = !escapedLeft;
+                    continue;
+                }
+                
+                if (line[i] == tryQuote && !escapedLeft) {
+                    leftQuotePos = i;
+                    break;
+                }
+                
+                escapedLeft = false;
+            }
+            
+            // If found a quote to the left, look for a matching one to the right
+            if (leftQuotePos >= 0) {
+                // Look for the matching quote to the right of the cursor
+                bool escapedRight = false;
+                for (size_t i = pos.column; i < line.length(); i++) {
+                    if (line[i] == '\\') {
+                        escapedRight = !escapedRight;
+                        continue;
+                    }
+                    
+                    if (line[i] == tryQuote && !escapedRight) {
+                        // Found a matching quote
+                        Position start = {pos.line, static_cast<size_t>(leftQuotePos)};
+                        Position end = {pos.line, i + 1}; // Include the closing quote
+                        return ExpressionBoundary(start, end);
+                    }
+                    
+                    escapedRight = false;
+                }
+            }
+        }
+    }
+    
+    // No enclosing quotes found
+    return ExpressionBoundary();
+}
+
+Editor::ExpressionBoundary Editor::findMatchingBracketPair(const Position& pos, char openBracket, char closeBracket) const {
+    if (buffer_.isEmpty() || pos.line >= buffer_.lineCount()) {
+        return ExpressionBoundary();
+    }
+    
+    const std::string& line = buffer_.getLine(pos.line);
+    if (pos.column >= line.length()) {
+        return ExpressionBoundary();
+    }
+    
+    // If cursor is on an opening bracket, find its closing match
+    if (pos.column < line.length() && line[pos.column] == openBracket) {
+        // Start from the current position and look for the matching closing bracket
+        int nestLevel = 1;
+        Position matchPos = {pos.line, 0};
+        
+        // First, check the rest of the current line
+        for (size_t i = pos.column + 1; i < line.length(); i++) {
+            if (line[i] == openBracket) {
+                nestLevel++;
+            } else if (line[i] == closeBracket) {
+                nestLevel--;
+                if (nestLevel == 0) {
+                    // Found matching bracket on same line
+                    matchPos = {pos.line, i};
+                    Position start = {pos.line, pos.column};
+                    Position end = {matchPos.line, matchPos.column + 1};
+                    return ExpressionBoundary(start, end);
+                }
+            }
+        }
+        
+        // If not found on the same line, check subsequent lines
+        for (size_t l = pos.line + 1; l < buffer_.lineCount(); l++) {
+            const std::string& nextLine = buffer_.getLine(l);
+            for (size_t i = 0; i < nextLine.length(); i++) {
+                if (nextLine[i] == openBracket) {
+                    nestLevel++;
+                } else if (nextLine[i] == closeBracket) {
+                    nestLevel--;
+                    if (nestLevel == 0) {
+                        // Found matching bracket on a different line
+                        matchPos = {l, i};
+                        Position start = {pos.line, pos.column};
+                        Position end = {matchPos.line, matchPos.column + 1};
+                        return ExpressionBoundary(start, end);
+                    }
+                }
+            }
+        }
+    }
+    
+    // If cursor is on a closing bracket, find its opening match
+    if (pos.column < line.length() && line[pos.column] == closeBracket) {
+        // Start from the current position and look for the matching opening bracket
+        int nestLevel = 1;
+        Position matchPos = {pos.line, 0};
+        
+        // First, check from the beginning of the current line
+        for (int i = static_cast<int>(pos.column) - 1; i >= 0; i--) {
+            if (line[i] == closeBracket) {
+                nestLevel++;
+            } else if (line[i] == openBracket) {
+                nestLevel--;
+                if (nestLevel == 0) {
+                    // Found matching bracket on same line
+                    matchPos = {pos.line, static_cast<size_t>(i)};
+                    Position start = {matchPos.line, matchPos.column};
+                    Position end = {pos.line, pos.column + 1};
+                    return ExpressionBoundary(start, end);
+                }
+            }
+        }
+        
+        // If not found on the same line, check previous lines
+        for (int l = static_cast<int>(pos.line) - 1; l >= 0; l--) {
+            const std::string& prevLine = buffer_.getLine(l);
+            for (int i = static_cast<int>(prevLine.length()) - 1; i >= 0; i--) {
+                if (prevLine[i] == closeBracket) {
+                    nestLevel++;
+                } else if (prevLine[i] == openBracket) {
+                    nestLevel--;
+                    if (nestLevel == 0) {
+                        // Found matching bracket on a different line
+                        matchPos = {static_cast<size_t>(l), static_cast<size_t>(i)};
+                        Position start = {matchPos.line, matchPos.column};
+                        Position end = {pos.line, pos.column + 1};
+                        return ExpressionBoundary(start, end);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Next, check if cursor is inside a bracket pair
+    // Look for the nearest opening bracket to the left
+    Position leftBracketPos = {pos.line, 0};
+    bool foundLeftBracket = false;
+    int nestLevel = 0;
+    
+    // Check on the current line, to the left of cursor
+    for (int i = static_cast<int>(pos.column) - 1; i >= 0; i--) {
+        if (line[i] == closeBracket) {
+            nestLevel++;
+        } else if (line[i] == openBracket) {
+            if (nestLevel == 0) {
+                // Found an unmatched opening bracket
+                leftBracketPos = {pos.line, static_cast<size_t>(i)};
+                foundLeftBracket = true;
+                break;
+            }
+            nestLevel--;
+        }
+    }
+    
+    // If not found on the current line, check previous lines
+    if (!foundLeftBracket) {
+        for (int l = static_cast<int>(pos.line) - 1; l >= 0; l--) {
+            const std::string& prevLine = buffer_.getLine(l);
+            for (int i = static_cast<int>(prevLine.length()) - 1; i >= 0; i--) {
+                if (prevLine[i] == closeBracket) {
+                    nestLevel++;
+                } else if (prevLine[i] == openBracket) {
+                    if (nestLevel == 0) {
+                        // Found an unmatched opening bracket
+                        leftBracketPos = {static_cast<size_t>(l), static_cast<size_t>(i)};
+                        foundLeftBracket = true;
+                        break;
+                    }
+                    nestLevel--;
+                }
+            }
+            if (foundLeftBracket) break;
+        }
+    }
+    
+    // If found an opening bracket, look for its matching closing bracket
+    if (foundLeftBracket) {
+        // Reset nest level
+        nestLevel = 1;
+        Position rightBracketPos = {pos.line, 0};
+        bool foundRightBracket = false;
+        
+        // Check on the current line, to the right of cursor
+        for (size_t i = pos.column; i < line.length(); i++) {
+            if (line[i] == openBracket) {
+                nestLevel++;
+            } else if (line[i] == closeBracket) {
+                nestLevel--;
+                if (nestLevel == 0) {
+                    // Found the matching closing bracket
+                    rightBracketPos = {pos.line, i};
+                    foundRightBracket = true;
+                    break;
+                }
+            }
+        }
+        
+        // If not found on the current line, check subsequent lines
+        if (!foundRightBracket) {
+            for (size_t l = pos.line + 1; l < buffer_.lineCount(); l++) {
+                const std::string& nextLine = buffer_.getLine(l);
+                for (size_t i = 0; i < nextLine.length(); i++) {
+                    if (nextLine[i] == openBracket) {
+                        nestLevel++;
+                    } else if (nextLine[i] == closeBracket) {
+                        nestLevel--;
+                        if (nestLevel == 0) {
+                            // Found the matching closing bracket
+                            rightBracketPos = {l, i};
+                            foundRightBracket = true;
+                            break;
+                        }
+                    }
+                }
+                if (foundRightBracket) break;
+            }
+        }
+        
+        // If found a matching pair that encloses the cursor
+        if (foundRightBracket) {
+            Position start = leftBracketPos;
+            Position end = {rightBracketPos.line, rightBracketPos.column + 1};
+            return ExpressionBoundary(start, end);
+        }
+    }
+    
+    // No matching bracket pair found
+    return ExpressionBoundary();
+}
+
+Editor::ExpressionBoundary Editor::findEnclosingExpression(const Position& startPos, const Position& endPos) const {
+    if (buffer_.isEmpty()) {
+        return ExpressionBoundary();
+    }
+    
+    // First, check if we're searching for an expansion of an existing expression
+    bool expandingExistingExpression = false;
+    ExpressionBoundary existingExpression;
+    
+    // Detect if startPos and endPos form a complete bracket pair (this would happen during expansion)
+    if (startPos.line < buffer_.lineCount() && endPos.line < buffer_.lineCount()) {
+        const std::string& startLine = buffer_.getLine(startPos.line);
+        const std::string& endLine = buffer_.getLine(endPos.line);
+        
+        if (startPos.column < startLine.length() && endPos.column <= endLine.length()) {
+            // Check if startPos is at an opening bracket and endPos is right after a closing bracket
+            if (startPos.column < startLine.length() && endPos.column > 0 && 
+                endPos.column <= endLine.length()) {
+                
+                char startChar = startLine[startPos.column];
+                char endChar = (endPos.column > 0) ? endLine[endPos.column - 1] : '\0';
+                
+                // Check if they form a matching bracket pair
+                if ((startChar == '(' && endChar == ')') ||
+                    (startChar == '[' && endChar == ']') ||
+                    (startChar == '{' && endChar == '}') ||
+                    (isQuoteChar(startChar) && startChar == endChar)) {
+                    expandingExistingExpression = true;
+                    existingExpression = ExpressionBoundary(startPos, endPos);
+                }
+            }
+        }
+    }
+    
+    // If we're expanding an existing expression, look for the next larger one
+    if (expandingExistingExpression) {
+        // Adjust the search positions to look just outside the current expression
+        Position outerStartPos = {startPos.line, startPos.column > 0 ? startPos.column - 1 : 0};
+        Position outerEndPos = {endPos.line, endPos.column < buffer_.getLine(endPos.line).length() ? 
+                                endPos.column + 1 : endPos.column};
+        
+        // First check for brackets that might enclose the current expression
+        std::vector<std::pair<char, char>> bracketPairs = {
+            {'(', ')'},
+            {'[', ']'},
+            {'{', '}'}
+        };
+        
+        for (const auto& pair : bracketPairs) {
+            // Look for opening bracket before start and closing bracket after end
+            // Start by checking the current line to the left of start pos
+            const std::string& startLine = buffer_.getLine(outerStartPos.line);
+            
+            // Look for opening brackets to the left
+            for (int i = static_cast<int>(outerStartPos.column); i >= 0; i--) {
+                if (i < static_cast<int>(startLine.length()) && startLine[i] == pair.first) {
+                    // Found potential opening bracket, now look for closing bracket
+                    // that appears after our current expression
+                    
+                    // Initialize nestLevel to 1 for this opening bracket
+                    int nestLevel = 1;
+                    Position matchingClosePos;
+                    bool foundMatch = false;
+                    
+                    // First check rest of current line
+                    const std::string& endLine = buffer_.getLine(outerEndPos.line);
+                    for (size_t j = outerEndPos.column; j < endLine.length(); j++) {
+                        if (endLine[j] == pair.first) {
+                            nestLevel++;
+                        } else if (endLine[j] == pair.second) {
+                            nestLevel--;
+                            if (nestLevel == 0) {
+                                // Found matching close bracket
+                                matchingClosePos = {outerEndPos.line, j + 1}; // position after the closing bracket
+                                foundMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If not found on the same line, check subsequent lines
+                    if (!foundMatch && outerEndPos.line < buffer_.lineCount() - 1) {
+                        for (size_t lineIndex = outerEndPos.line + 1; lineIndex < buffer_.lineCount(); lineIndex++) {
+                            const std::string& line = buffer_.getLine(lineIndex);
+                            for (size_t j = 0; j < line.length(); j++) {
+                                if (line[j] == pair.first) {
+                                    nestLevel++;
+                                } else if (line[j] == pair.second) {
+                                    nestLevel--;
+                                    if (nestLevel == 0) {
+                                        // Found matching close bracket
+                                        matchingClosePos = {lineIndex, j + 1}; // position after the closing bracket
+                                        foundMatch = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (foundMatch) break;
+                        }
+                    }
+                    
+                    if (foundMatch) {
+                        // Found a larger enclosing expression
+                        Position newStart = {outerStartPos.line, static_cast<size_t>(i)};
+                        return ExpressionBoundary(newStart, matchingClosePos);
+                    }
+                }
+            }
+            
+            // If not found on current line, check previous lines
+            if (outerStartPos.line > 0) {
+                for (int lineIndex = static_cast<int>(outerStartPos.line) - 1; lineIndex >= 0; lineIndex--) {
+                    const std::string& line = buffer_.getLine(lineIndex);
+                    for (int i = static_cast<int>(line.length()) - 1; i >= 0; i--) {
+                        if (line[i] == pair.first) {
+                            // Found potential opening bracket, now look for closing bracket
+                            // that appears after our current expression
+                            
+                            // Initialize nestLevel to 1 for this opening bracket
+                            int nestLevel = 1;
+                            Position matchingClosePos;
+                            bool foundMatch = false;
+                            
+                            // Start with the outerEndPos line
+                            const std::string& endLine = buffer_.getLine(outerEndPos.line);
+                            for (size_t j = outerEndPos.column; j < endLine.length(); j++) {
+                                if (endLine[j] == pair.first) {
+                                    nestLevel++;
+                                } else if (endLine[j] == pair.second) {
+                                    nestLevel--;
+                                    if (nestLevel == 0) {
+                                        // Found matching close bracket
+                                        matchingClosePos = {outerEndPos.line, j + 1}; // position after the closing bracket
+                                        foundMatch = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // If not found on the same line, check subsequent lines
+                            if (!foundMatch && outerEndPos.line < buffer_.lineCount() - 1) {
+                                for (size_t nextLine = outerEndPos.line + 1; nextLine < buffer_.lineCount(); nextLine++) {
+                                    const std::string& line = buffer_.getLine(nextLine);
+                                    for (size_t j = 0; j < line.length(); j++) {
+                                        if (line[j] == pair.first) {
+                                            nestLevel++;
+                                        } else if (line[j] == pair.second) {
+                                            nestLevel--;
+                                            if (nestLevel == 0) {
+                                                // Found matching close bracket
+                                                matchingClosePos = {nextLine, j + 1}; // position after the closing bracket
+                                                foundMatch = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (foundMatch) break;
+                                }
+                            }
+                            
+                            if (foundMatch) {
+                                // Found a larger enclosing expression
+                                Position newStart = {static_cast<size_t>(lineIndex), static_cast<size_t>(i)};
+                                return ExpressionBoundary(newStart, matchingClosePos);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // If we get here, we either weren't expanding an existing expression, or we couldn't find a larger one
+    // Check for quotes first
+    ExpressionBoundary quoteBoundary = findEnclosingQuotes(startPos, '\0');
+    if (quoteBoundary.found) {
+        return quoteBoundary;
+    }
+    
+    // Check for various bracket types
+    std::vector<std::pair<char, char>> bracketPairs = {
+        {'(', ')'},
+        {'[', ']'},
+        {'{', '}'}
+    };
+    
+    for (const auto& pair : bracketPairs) {
+        ExpressionBoundary bracketBoundary = findMatchingBracketPair(startPos, pair.first, pair.second);
+        if (bracketBoundary.found) {
+            return bracketBoundary;
+        }
+    }
+    
+    // If cursor position itself didn't yield results, try searching for the smallest enclosing expression
+    // This means looking both left and right from the current position
+    
+    // Look for the nearest enclosing brackets or quotes
+    // For simplicity, we'll check a limited vicinity around the cursor
+    
+    const std::string& line = buffer_.getLine(startPos.line);
+    
+    // Check for brackets enclosing the current position
+    for (const auto& pair : bracketPairs) {
+        // Look for an opening bracket to the left and closing to the right
+        size_t leftLimit = startPos.column > 10 ? startPos.column - 10 : 0;
+        size_t rightLimit = std::min(startPos.column + 10, line.length());
+        
+        for (size_t left = startPos.column; left >= leftLimit; left--) {
+            if (left < line.length() && line[left] == pair.first) {
+                // Found opening bracket, now look for matching closing
+                int nestLevel = 1;
+                for (size_t right = startPos.column; right < rightLimit; right++) {
+                    if (right < line.length()) {
+                        if (line[right] == pair.first) {
+                            nestLevel++;
+                        } else if (line[right] == pair.second) {
+                            nestLevel--;
+                            if (nestLevel == 0) {
+                                // Found a matching pair
+                                Position start = {startPos.line, left};
+                                Position end = {startPos.line, right + 1}; // Include the closing bracket
+                                return ExpressionBoundary(start, end);
+                            }
+                        }
+                    }
+                }
+            }
+            if (left == 0) break; // Avoid underflow
+        }
+    }
+    
+    // No enclosing expression found
+    return ExpressionBoundary();
+}
+
+bool Editor::expandToExpression() {
+    if (buffer_.isEmpty()) {
+        return false;
+    }
+    
+    Position cursorPos = {cursorLine_, cursorCol_};
+    Position startPos, endPos;
+    
+    if (!hasSelection_) {
+        // If no selection, start with cursor position
+        startPos = endPos = cursorPos;
+    } else {
+        // If there is an existing selection, use its boundaries
+        startPos = {selectionStartLine_, selectionStartCol_};
+        endPos = {selectionEndLine_, selectionEndCol_};
+    }
+    
+    // Find the immediate enclosing expression
+    ExpressionBoundary boundary = findEnclosingExpression(startPos, endPos);
+    
+    if (boundary.found) {
+        // If the selection already matches this expression exactly, try to find a larger one
+        if (hasSelection_ && 
+            selectionStartLine_ == boundary.start.line && 
+            selectionStartCol_ == boundary.start.column &&
+            selectionEndLine_ == boundary.end.line && 
+            selectionEndCol_ == boundary.end.column) {
+            
+            // Try to find a larger enclosing expression
+            Position outerStart = {boundary.start.line, boundary.start.column > 0 ? boundary.start.column - 1 : 0};
+            Position outerEnd = {boundary.end.line, boundary.end.column + 1};
+            
+            ExpressionBoundary outerBoundary = findEnclosingExpression(outerStart, outerEnd);
+            if (outerBoundary.found) {
+                // Use the larger expression
+                boundary = outerBoundary;
+            }
+        }
+        
+        // Set selection to the found expression
+        setSelectionRange(boundary.start.line, boundary.start.column, 
+                         boundary.end.line, boundary.end.column);
+        
+        // Update cursor position to the end of the selection
+        setCursor(boundary.end.line, boundary.end.column);
+        
+        currentSelectionUnit_ = SelectionUnit::Expression;
+        return true;
+    }
+    
+    return false; // No enclosing expression found
 } 
