@@ -1471,4 +1471,80 @@ void Editor::selectAll() {
     
     // Move cursor to the end of the buffer
     setCursor(lastLineIndex, lastLineLength);
+}
+
+void Editor::selectToLineStart() {
+    if (buffer_.isEmpty()) return;
+    
+    // If no selection exists, start a new selection at the current cursor position
+    if (!hasSelection_) {
+        // Set selection start and end points at current cursor position
+        selectionStartLine_ = cursorLine_;
+        selectionStartCol_ = cursorCol_;
+        selectionEndLine_ = cursorLine_;
+        selectionEndCol_ = cursorCol_;
+        hasSelection_ = true;
+    }
+    
+    // Determine if the cursor is at the start or end of the current selection
+    bool cursorAtSelectionStart = (cursorLine_ == selectionStartLine_ && cursorCol_ == selectionStartCol_);
+    
+    // Move cursor to start of line
+    size_t originalLine = cursorLine_;
+    size_t originalCol = cursorCol_;
+    cursorCol_ = 0;
+    
+    // Update the selection point where the cursor is
+    if (cursorAtSelectionStart) {
+        selectionStartLine_ = cursorLine_;
+        selectionStartCol_ = cursorCol_;
+    } else {
+        selectionEndLine_ = cursorLine_;
+        selectionEndCol_ = cursorCol_;
+    }
+    
+    // Ensure selection points are in document order (start comes before end)
+    if (selectionStartLine_ > selectionEndLine_ || 
+        (selectionStartLine_ == selectionEndLine_ && selectionStartCol_ > selectionEndCol_)) {
+        std::swap(selectionStartLine_, selectionEndLine_);
+        std::swap(selectionStartCol_, selectionEndCol_);
+    }
+}
+
+void Editor::selectToLineEnd() {
+    if (buffer_.isEmpty()) return;
+    
+    // If no selection exists, start a new selection at the current cursor position
+    if (!hasSelection_) {
+        // Set selection start and end points at current cursor position
+        selectionStartLine_ = cursorLine_;
+        selectionStartCol_ = cursorCol_;
+        selectionEndLine_ = cursorLine_;
+        selectionEndCol_ = cursorCol_;
+        hasSelection_ = true;
+    }
+    
+    // Determine if the cursor is at the start or end of the current selection
+    bool cursorAtSelectionStart = (cursorLine_ == selectionStartLine_ && cursorCol_ == selectionStartCol_);
+    
+    // Move cursor to end of line
+    size_t originalLine = cursorLine_;
+    size_t originalCol = cursorCol_;
+    cursorCol_ = buffer_.getLine(cursorLine_).length();
+    
+    // Update the selection point where the cursor is
+    if (cursorAtSelectionStart) {
+        selectionStartLine_ = cursorLine_;
+        selectionStartCol_ = cursorCol_;
+    } else {
+        selectionEndLine_ = cursorLine_;
+        selectionEndCol_ = cursorCol_;
+    }
+    
+    // Ensure selection points are in document order (start comes before end)
+    if (selectionStartLine_ > selectionEndLine_ || 
+        (selectionStartLine_ == selectionEndLine_ && selectionStartCol_ > selectionEndCol_)) {
+        std::swap(selectionStartLine_, selectionEndLine_);
+        std::swap(selectionStartCol_, selectionEndCol_);
+    }
 } 

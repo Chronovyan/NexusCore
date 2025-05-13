@@ -96,6 +96,8 @@ public:
     void replaceSelection(const std::string& text);
     void selectLine(); // Selects the entire current line
     void selectAll(); // Selects the entire buffer content
+    void selectToLineStart(); // Extends selection from cursor to start of line
+    void selectToLineEnd(); // Extends selection from cursor to end of line
     
     // Selection coordinate getters
     size_t getSelectionStartLine() const;

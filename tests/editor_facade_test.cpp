@@ -1015,6 +1015,95 @@ TEST_F(EditorFacadeTest, SelectAllScenarios) {
     verifySelection(true, 0, 0, lastLineIndex, lastLineLength);
 }
 
+TEST_F(EditorFacadeTest, SelectToLineBoundariesScenarios) {
+    // Setup buffer with varied content
+    std::vector<std::string> lines = {
+        "First line with content",
+        "Second line that is longer for testing",
+        "", // Empty line
+        "Fourth line with trailing spaces    ",
+        "Last line"
+    };
+    setBufferLines(lines);
+    
+    // Test 1: Select from middle of line to start
+    editor.clearSelection(); // Ensure no selection exists to start with
+    editor.setCursor(0, 10); // Cursor at "w" in "with"
+    editor.selectToLineStart();
+    
+    // Verify selection from cursor to line start and cursor position
+    verifySelection(true, 0, 0, 0, 10);
+    verifyCursorPosition(0, 0); // Cursor should move to line start
+    
+    // Test 2: Select from middle of line to end
+    editor.clearSelection(); // Clear previous selection
+    editor.setCursor(1, 15); // Somewhere in the middle of second line
+    editor.selectToLineEnd();
+    
+    // Verify selection from cursor to line end and cursor position
+    verifySelection(true, 1, 15, 1, lines[1].length());
+    verifyCursorPosition(1, lines[1].length()); // Cursor should move to line end
+    
+    // Test 3: When cursor is already at start of line
+    editor.clearSelection(); // Clear previous selection
+    editor.setCursor(2, 0); // At start of empty line
+    editor.selectToLineStart();
+    
+    // Selection should exist but be zero-length (cursor position to cursor position)
+    verifySelection(true, 2, 0, 2, 0);
+    verifyCursorPosition(2, 0);
+    
+    // Test 4: When cursor is already at end of line
+    editor.clearSelection(); // Clear previous selection
+    editor.setCursor(4, lines[4].length()); // At end of last line
+    editor.selectToLineEnd();
+    
+    // Selection should exist but be zero-length
+    verifySelection(true, 4, lines[4].length(), 4, lines[4].length());
+    verifyCursorPosition(4, lines[4].length());
+    
+    // Test 5: Select to line start when a selection already exists
+    editor.clearSelection(); // Clear previous selection
+    editor.setSelectionRange(3, 5, 3, 15); // Partial selection in fourth line
+    
+    // The TestEditor doesn't automatically position the cursor at the end of selection,
+    // we need to do it explicitly for our test scenario
+    editor.setCursor(3, 5); // Position cursor at start of selection
+    
+    // When selecting to line start, the cursor should move to line start (column 0)
+    // and the selection should extend from the original end to line start
+    editor.selectToLineStart();
+    
+    // Selection should now be from column 0 to column 15
+    verifySelection(true, 3, 0, 3, 15);
+    verifyCursorPosition(3, 0);
+    
+    // Test 6: Select to line end when a selection already exists
+    editor.clearSelection(); // Clear previous selection
+    editor.setSelectionRange(0, 5, 0, 10); // Partial selection in first line
+    
+    // The TestEditor doesn't automatically position the cursor at the end of selection,
+    // we need to do it explicitly for our test scenario
+    editor.setCursor(0, 10); // Position cursor at end of selection
+    
+    // When selecting to line end, the cursor should move to line end
+    // and the selection should extend from the original start to line end
+    editor.selectToLineEnd();
+    
+    // Selection should now be from column 5 to end of line
+    verifySelection(true, 0, 5, 0, lines[0].length());
+    verifyCursorPosition(0, lines[0].length());
+    
+    // Test 7: Test selection order is preserved properly
+    editor.clearSelection(); // Clear previous selection
+    editor.setCursor(1, 20); // Middle of second line
+    editor.selectToLineStart(); // This should create a backward selection
+    
+    // Verify selection goes from column 0 to 20 and cursor is at start of line
+    verifySelection(true, 1, 0, 1, 20);
+    verifyCursorPosition(1, 0);
+}
+
 // Add more tests as needed for:
 // - Undo/Redo functionality
 // - More advanced error handling
