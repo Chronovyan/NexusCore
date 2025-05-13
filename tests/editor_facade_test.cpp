@@ -1478,4 +1478,79 @@ TEST_F(EditorFacadeTest, ExpandSelectionToParagraphEmptyBuffer) {
     verifySelection(true, 0, 0, 0, 0);
 }
 
+// Test for block level expansion
+TEST_F(EditorFacadeTest, ExpandSelectionToBlock) {
+    // Test 1: Cursor inside a simple single-line block
+    setBufferContent("int main() { return 0; }");
+    editor.setCursor(0, 12); // Position after the '{'
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify block selection unit was set
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+    
+    // Test 2: Cursor inside a simple multi-line block
+    setBufferContent("{\n    int x = 10;\n    int y = 20;\n}");
+    editor.setCursor(1, 5); // Inside the block
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify block selection unit was set
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+    
+    // Test 3: Cursor on an opening brace
+    editor.clearSelection();
+    editor.setCursor(0, 0); // On the opening brace
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify selection was created
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+    
+    // Test 4: Cursor on a closing brace
+    editor.clearSelection();
+    editor.setCursor(3, 0); // On the closing brace
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify selection was created
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+    
+    // Test 5: Nested blocks
+    setBufferContent("{\n    if (condition) {\n        doSomething();\n    }\n}");
+    
+    // Position cursor inside the inner block
+    editor.setCursor(2, 10); // Inside the inner block
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify selection was created
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+    
+    // Expand again to get outer block
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify selection still exists
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(SelectionUnit::Block, editor.getCurrentSelectionUnit());
+}
+
+// Test for block level expansion with empty buffer
+TEST_F(EditorFacadeTest, ExpandSelectionToBlockEmptyBuffer) {
+    // Set up a buffer with just a single empty line
+    editor.getBuffer().clear(false);
+    editor.addLine("");
+    
+    // Position cursor at the beginning
+    editor.setCursor(0, 0);
+    
+    // Expand to block on the empty buffer - should fail gracefully
+    editor.expandSelection(SelectionUnit::Block);
+    
+    // Verify no selection was created
+    EXPECT_FALSE(editor.hasSelection());
+    // The selection unit doesn't change since we didn't actually expand
+    EXPECT_EQ(SelectionUnit::Character, editor.getCurrentSelectionUnit());
+}
+
 } // anonymous namespace 
