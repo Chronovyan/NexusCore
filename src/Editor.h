@@ -24,6 +24,17 @@ struct Position {
     }
 };
 
+// Selection unit enum to define semantic units for expansion/shrinking
+enum class SelectionUnit {
+    Character,
+    Word,
+    Expression,
+    Line, 
+    Paragraph,
+    Block,
+    Document
+};
+
 class Editor {
 public:
     Editor();
@@ -98,6 +109,8 @@ public:
     void selectAll(); // Selects the entire buffer content
     void selectToLineStart(); // Extends selection from cursor to start of line
     void selectToLineEnd(); // Extends selection from cursor to end of line
+    void expandSelection(SelectionUnit targetUnit = SelectionUnit::Word);
+    SelectionUnit getCurrentSelectionUnit() const;
     
     // Selection coordinate getters
     size_t getSelectionStartLine() const;
@@ -200,6 +213,10 @@ protected:
     void setTopVisibleLine(size_t line) { topVisibleLine_ = line; }
     size_t getVisibleLineCount() const { return viewableLines_; }
 
+    // Selection expansion/shrinking helpers
+    bool expandToWord();
+    std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
+    
     friend class Command; 
     friend class CompoundCommand;
     // Consider making TestEditor a friend if it needs to poke at internals not exposed by public API.
@@ -219,6 +236,7 @@ protected:
     size_t selectionStartCol_ = 0;
     size_t selectionEndLine_ = 0;
     size_t selectionEndCol_ = 0;
+    SelectionUnit currentSelectionUnit_ = SelectionUnit::Character;
     
     std::string clipboard_;
     
