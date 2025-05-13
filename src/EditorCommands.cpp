@@ -649,15 +649,25 @@ void SearchCommand::execute(Editor& editor) {
         originalSelectionEndCol_ = editor.getSelectionEndCol();
     }
 
+    // If this is a second search and we have a previous match end position,
+    // temporarily position the cursor there to find the next match
+    if (!searchTerm_.empty() && (lastMatchEndLine_ > 0 || lastMatchEndCol_ > 0)) {
+        // Move cursor to the end of the previous match to search for the next one
+        editor.setCursor(lastMatchEndLine_, lastMatchEndCol_);
+    }
+
     size_t foundLine = 0; // Output param for performSearchLogic
     size_t foundCol = 0;  // Output param for performSearchLogic
     // Assuming search is always forward for this command's execute. 
     // If directionality is needed, it should be a member of SearchCommand.
     searchSuccessful_ = editor.performSearchLogic(searchTerm_, caseSensitive_, true, foundLine, foundCol);
     
-    // performSearchLogic already updates selection and cursor if successful.
-    // No explicit editor.setCursor or editor.setSelectionRange needed here unless
-    // SearchCommand has a different desired outcome for cursor/selection than what performSearchLogic does.
+    if (searchSuccessful_ && editor.hasSelection()) {
+        // For test compatibility, store the end position of the current match for the next search
+        lastMatchEndLine_ = editor.getSelectionEndLine();
+        lastMatchEndCol_ = editor.getSelectionEndCol();
+    }
+    
     editor.invalidateHighlightingCache(); // Invalidate after search changes selection
 }
 

@@ -226,7 +226,8 @@ public:
     SearchCommand(const std::string& searchTerm, bool caseSensitive = true)
         : searchTerm_(searchTerm), caseSensitive_(caseSensitive), searchSuccessful_(false),
           specialHandle_(false), originalCursorLine_(0), originalCursorCol_(0), originalHasSelection_(false),
-          originalSelectionStartLine_(0), originalSelectionStartCol_(0), originalSelectionEndLine_(0), originalSelectionEndCol_(0) {}
+          originalSelectionStartLine_(0), originalSelectionStartCol_(0), originalSelectionEndLine_(0), 
+          originalSelectionEndCol_(0), lastMatchEndLine_(0), lastMatchEndCol_(0) {}
     
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
@@ -247,6 +248,10 @@ private:
     size_t originalSelectionStartCol_;
     size_t originalSelectionEndLine_;
     size_t originalSelectionEndCol_;
+    
+    // Position of match end (for next search)
+    size_t lastMatchEndLine_;
+    size_t lastMatchEndCol_;
 };
 
 // ReplaceCommand - Handles replacing text that matches search term
