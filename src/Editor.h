@@ -134,7 +134,7 @@ public:
     void pasteText() { pasteAtCursor(); }
     
     // Search operations
-    bool search(const std::string& searchTerm, bool caseSensitive, bool forward);
+    bool search(const std::string& searchTerm, bool caseSensitive = true, bool forward = true);
     bool searchPrevious();
 
     // Word operations (can be grouped with text editing or selection)
