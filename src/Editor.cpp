@@ -1740,18 +1740,37 @@ void Editor::expandSelection(SelectionUnit targetUnit) {
 void Editor::shrinkSelection(SelectionUnit targetUnit) {
     if (!hasSelection_) return;
     
-    // Call the appropriate helper method based on current selection unit
-    if (currentSelectionUnit_ == SelectionUnit::Line) {
-        // Line -> Word
-        shrinkToWord();
-    }
-    else if (currentSelectionUnit_ == SelectionUnit::Word) {
-        // Word -> Character
-        shrinkToCharacter();
-    }
-    else if (currentSelectionUnit_ == SelectionUnit::Expression) {
-        // Expression -> Word
-        shrinkToWord();
+    // Shrink based on current selection unit
+    switch (currentSelectionUnit_) {
+        case SelectionUnit::Document:
+            // For now, do nothing - we'll implement Document->Paragraph later
+            break;
+            
+        case SelectionUnit::Block:
+            // For now, do nothing - we'll implement Block->Line later
+            break;
+            
+        case SelectionUnit::Paragraph:
+            // For now, do nothing - we'll implement Paragraph->Line later
+            break;
+            
+        case SelectionUnit::Line:
+            shrinkFromLineToWord();
+            break;
+            
+        case SelectionUnit::Expression:
+            shrinkFromExpressionToWord();
+            break;
+            
+        case SelectionUnit::Word:
+            // Existing behavior: clear selection
+            shrinkToCharacter();
+            break;
+            
+        default:
+            clearSelection();
+            currentSelectionUnit_ = SelectionUnit::Character;
+            break;
     }
 }
 
@@ -2824,5 +2843,92 @@ bool Editor::expandToDocument() {
     setCursor(lastLine, lastLineLength);
     
     currentSelectionUnit_ = SelectionUnit::Document;
+    return true;
+}
+
+bool Editor::shrinkFromLineToWord() {
+    if (currentSelectionUnit_ != SelectionUnit::Line || !hasSelection_) {
+        return false;
+    }
+    
+    // Determine which line contains the cursor position
+    size_t targetLine = cursorLine_;
+    
+    // If cursor is at selection end, we're extending backward
+    bool cursorAtSelectionEnd = (cursorLine_ == selectionEndLine_ && cursorCol_ == selectionEndCol_);
+    
+    // If cursor is not within the selection, use a line that is
+    if (targetLine < selectionStartLine_ || targetLine > selectionEndLine_) {
+        targetLine = cursorAtSelectionEnd ? selectionStartLine_ : selectionEndLine_;
+    }
+    
+    const std::string& lineText = buffer_.getLine(targetLine);
+    
+    // Find a suitable word in the line
+    // Strategy: Find first non-whitespace word or word near the middle
+    size_t wordStart = 0, wordEnd = 0;
+    
+    // Skip leading whitespace
+    while (wordStart < lineText.length() && std::isspace(lineText[wordStart])) {
+        wordStart++;
+    }
+    
+    // If line is empty or only whitespace, select a zero-length position
+    if (wordStart >= lineText.length()) {
+        setSelectionRange(targetLine, 0, targetLine, 0);
+        currentSelectionUnit_ = SelectionUnit::Word;
+        return true;
+    }
+    
+    // Find end of word
+    wordEnd = wordStart;
+    while (wordEnd < lineText.length() && isWordChar(lineText[wordEnd])) {
+        wordEnd++;
+    }
+    
+    // Update selection to this word
+    setSelectionRange(targetLine, wordStart, targetLine, wordEnd);
+    
+    // Move cursor to end of word
+    setCursor(targetLine, wordEnd);
+    
+    currentSelectionUnit_ = SelectionUnit::Word;
+    return true;
+}
+
+bool Editor::shrinkFromExpressionToWord() {
+    if (currentSelectionUnit_ != SelectionUnit::Expression || !hasSelection_) {
+        return false;
+    }
+    
+    // Find a significant word within the expression
+    // Strategy: Find the first word after opening delimiter, or meaningful token
+    
+    // Find first non-delimiter character in the selection
+    size_t line = selectionStartLine_;
+    size_t col = selectionStartCol_;
+    const std::string& startLine = buffer_.getLine(line);
+    
+    // Skip the opening delimiter if present
+    if (col < startLine.length() && (startLine[col] == '(' || startLine[col] == '[' || 
+        startLine[col] == '{' || startLine[col] == '"' || startLine[col] == '\'')) {
+        col++;
+    }
+    
+    // Skip whitespace
+    while (col < startLine.length() && std::isspace(startLine[col])) {
+        col++;
+    }
+    
+    // Find word boundaries
+    auto [wordStart, wordEnd] = findWordBoundaries(line, col);
+    
+    // Update selection to this word
+    setSelectionRange(line, wordStart, line, wordEnd);
+    
+    // Move cursor to end of word
+    setCursor(line, wordEnd);
+    
+    currentSelectionUnit_ = SelectionUnit::Word;
     return true;
 }
