@@ -836,11 +836,11 @@ bool Editor::performSearchLogic(
         selectionEndLine_ = matchEndLine;
         selectionEndCol_ = matchEndCol;
         
-        // Set cursor to end of match (important for test expectations)
-        setCursor(matchEndLine, matchEndCol);
+        // Set cursor to START of match instead of end (this is the change)
+        setCursor(matchStartLine, matchStartCol);
         
-        outFoundLine = matchEndLine;
-        outFoundCol = matchEndCol;
+        outFoundLine = matchStartLine;  // Return start position instead of end
+        outFoundCol = matchStartCol;    // Return start position instead of end
         
         return true;
     } else {
