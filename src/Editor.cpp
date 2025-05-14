@@ -10,7 +10,7 @@ Editor::Editor()
       selectionEndLine_(0), selectionEndCol_(0), clipboard_(""),
       currentSearchTerm_(""), currentSearchCaseSensitive_(true),
       lastSearchLine_(0), lastSearchCol_(0), searchWrapped_(false),
-      syntaxHighlightingEnabled_(true), filename_("untitled.txt"), currentHighlighter_(nullptr),
+      syntaxHighlightingEnabled_(false), filename_("untitled.txt"), currentHighlighter_(nullptr),
       highlightingStylesCacheValid_(false), commandLineHeight_(1), statusLineHeight_(1),
       displayWidth_(80), displayHeight_(24), viewableLines_(22) {
     // Ensure buffer starts non-empty for initial cursor validation, or handle empty buffer case.

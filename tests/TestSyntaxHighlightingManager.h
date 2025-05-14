@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_set>
+#include <iostream>
 
 // Forward declarations
 class TextBuffer;
@@ -16,10 +17,11 @@ class TextBuffer;
  */
 class TestSyntaxHighlightingManager {
 public:
-    TestSyntaxHighlightingManager() : 
+    TestSyntaxHighlightingManager() :
         buffer_(nullptr),
         highlighter_(nullptr),
-        enabled_(true) {}
+        enabled_(false) {
+    }
     
     ~TestSyntaxHighlightingManager() = default;
     

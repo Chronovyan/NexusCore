@@ -231,7 +231,7 @@ private:
     std::shared_ptr<SyntaxHighlighter> highlighter_{nullptr};
     
     // Is syntax highlighting enabled - use atomic for thread safety
-    std::atomic<bool> enabled_{true};
+    std::atomic<bool> enabled_{false};
     
     // Highlighted styles cache
     std::vector<std::shared_ptr<CacheEntry>> cachedStyles_;
