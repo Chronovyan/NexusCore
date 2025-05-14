@@ -47,7 +47,7 @@ namespace {
 SyntaxHighlightingManager::SyntaxHighlightingManager()
     : buffer_(nullptr),
       highlighter_(nullptr),
-      enabled_(true),
+      enabled_(false),
       visibleStartLine_(0), 
       visibleEndLine_(0),
       highlightingTimeoutMs_(DEFAULT_HIGHLIGHTING_TIMEOUT_MS),

@@ -286,7 +286,7 @@ protected:
     bool searchWrapped_ = false;
     
     // Syntax highlighting state
-    bool syntaxHighlightingEnabled_ = true;
+    bool syntaxHighlightingEnabled_ = false;
     std::string filename_ = "untitled.txt"; // Initialized
     std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr; // Changed to shared_ptr 
     mutable std::vector<std::vector<SyntaxStyle>> cachedHighlightStyles_;
