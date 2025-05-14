@@ -39,6 +39,9 @@ void InsertTextCommand::execute(Editor& editor) {
         editor.setCursor(cursorLine_, cursorCol_ + text_.length());
     }
     
+    // Mark the document as modified
+    editor.setModified(true);
+    
     editor.invalidateHighlightingCache();
 }
 
@@ -97,17 +100,20 @@ void DeleteTextCommand::execute(Editor& editor) {
         
         // Update cursor position
         editor.setCursor(cursorLine_ - 1, prevLineLength);
+        
+        // Mark the document as modified
+        editor.setModified(true);
     } else {
         // For regular backspace, store the character that will be deleted
         size_t lineIdx = cursorLine_;
         size_t colIdx = cursorCol_ - 1; // Character to be deleted is before cursor
         const std::string& line = buffer.getLine(lineIdx);
         if (colIdx < line.length()) { // Ensure colIdx is valid
-                deletedText_ = std::string(1, line[colIdx]);
+            deletedText_ = std::string(1, line[colIdx]);
         } else { // Should not happen if cursor is valid
-                deletedText_ = "";
-                editor.invalidateHighlightingCache(); // Invalidate even if nothing changes due to guard
-                return;
+            deletedText_ = "";
+            editor.invalidateHighlightingCache(); // Invalidate even if nothing changes due to guard
+            return;
         }
         
         // Execute the deletion
@@ -115,6 +121,9 @@ void DeleteTextCommand::execute(Editor& editor) {
         
         // Update cursor position
         editor.setCursor(cursorLine_, cursorCol_ - 1);
+        
+        // Mark the document as modified
+        editor.setModified(true);
     }
     editor.invalidateHighlightingCache();
 }
@@ -177,6 +186,10 @@ void DeleteForwardCommand::execute(Editor& editor) {
         deletedText_ = "\n";
         buffer.deleteCharForward(cursorLine_, cursorCol_); // This will join with next line
         // Cursor position is handled by deleteCharForward or should remain
+        
+        // Mark the document as modified
+        editor.setModified(true);
+        
         editor.invalidateHighlightingCache();
         return;
     }
@@ -194,6 +207,10 @@ void DeleteForwardCommand::execute(Editor& editor) {
     
     // Execute the deletion
     buffer.deleteCharForward(cursorLine_, cursorCol_);
+    
+    // Mark the document as modified
+    editor.setModified(true);
+    
     // Cursor position should not change for forward delete of a character
     editor.invalidateHighlightingCache();
 }
@@ -247,14 +264,18 @@ void NewLineCommand::execute(Editor& editor) {
     if (buffer.isEmpty()) { // Assuming isEmpty means truly no lines or one empty line that clear() might leave.
                             // The original logic was to add two lines if buffer.isEmpty().
         buffer.clear(false); // Ensure it's really empty if that's the precondition for addLine+addLine
-        buffer.addLine("");   // First line (becomes line 0)
-        buffer.addLine("");   // Second line (becomes line 1, cursor goes here)
-        editor.setCursor(1, 0);
+        buffer.addLine(""); // Add first line
+        buffer.addLine(""); // Add second line
+        editor.setCursor(1, 0); // Set cursor to beginning of second line
     } else {
-        // Split the line at the cursor position
+        // Split the current line at cursor position
         buffer.splitLine(cursorLine_, cursorCol_);
-        editor.setCursor(cursorLine_ + 1, 0); // Move cursor to beginning of the new line
+        editor.setCursor(cursorLine_ + 1, 0); // Move cursor to beginning of new line
     }
+    
+    // Mark the document as modified
+    editor.setModified(true);
+    
     editor.invalidateHighlightingCache();
 }
 
