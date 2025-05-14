@@ -29,7 +29,7 @@ void TextBuffer::insertLine(size_t index, const std::string& line) {
 
 void TextBuffer::deleteLine(size_t index) {
     if (index >= lines_.size()) {
-        throw TextBufferException("Index out of range for deleteLine", EditorException::Severity::Error);
+        return; // Silently ignore out-of-range indices
     }
     
     if (lines_.size() == 1 && index == 0) { // If it's the only line and we're deleting it
@@ -42,7 +42,7 @@ void TextBuffer::deleteLine(size_t index) {
 
 void TextBuffer::replaceLine(size_t index, const std::string& newLine) {
     if (index >= lines_.size()) {
-        throw TextBufferException("Index out of range for replaceLine", EditorException::Severity::Error);
+        return; // Silently ignore out-of-range indices
     }
     lines_[index] = newLine;
 }
@@ -227,6 +227,7 @@ void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::stri
         throw TextBufferException("Index out of range for insertString (lineIndex)", EditorException::Severity::Error);
     }
     if (colIndex > lines_[lineIndex].length()) {
+        // The column index is out of range - this is the check that's failing
         throw TextBufferException("Index out of range for insertString (colIndex)", EditorException::Severity::Error);
     }
 

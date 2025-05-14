@@ -380,7 +380,7 @@ void DeleteLineCommand::execute(Editor& editor) {
         deletedLine_ = buffer.getLine(lineIndex_); // Store for undo
         buffer.deleteLine(lineIndex_); // This might change buffer.lineCount()
         wasDeleted_ = true;
-    } catch (const std::out_of_range& e) {
+    } catch (const std::exception& e) {
         // Should be caught by lineIndex_ >= buffer.lineCount() check, but as a safeguard
         wasDeleted_ = false;
         std::cerr << "DeleteLineCommand::execute Error: " << e.what() << std::endl;
@@ -426,14 +426,20 @@ std::string DeleteLineCommand::getDescription() const {
 void ReplaceLineCommand::execute(Editor& editor) {
     TextBuffer& buffer = editor.getBuffer();
     
-    if (lineIndex_ < buffer.lineCount()) {
+    if (lineIndex_ >= buffer.lineCount()) {
+        wasExecuted_ = false; // Index out of bounds
+        return;
+    }
+
+    try {
         originalText_ = buffer.getLine(lineIndex_); // Store for undo
         buffer.replaceLine(lineIndex_, newText_);
         editor.setCursor(lineIndex_, 0); // Set cursor to start of replaced line
         wasExecuted_ = true;
         editor.invalidateHighlightingCache();
-    } else {
-        wasExecuted_ = false; // Index out of bounds
+    } catch (const std::exception& e) {
+        wasExecuted_ = false;
+        std::cerr << "ReplaceLineCommand::execute Error: " << e.what() << std::endl;
     }
 }
 
