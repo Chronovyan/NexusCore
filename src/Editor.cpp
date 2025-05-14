@@ -480,12 +480,14 @@ void Editor::startSelection() {
     selectionStartCol_ = cursorCol_;
     selectionEndLine_ = cursorLine_;
     selectionEndCol_ = cursorCol_;
+    hasSelection_ = true; // Set selection active flag
 }
 
 void Editor::updateSelection() {
     // Update the end point of the selection to current cursor position
     selectionEndLine_ = cursorLine_;
     selectionEndCol_ = cursorCol_;
+    hasSelection_ = true; // Ensure selection remains active
 }
 
 void Editor::replaceSelection(const std::string& text) {
