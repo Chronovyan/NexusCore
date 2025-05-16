@@ -67,7 +67,8 @@ bool Editor::hasSelection() const {
 }
 
 void Editor::printView(std::ostream& os) const {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         os << "(Buffer is empty)" << '\n';
         os << "Cursor at: [0, 0] (conceptual on empty buffer)" << '\n';
         return;
@@ -96,9 +97,9 @@ void Editor::printView(std::ostream& os) const {
         {SyntaxColor::Function, "\033[0;36m"}     // Cyan
     };
 
-    for (size_t i = 0; i < buffer_.lineCount(); ++i) {
+    for (size_t i = 0; i < buffer.lineCount(); ++i) {
         if (i == cursorLine_) {
-            const std::string& currentLine = buffer_.getLine(i);
+            const std::string& currentLine = buffer.getLine(i);
             
             // Handle line with cursor differently
             if (useHighlighting && i < styles.size()) {
@@ -159,7 +160,7 @@ void Editor::printView(std::ostream& os) const {
         } 
         else {
             // Regular line without cursor
-            const std::string& line = buffer_.getLine(i);
+            const std::string& line = buffer.getLine(i);
             
             if (useHighlighting && i < styles.size()) {
                 // Print line with syntax highlighting
@@ -206,7 +207,7 @@ void Editor::printView(std::ostream& os) const {
         os << '\n';
     }
     // If cursor is beyond last line (e.g. after adding a line), print its position.
-    if (cursorLine_ >= buffer_.lineCount() && buffer_.lineCount() > 0 && cursorLine_ != (buffer_.lineCount() -1) ) { 
+    if (cursorLine_ >= buffer.lineCount() && buffer.lineCount() > 0 && cursorLine_ != (buffer.lineCount() -1) ) { 
         // This condition is a bit tricky, it tries to only show if cursor is truly out of intended bounds
         // and not just at the last valid line that was printed above.
         // Let's refine this to be clearer or remove if redundant with clamping display.
@@ -241,7 +242,8 @@ void Editor::typeText(const std::string& textToInsert) {
         return;
     }
 
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         validateAndClampCursor(); // Will add an empty line if needed.
     }
 
@@ -292,7 +294,8 @@ void Editor::moveCursorUp() {
 }
 
 void Editor::moveCursorDown() {
-    if (!buffer_.isEmpty() && cursorLine_ < buffer_.lineCount() - 1) {
+    const TextBuffer& buffer = getBuffer();
+    if (!buffer.isEmpty() && cursorLine_ < buffer.lineCount() - 1) {
         cursorLine_++;
     }
     // Column position is maintained, validateAndClampCursor will adjust if new line is shorter.
@@ -308,11 +311,12 @@ void Editor::moveCursorLeft() {
 }
 
 void Editor::moveCursorRight() {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         validateAndClampCursor(); // Should already be 0,0 on an empty (but 1 line) buffer
         return;
     }
-    const std::string& currentLineContent = buffer_.getLine(cursorLine_);
+    const std::string& currentLineContent = buffer.getLine(cursorLine_);
     if (cursorCol_ < currentLineContent.length()) {
         cursorCol_++;
     }
@@ -326,8 +330,9 @@ void Editor::moveCursorToLineStart() {
 }
 
 void Editor::moveCursorToLineEnd() {
-    if (!buffer_.isEmpty()) {
-        cursorCol_ = buffer_.getLine(cursorLine_).length();
+    const TextBuffer& buffer = getBuffer();
+    if (!buffer.isEmpty()) {
+        cursorCol_ = buffer.getLine(cursorLine_).length();
     }
     validateAndClampCursor();
 }
@@ -339,23 +344,25 @@ void Editor::moveCursorToBufferStart() {
 }
 
 void Editor::moveCursorToBufferEnd() {
-    if (!buffer_.isEmpty()) {
-        cursorLine_ = buffer_.lineCount() - 1;
-        cursorCol_ = buffer_.getLine(cursorLine_).length();
+    const TextBuffer& buffer = getBuffer();
+    if (!buffer.isEmpty()) {
+        cursorLine_ = buffer.lineCount() - 1;
+        cursorCol_ = buffer.getLine(cursorLine_).length();
     }
     validateAndClampCursor();
 }
 
 void Editor::moveCursorToNextWord() {
-    if (buffer_.isEmpty()) return;
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) return;
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     
     // Start from current position
     size_t pos = cursorCol_;
     
     // If we're at the end of the line, move to next line
-    if (pos >= line.length() && cursorLine_ < buffer_.lineCount() - 1) {
+    if (pos >= line.length() && cursorLine_ < buffer.lineCount() - 1) {
         cursorLine_++;
         cursorCol_ = 0;
         validateAndClampCursor();
@@ -378,19 +385,20 @@ void Editor::moveCursorToNextWord() {
 }
 
 void Editor::moveCursorToPrevWord() {
-    if (buffer_.isEmpty()) return;
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) return;
     
     // If at beginning of line, move to previous line end
     if (cursorCol_ == 0) {
         if (cursorLine_ > 0) {
             cursorLine_--;
-            cursorCol_ = buffer_.getLine(cursorLine_).length();
+            cursorCol_ = buffer.getLine(cursorLine_).length();
         }
         validateAndClampCursor();
         return;
     }
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     
     // Start from position before current
     size_t pos = cursorCol_ > 0 ? cursorCol_ - 1 : 0;
@@ -519,28 +527,29 @@ void Editor::clearSelection() {
 std::string Editor::getSelectedText() const {
     if (!hasSelection()) return "";
     
+    const TextBuffer& buffer = getBuffer();
     std::string result;
     
     if (selectionStartLine_ == selectionEndLine_) {
         // Selection on a single line
-        result = buffer_.getLineSegment(selectionStartLine_, 
-                                        selectionStartCol_, 
-                                        selectionEndCol_);
+        result = buffer.getLineSegment(selectionStartLine_, 
+                                      selectionStartCol_, 
+                                      selectionEndCol_);
     } else {
         // Multi-line selection
         // First line (from start to end of line)
-        result = buffer_.getLineSegment(selectionStartLine_, 
-                                        selectionStartCol_, 
-                                        buffer_.lineLength(selectionStartLine_));
+        result = buffer.getLineSegment(selectionStartLine_, 
+                                      selectionStartCol_, 
+                                      buffer.lineLength(selectionStartLine_));
         result += '\n';
         
         // Middle lines (full lines)
         for (size_t i = selectionStartLine_ + 1; i < selectionEndLine_; i++) {
-            result += buffer_.getLine(i) + '\n';
+            result += buffer.getLine(i) + '\n';
         }
         
         // Last line (from start to selection end)
-        result += buffer_.getLineSegment(selectionEndLine_, 0, selectionEndCol_);
+        result += buffer.getLineSegment(selectionEndLine_, 0, selectionEndCol_);
     }
     
     return result;
@@ -577,18 +586,19 @@ void Editor::pasteAtCursor() {
 }
 
 void Editor::deleteWord() {
-    if (buffer_.isEmpty()) return;
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) return;
     
     if (hasSelection()) {
         deleteSelection();
         return;
     }
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     
     // If at end of line, join with next line
     if (cursorCol_ >= line.length()) {
-        if (cursorLine_ < buffer_.lineCount() - 1) {
+        if (cursorLine_ < buffer.lineCount() - 1) {
             joinWithNextLine();
         }
         return;
@@ -675,7 +685,8 @@ void Editor::selectToLineStart() {
 }
 
 void Editor::selectToLineEnd() {
-    if (buffer_.isEmpty()) return;
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) return;
     
     // If no selection exists, start a new selection at the current cursor position
     if (!hasSelection_) {
@@ -693,7 +704,7 @@ void Editor::selectToLineEnd() {
     // Move cursor to end of line
     size_t originalLine = cursorLine_;
     size_t originalCol = cursorCol_;
-    cursorCol_ = buffer_.getLine(cursorLine_).length();
+    cursorCol_ = buffer.getLine(cursorLine_).length();
     
     // Update the selection point where the cursor is
     if (cursorAtSelectionStart) {
@@ -717,11 +728,12 @@ SelectionUnit Editor::getCurrentSelectionUnit() const {
 }
 
 std::pair<size_t, size_t> Editor::findWordBoundaries(size_t line, size_t col) const {
-    if (buffer_.isEmpty() || line >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || line >= buffer.lineCount()) {
         return {0, 0};
     }
     
-    const std::string& lineContent = buffer_.getLine(line);
+    const std::string& lineContent = buffer.getLine(line);
     
     // Handle empty line case
     if (lineContent.empty()) {
@@ -784,7 +796,8 @@ std::pair<size_t, size_t> Editor::findWordBoundaries(size_t line, size_t col) co
 }
 
 bool Editor::expandToWord() {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         return false;
     }
     
@@ -816,14 +829,15 @@ bool Editor::expandToWord() {
 }
 
 bool Editor::expandToLine() {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         return false;
     }
     
     // If no selection, select the current line
     if (!hasSelection_) {
         // Get the length of the current line
-        const std::string& line = buffer_.getLine(cursorLine_);
+        const std::string& line = buffer.getLine(cursorLine_);
         size_t lineLength = line.length();
         
         // Select entire line
@@ -843,8 +857,8 @@ bool Editor::expandToLine() {
     size_t endLine = selectionEndLine_;
     
     // Expand selection to include full lines
-    const std::string& startLineContent = buffer_.getLine(startLine);
-    const std::string& endLineContent = buffer_.getLine(endLine);
+    const std::string& startLineContent = buffer.getLine(startLine);
+    const std::string& endLineContent = buffer.getLine(endLine);
     
     // Set selection to include all lines from start to end, from column 0 to end of each line
     setSelectionRange(startLine, 0, endLine, endLineContent.length());
@@ -1061,11 +1075,12 @@ bool Editor::isQuoteChar(char c) const {
 }
 
 Editor::ExpressionBoundary Editor::findEnclosingQuotes(const Position& pos, char quoteChar) const {
-    if (buffer_.isEmpty() || pos.line >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || pos.line >= buffer.lineCount()) {
         return ExpressionBoundary();
     }
     
-    const std::string& line = buffer_.getLine(pos.line);
+    const std::string& line = buffer.getLine(pos.line);
     if (pos.column >= line.length()) {
         return ExpressionBoundary();
     }
@@ -1182,11 +1197,12 @@ Editor::ExpressionBoundary Editor::findEnclosingQuotes(const Position& pos, char
 }
 
 Editor::ExpressionBoundary Editor::findMatchingBracketPair(const Position& pos, char openBracket, char closeBracket) const {
-    if (buffer_.isEmpty() || pos.line >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || pos.line >= buffer.lineCount()) {
         return ExpressionBoundary();
     }
     
-    const std::string& line = buffer_.getLine(pos.line);
+    const std::string& line = buffer.getLine(pos.line);
     if (pos.column >= line.length()) {
         return ExpressionBoundary();
     }
@@ -1373,7 +1389,8 @@ Editor::ExpressionBoundary Editor::findMatchingBracketPair(const Position& pos, 
 }
 
 Editor::ExpressionBoundary Editor::findEnclosingExpression(const Position& startPos, const Position& endPos) const {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         return ExpressionBoundary();
     }
     
@@ -1382,9 +1399,9 @@ Editor::ExpressionBoundary Editor::findEnclosingExpression(const Position& start
     ExpressionBoundary existingExpression;
     
     // Detect if startPos and endPos form a complete bracket pair (this would happen during expansion)
-    if (startPos.line < buffer_.lineCount() && endPos.line < buffer_.lineCount()) {
-        const std::string& startLine = buffer_.getLine(startPos.line);
-        const std::string& endLine = buffer_.getLine(endPos.line);
+    if (startPos.line < buffer.lineCount() && endPos.line < buffer.lineCount()) {
+        const std::string& startLine = buffer.getLine(startPos.line);
+        const std::string& endLine = buffer.getLine(endPos.line);
         
         if (startPos.column < startLine.length() && endPos.column <= endLine.length()) {
             // Check if startPos is at an opening bracket and endPos is right after a closing bracket
@@ -1661,7 +1678,8 @@ bool Editor::expandToExpression() {
 }
 
 bool Editor::expandToParagraph() {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         // Handle empty buffer case
         setSelectionRange(0, 0, 0, 0);
         currentSelectionUnit_ = SelectionUnit::Paragraph;
@@ -1673,14 +1691,14 @@ bool Editor::expandToParagraph() {
     size_t endLine = hasSelection_ ? selectionEndLine_ : cursorLine_;
     
     // Ensure we're within buffer bounds
-    if (startLine >= buffer_.lineCount()) startLine = buffer_.lineCount() - 1;
-    if (endLine >= buffer_.lineCount()) endLine = buffer_.lineCount() - 1;
+    if (startLine >= buffer.lineCount()) startLine = buffer.lineCount() - 1;
+    if (endLine >= buffer.lineCount()) endLine = buffer.lineCount() - 1;
     
     // Find paragraph start by searching up from start line
     // A paragraph starts at line 0 or after an empty line
     size_t paragraphStart = startLine;
     while (paragraphStart > 0) {
-        const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+        const std::string& prevLine = buffer.getLine(paragraphStart - 1);
         if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
             // Found an empty line or line with only whitespace
             break;
@@ -1691,8 +1709,8 @@ bool Editor::expandToParagraph() {
     // Find paragraph end by searching down from end line
     // A paragraph ends at the last line or before an empty line
     size_t paragraphEnd = endLine;
-    while (paragraphEnd < buffer_.lineCount() - 1) {
-        const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+    while (paragraphEnd < buffer.lineCount() - 1) {
+        const std::string& nextLine = buffer.getLine(paragraphEnd + 1);
         if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
             // Found an empty line or line with only whitespace
             break;
@@ -1701,27 +1719,27 @@ bool Editor::expandToParagraph() {
     }
     
     // Special case: if cursor is on an empty line or if the selection starts on an empty line
-    bool isEmptyLine = buffer_.getLine(startLine).empty() || 
-                      buffer_.getLine(startLine).find_first_not_of(" \t") == std::string::npos;
+    bool isEmptyLine = buffer.getLine(startLine).empty() || 
+                      buffer.getLine(startLine).find_first_not_of(" \t") == std::string::npos;
     
     if (!hasSelection_ && isEmptyLine) {
         // Look for the nearest non-empty paragraph
         // First, try to find a paragraph below
         size_t nextParagraphStart = startLine + 1;
-        while (nextParagraphStart < buffer_.lineCount() && 
-               (buffer_.getLine(nextParagraphStart).empty() || 
-                buffer_.getLine(nextParagraphStart).find_first_not_of(" \t") == std::string::npos)) {
+        while (nextParagraphStart < buffer.lineCount() && 
+               (buffer.getLine(nextParagraphStart).empty() || 
+                buffer.getLine(nextParagraphStart).find_first_not_of(" \t") == std::string::npos)) {
             nextParagraphStart++;
         }
         
-        if (nextParagraphStart < buffer_.lineCount()) {
+        if (nextParagraphStart < buffer.lineCount()) {
             // Found a paragraph below, expand to it
             paragraphStart = nextParagraphStart;
             
             // Find the end of this paragraph
             paragraphEnd = paragraphStart;
-            while (paragraphEnd < buffer_.lineCount() - 1) {
-                const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+            while (paragraphEnd < buffer.lineCount() - 1) {
+                const std::string& nextLine = buffer.getLine(paragraphEnd + 1);
                 if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
                     break;
                 }
@@ -1731,21 +1749,21 @@ bool Editor::expandToParagraph() {
             // No paragraph below, try to find one above
             size_t prevParagraphEnd = startLine;
             while (prevParagraphEnd > 0 && 
-                   (buffer_.getLine(prevParagraphEnd).empty() || 
-                    buffer_.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
+                   (buffer.getLine(prevParagraphEnd).empty() || 
+                    buffer.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
                 prevParagraphEnd--;
             }
             
-            if (prevParagraphEnd < buffer_.lineCount() && 
-                !(buffer_.getLine(prevParagraphEnd).empty() || 
-                  buffer_.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
+            if (prevParagraphEnd < buffer.lineCount() && 
+                !(buffer.getLine(prevParagraphEnd).empty() || 
+                  buffer.getLine(prevParagraphEnd).find_first_not_of(" \t") == std::string::npos)) {
                 // Found a paragraph above, expand to it
                 paragraphEnd = prevParagraphEnd;
                 
                 // Find the start of this paragraph
                 paragraphStart = paragraphEnd;
                 while (paragraphStart > 0) {
-                    const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+                    const std::string& prevLine = buffer.getLine(paragraphStart - 1);
                     if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
                         break;
                     }
@@ -1761,7 +1779,7 @@ bool Editor::expandToParagraph() {
         // Find the start of the first paragraph
         paragraphStart = startLine;
         while (paragraphStart > 0) {
-            const std::string& prevLine = buffer_.getLine(paragraphStart - 1);
+            const std::string& prevLine = buffer.getLine(paragraphStart - 1);
             if (prevLine.empty() || prevLine.find_first_not_of(" \t") == std::string::npos) {
                 break;
             }
@@ -1770,8 +1788,8 @@ bool Editor::expandToParagraph() {
         
         // Find the end of the last paragraph
         paragraphEnd = endLine;
-        while (paragraphEnd < buffer_.lineCount() - 1) {
-            const std::string& nextLine = buffer_.getLine(paragraphEnd + 1);
+        while (paragraphEnd < buffer.lineCount() - 1) {
+            const std::string& nextLine = buffer.getLine(paragraphEnd + 1);
             if (nextLine.empty() || nextLine.find_first_not_of(" \t") == std::string::npos) {
                 break;
             }
@@ -1781,8 +1799,8 @@ bool Editor::expandToParagraph() {
     
     // Handle edge case where we're at the end of the buffer
     size_t lineLength = 0;
-    if (paragraphEnd < buffer_.lineCount()) {
-        lineLength = buffer_.getLine(paragraphEnd).length();
+    if (paragraphEnd < buffer.lineCount()) {
+        lineLength = buffer.getLine(paragraphEnd).length();
     }
     
     // Set selection to cover the paragraph(s)
@@ -1993,7 +2011,8 @@ bool Editor::expandToBlock() {
 }
 
 bool Editor::expandToDocument() {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         // For an empty buffer, just clear any existing selection
         clearSelection();
         currentSelectionUnit_ = SelectionUnit::Document;
@@ -2001,8 +2020,8 @@ bool Editor::expandToDocument() {
     }
     
     // Set selection from start to end of buffer
-    size_t lastLine = buffer_.lineCount() - 1;
-    size_t lastLineLength = buffer_.getLine(lastLine).length();
+    size_t lastLine = buffer.lineCount() - 1;
+    size_t lastLineLength = buffer.getLine(lastLine).length();
     
     setSelectionRange(0, 0, lastLine, lastLineLength);
     
@@ -2101,9 +2120,10 @@ bool Editor::shrinkFromExpressionToWord() {
 }
 
 void Editor::selectWord() {
-    if (buffer_.isEmpty()) return;
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) return;
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     
     // If cursor is at the end of the line or empty line, nothing to select
     if (line.empty() || cursorCol_ > line.length()) {
@@ -2636,18 +2656,19 @@ void Editor::detectAndSetHighlighter() {
 
 void Editor::validateAndClampCursor() {
     // Ensure cursor is within valid buffer bounds
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         // If the buffer is empty, add an empty line
         buffer_.addLine("");
     }
     
     // Ensure line is valid
-    if (cursorLine_ >= buffer_.lineCount()) {
-        cursorLine_ = buffer_.lineCount() - 1;
+    if (cursorLine_ >= buffer.lineCount()) {
+        cursorLine_ = buffer.lineCount() - 1;
     }
     
     // Ensure column is valid for the current line
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     if (cursorCol_ > line.length()) {
         cursorCol_ = line.length();
     }
@@ -3342,11 +3363,12 @@ void Editor::processCharacterInput(char ch) {
 
 // Cursor-centric text analysis methods
 std::string Editor::getCurrentLineText() const {
-    if (buffer_.isEmpty() || cursorLine_ >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || cursorLine_ >= buffer.lineCount()) {
         return "";
     }
     
-    return buffer_.getLine(cursorLine_);
+    return buffer.getLine(cursorLine_);
 }
 
 bool Editor::isCursorAtLineStart() const {
@@ -3354,11 +3376,12 @@ bool Editor::isCursorAtLineStart() const {
 }
 
 bool Editor::isCursorAtLineEnd() const {
-    if (buffer_.isEmpty() || cursorLine_ >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || cursorLine_ >= buffer.lineCount()) {
         return true;
     }
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     return cursorCol_ >= line.length();
 }
 
@@ -3367,12 +3390,13 @@ bool Editor::isCursorAtBufferStart() const {
 }
 
 bool Editor::isCursorAtBufferEnd() const {
-    if (buffer_.isEmpty()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty()) {
         return true;
     }
     
-    size_t lastLine = buffer_.lineCount() - 1;
-    size_t lastLineLength = buffer_.getLine(lastLine).length();
+    size_t lastLine = buffer.lineCount() - 1;
+    size_t lastLineLength = buffer.getLine(lastLine).length();
     
     return (cursorLine_ == lastLine && cursorCol_ >= lastLineLength);
 }
@@ -3389,11 +3413,12 @@ size_t Editor::getViewportHeight() const {
 // Additional text analysis methods
 std::string Editor::getWordUnderCursor() const {
     // Get the current line's text
-    if (buffer_.isEmpty() || cursorLine_ >= buffer_.lineCount()) {
+    const TextBuffer& buffer = getBuffer();
+    if (buffer.isEmpty() || cursorLine_ >= buffer.lineCount()) {
         return "";
     }
     
-    const std::string& line = buffer_.getLine(cursorLine_);
+    const std::string& line = buffer.getLine(cursorLine_);
     if (line.empty()) {
         return "";
     }
@@ -3450,3 +3475,6 @@ std::string Editor::getWordUnderCursor() const {
     // No word found
     return "";
 }
+
+ 
+ 
