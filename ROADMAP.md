@@ -27,9 +27,12 @@ This roadmap outlines the strategic plan to enhance the text editor, prioritizin
 ### 1.3 Performant Syntax Highlighting
 - [x] Incremental highlighting (visible/modified lines only).
 - [x] Caching and timeout/cancellation mechanisms.
+- [x] Fixed multi-line preprocessor directive highlighting.
+- [x] Improved pattern-based highlighting with proper precedence rules.
 - [ ] **Refinement:** Simplify `SyntaxHighlightingManager::highlighter_` member type (`std::shared_ptr<std::atomic<SyntaxHighlighter*>>`) for clear ownership/observation.
 - [ ] **Refinement:** Integrate `Editor`'s highlighting cache fully into `SyntaxHighlightingManager`, removing redundancy from `Editor.cpp`.
 - [ ] **Refinement:** Investigate `shared_ptr::reset()` for evicted cache entries in `SyntaxHighlightingManager::cleanupCache()` for better memory management.
+- [ ] **Refinement:** Address remaining syntax highlighting test failures (SimpleSyntaxHighlighterTest, SimplifiedSyntaxHighlightingTest).
 
 ### 1.4 Core Text Input & Operations
 - [x] Optimized `typeText`/`typeChar` for bulk operations.
@@ -64,7 +67,7 @@ This roadmap outlines the strategic plan to enhance the text editor, prioritizin
     - [x] Individual Commands (`execute`/`undo`, edge cases, clipboard interactions). (Good coverage via GTest `editor_commands_test.cpp` and custom `CommandLogicTests.cpp`)
     - [x] `CommandManager` (undo/redo stack, limits). (Covered by `CommandManagerTests.cpp`)
     - [~] `Editor` facade methods (command dispatching, core logic). (Implicitly tested by CLI-driven tests; specific facade unit tests could be added.)
-    - [ ] Syntax highlighting components (`SyntaxHighlighter` implementations, `SyntaxHighlightingManager` caching/invalidation/timeout).
+    - [~] Syntax highlighting components (`SyntaxHighlighter` implementations, `SyntaxHighlightingManager` caching/invalidation/timeout). (~96% pass rate, continuing to improve)
     - [ ] File I/O operations (`Editor::openFile`, `Editor::saveFile` specifically).
 - [x] **Refinement Task:** Ensure all test-specific code (like in `CutCommand`) is removed from production logic; tests must verify generic behavior.
 - [ ] **Refinement Task:** Convert all manual CLI-driven tests (e.g., `Comprehensive*.cpp`, `SelectionClipboardTest.cpp`, etc.) to use automated assertions (e.g., via checkpoints or direct state verification).
