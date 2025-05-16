@@ -6,6 +6,25 @@
 #include <algorithm> // For std::sort and potentially std::min
 #include <regex> // For std::regex and std::smatch
 #include <memory> // Required for std::unique_ptr
+#include "EditorError.h"
+
+// Add static debug flag for SyntaxHighlighter
+bool SyntaxHighlighter::debugLoggingEnabled_ = false;
+
+// Helper function to log debug information through ErrorReporter
+void SyntaxHighlighter::logDebug(const std::string& message) {
+    if (debugLoggingEnabled_) {
+        ErrorReporter::logWarning("Debug: " + message);
+    }
+}
+
+void SyntaxHighlighter::setDebugLoggingEnabled(bool enabled) {
+    debugLoggingEnabled_ = enabled;
+}
+
+bool SyntaxHighlighter::isDebugLoggingEnabled() {
+    return debugLoggingEnabled_;
+}
 
 // Static helper function to trim trailing whitespace
 static std::string trimTrailingWhitespace(const std::string& str) {
@@ -300,11 +319,13 @@ void CppHighlighter::findNextStatefulToken(const std::string& segment, size_t& o
 }
 
 void CppHighlighter::appendBaseStyles(std::vector<SyntaxStyle>& existingStyles, const std::string& subLine, size_t offset) const {
-    // std::cout << "[CppHL::appendBaseStyles] Segment: '" << subLine << "', Offset: " << offset << std::endl;
+    logDebug("CppHL::appendBaseStyles - Segment: '" + subLine + "', Offset: " + std::to_string(offset));
+    
     if (subLine.empty()) {
-        // std::cout << "[CppHL::appendBaseStyles] Segment empty, returning." << std::endl;
+        logDebug("CppHL::appendBaseStyles - Segment empty, returning.");
         return;
     }
+    
     // Get styles from PatternBasedHighlighter (regexes for keywords, types, etc.)
     auto segmentStylesPtr = PatternBasedHighlighter::highlightLine(subLine, 0); 
     std::vector<SyntaxStyle> segmentStyles;
@@ -312,8 +333,16 @@ void CppHighlighter::appendBaseStyles(std::vector<SyntaxStyle>& existingStyles, 
         segmentStyles = std::move(*segmentStylesPtr);
     }
 
-    // std::cout << "[CppHL::appendBaseStyles] Got " << segmentStyles.size() << " styles from PatternBasedHighlighter for segment '" << subLine << "':\n";
-    // for(const auto& s_style : segmentStyles) std::cout << "  Raw Style: (" << s_style.startCol << "," << s_style.endCol << ") Color: " << static_cast<int>(s_style.color) << std::endl;
+    std::string debugOutput = "CppHL::appendBaseStyles - Got " + std::to_string(segmentStyles.size()) + 
+                             " styles from PatternBasedHighlighter for segment '" + subLine + "'";
+    logDebug(debugOutput);
+    
+    for (const auto& s_style : segmentStyles) {
+        std::string styleInfo = "  Raw Style: (" + std::to_string(s_style.startCol) + "," + 
+                              std::to_string(s_style.endCol) + ") Color: " + 
+                              std::to_string(static_cast<int>(s_style.color));
+        logDebug(styleInfo);
+    }
 
     for (const auto& s_style : segmentStyles) {
         SyntaxStyle newStyle(s_style.startCol + offset, s_style.endCol + offset, s_style.color);
@@ -343,6 +372,9 @@ void CppHighlighter::appendBaseStyles(std::vector<SyntaxStyle>& existingStyles, 
 }
 
 std::unique_ptr<std::vector<SyntaxStyle>> CppHighlighter::highlightLine(const std::string& line, size_t lineIndex) const {
+    // Debug output to understand the state
+    logDebug("CppHighlighter::highlightLine - Line: '" + line + "', Index: " + std::to_string(lineIndex) + ", isInBlockComment: " + (isInBlockComment_ ? "true" : "false"));
+
     // Check for line ending with backslash - needs to happen before other processing
     std::string trimmedLine = trimTrailingWhitespace(line);
     bool lineEndsWithBackslash = !trimmedLine.empty() && trimmedLine.back() == '\\';
@@ -357,8 +389,8 @@ std::unique_ptr<std::vector<SyntaxStyle>> CppHighlighter::highlightLine(const st
         // Check if this line also continues the macro
         isInMacroContinuation_ = lineEndsWithBackslash;
         
-        // For macro continuation lines, return an empty style vector
-        return std::make_unique<std::vector<SyntaxStyle>>(); 
+        // Instead of returning an empty vector, process the line normally but track that we're in a continuation
+        // We want syntax highlighting to work on continuation lines
     }
     
     // Reset the statement block states for non-continuation lines
@@ -385,6 +417,25 @@ std::unique_ptr<std::vector<SyntaxStyle>> CppHighlighter::highlightLine(const st
 
     // Explicitly clear 'styles' before checking for macro continuation, as a desperate measure.
     styles.clear(); 
+
+    // Check if this is the first line of a preprocessor directive
+    bool isPreprocessorDirective = false;
+    if (!isInMacroContinuation_ && line.length() > 0) {
+        // Find the first non-whitespace character
+        size_t nonWhitespacePos = line.find_first_not_of(" \t");
+        if (nonWhitespacePos != std::string::npos && line[nonWhitespacePos] == '#') {
+            isPreprocessorDirective = true;
+            // Add style for the preprocessor directive
+            size_t directiveEnd = line.find_first_of(" \t", nonWhitespacePos + 1);
+            if (directiveEnd == std::string::npos) directiveEnd = line.length();
+            styles.push_back(SyntaxStyle(nonWhitespacePos, directiveEnd, SyntaxColor::Preprocessor));
+            
+            // Check if line ends with backslash to start continuation
+            if (lineEndsWithBackslash) {
+                isInMacroContinuation_ = true;
+            }
+        }
+    }
 
     while (currentPos < line.length()) {
         size_t segmentStartPos = currentPos; // Start of the segment we might pass to appendBaseStyles
@@ -583,17 +634,17 @@ std::vector<std::vector<SyntaxStyle>> CppHighlighter::highlightBuffer(const Text
         auto lineStylesPtr = this->highlightLine(lineContent, i);
         
         if (lineStylesPtr) {
-            std::cout << "    [HL_BUFFER POST_CALL] For line " << i << " ('" << lineContent.substr(0,40) << (lineContent.length() > 40 ? "..." : "") << "'), received " << lineStylesPtr->size() << " styles." << std::endl;
+            logDebug("For line " + std::to_string(i) + " ('" + lineContent.substr(0,40) + (lineContent.length() > 40 ? "..." : "") + "'), received " + std::to_string(lineStylesPtr->size()) + " styles.");
             if ((i == 1 || i == 2)) { // Lines of interest for MultiLinePreprocessorDirectives
                 if (lineStylesPtr->empty()) {
-                    std::cout << "      [HL_BUFFER POST_CALL] Line " << i << " received styles are indeed EMPTY." << std::endl;
+                    logDebug("Line " + std::to_string(i) + " received styles are indeed EMPTY.");
                 } else {
-                    std::cout << "      [HL_BUFFER POST_CALL] Line " << i << " received styles are NOT EMPTY. First style: (" << (*lineStylesPtr)[0].startCol << "," << (*lineStylesPtr)[0].endCol << ") Color: " << static_cast<int>((*lineStylesPtr)[0].color) << std::endl;
+                    logDebug("Line " + std::to_string(i) + " received styles are NOT EMPTY. First style: (" + std::to_string((*lineStylesPtr)[0].startCol) + "," + std::to_string((*lineStylesPtr)[0].endCol) + ") Color: " + std::to_string(static_cast<int>((*lineStylesPtr)[0].color)));
                 }
             }
             result.push_back(std::move(*lineStylesPtr));
         } else {
-            std::cout << "    [HL_BUFFER POST_CALL] For line " << i << " ('" << lineContent.substr(0,40) << (lineContent.length() > 40 ? "..." : "") << "'), received nullptr." << std::endl;
+            logDebug("For line " + std::to_string(i) + " ('" + lineContent.substr(0,40) + (lineContent.length() > 40 ? "..." : "") + "'), received nullptr.");
             result.push_back({}); // Add empty styles if null ptr
         }
     }

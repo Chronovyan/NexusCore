@@ -9,7 +9,7 @@ A command-line C++17 text editor focused on stability and core editing features.
 - ✅ File I/O (save/load)
 - ✅ Search & Replace
 - ✅ Automated testing framework (`ctest` / batch scripts)
-- ⏳ Syntax highlighting (Planned)
+- 🔄 Syntax highlighting (In Progress)
 - ⏳ Basic Graphical UI (Planned)
 
 ## Building & Running
@@ -83,6 +83,7 @@ It provides an interactive command prompt. Key commands:
   - [`docs/THREAD_SAFETY.MD`](docs/THREAD_SAFETY.md): Thread safety patterns.
   - [`docs/REFINEMENTS.MD`](docs/REFINEMENTS.md): C++ code refinements and best practices.
   - [`docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.MD`](docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.md): Technical investigation of the syntax highlighting manager.
+  - [`docs/SYNTAX_HIGHLIGHTING_FIXES.MD`](docs/SYNTAX_HIGHLIGHTING_FIXES.md): Recent fixes to the syntax highlighting system.
 - **Development & Progress:**
   - [`ROADMAP.MD`](ROADMAP.md): Project development roadmap.
   - [`FUTURE_IMPROVEMENTS.MD`](FUTURE_IMPROVEMENTS.md): Ideas for future enhancements.

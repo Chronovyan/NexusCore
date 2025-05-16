@@ -146,7 +146,7 @@ TEST_F(CppHighlighterMultilineTest, MultiLinePreprocessorDirectives) {
     
     // Re-initialize buffer for this specific test case as it was problematic before
     buffer = std::make_unique<TextBuffer>();
-    buffer->clear(false); // Ensure buffer is completely empty
+    buffer->clear(false); // Don't add an empty line when clearing
     
     for(const auto& line : lines) {
         buffer->addLine(line);
@@ -408,7 +408,7 @@ TEST_F(CppHighlighterMultilineTest, BufferHighlighting) {
     };
     
     // Clear buffer first to ensure it's empty
-    buffer->clear();
+    buffer->clear(true);
     
     for (const auto& line : lines) {
         buffer->addLine(line);
@@ -460,7 +460,7 @@ TEST_F(CppHighlighterMultilineTest, HighlightingAfterEdits) {
     };
     
     // Clear buffer to ensure it's empty
-    buffer->clear();
+    buffer->clear(true);
     
     for (const auto& line : lines) {
         buffer->addLine(line);

@@ -68,6 +68,18 @@ public:
     
     // Get human-readable name of the language
     virtual std::string getLanguageName() const = 0;
+    
+    // Debug logging methods
+    static void setDebugLoggingEnabled(bool enabled);
+    static bool isDebugLoggingEnabled();
+    
+protected:
+    // Helper method to log debug information
+    static void logDebug(const std::string& message);
+    
+private:
+    // Static flag for debug logging
+    static bool debugLoggingEnabled_;
 };
 
 // Define the NextTokenType enum for CppHighlighter state management
@@ -84,20 +96,25 @@ enum class NextTokenType {
 class PatternBasedHighlighter : public SyntaxHighlighter {
 public:
     PatternBasedHighlighter(const std::string& name) : languageName_(name) {
-        // THREAD_DEBUG("PatternBasedHighlighter Constructor for '" << name << "'");
+        logDebug("PatternBasedHighlighter Constructor for '" + name + "'");
     }
     
     virtual ~PatternBasedHighlighter() = default;
     
     // Main method to highlight a single line based on patterns
     virtual std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, [[maybe_unused]] size_t lineIndex) const override {
-        // THREAD_DEBUG("PatternBasedHighlighter::highlightLine for '" << languageName_ << "' on line: \"" << line.substr(0, 50) << (line.length() > 50 ? "..." : "") << "\"");
+        logDebug("PatternBasedHighlighter::highlightLine for '" + languageName_ + "' on line: \"" + 
+                line.substr(0, std::min(size_t(50), line.length())) + 
+                (line.length() > 50 ? "..." : "") + "\"");
         auto styles = std::make_unique<std::vector<SyntaxStyle>>();
         
         try {
-            // THREAD_DEBUG("PatternBasedHighlighter::highlightLine - Attempting read lock");
+            logDebug("PatternBasedHighlighter::highlightLine - Attempting read lock");
             READ_LOCK(patterns_mutex_);
-            // THREAD_DEBUG("PatternBasedHighlighter::highlightLine - Acquired read lock");
+            logDebug("PatternBasedHighlighter::highlightLine - Acquired read lock");
+            
+            // Keep track of which positions have already been styled
+            std::vector<bool> positionStyled(line.length(), false);
             
             // Apply each pattern to the line
             for (const auto& pattern_pair : patterns_) {
@@ -116,8 +133,27 @@ public:
                         }
                         size_t startCol = match.position();
                         size_t endCol = startCol + match.length();
-                        styles->push_back(SyntaxStyle(startCol, endCol, color));
-                        // std::cout << "    DBG: PBHL match '" << match.str(0) << "' -> (" << startCol << "," << endCol << ") C:" << static_cast<int>(color) << std::endl;
+                        
+                        // Check if this range is already styled - only add if not
+                        bool alreadyStyled = false;
+                        for (size_t i = startCol; i < endCol && i < positionStyled.size(); ++i) {
+                            if (positionStyled[i]) {
+                                alreadyStyled = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!alreadyStyled) {
+                            styles->push_back(SyntaxStyle(startCol, endCol, color));
+                            logDebug("PBHL match '" + match.str(0) + "' -> (" + 
+                                    std::to_string(startCol) + "," + std::to_string(endCol) + 
+                                    ") C:" + std::to_string(static_cast<int>(color)));
+                            
+                            // Mark these positions as styled
+                            for (size_t i = startCol; i < endCol && i < positionStyled.size(); ++i) {
+                                positionStyled[i] = true;
+                            }
+                        }
                     }
                     ++it;
                 }
@@ -132,7 +168,8 @@ public:
             ErrorReporter::logUnknownException("PatternBasedHighlighter::highlightLine");
         }
         
-        // Sort styles by start position for rendering
+        // Sort styles by start position for rendering 
+        // (this shouldn't affect the precedence since we already filtered out overlaps)
         std::sort(styles->begin(), styles->end(), 
                   [](const SyntaxStyle& a, const SyntaxStyle& b) {
                       return a.startCol < b.startCol;
@@ -156,15 +193,15 @@ public:
 protected:
     // Add a pattern with its associated color and category
     void addPattern(const std::string& patternStr, SyntaxColor color, HighlightCategory category = HighlightCategory::UNKNOWN) {
-        // THREAD_DEBUG("PatternBasedHighlighter::addPattern for '" << languageName_ << "' with pattern: \"" << patternStr.substr(0, 50) << (patternStr.length() > 50 ? "..." : "") << "\"");
+        logDebug("PatternBasedHighlighter::addPattern for '" + languageName_ + "' with pattern: \"" + 
+                patternStr.substr(0, std::min(size_t(50), patternStr.length())) + 
+                (patternStr.length() > 50 ? "..." : "") + "\"");
         try {
-            // THREAD_DEBUG("PatternBasedHighlighter::addPattern - Attempting write lock");
             WRITE_LOCK(patterns_mutex_);
-            // THREAD_DEBUG("PatternBasedHighlighter::addPattern - Acquired write lock");
             patterns_.push_back(std::make_pair(std::regex(patternStr), color));
         } catch (const std::regex_error& regex_ex) {
-            std::cerr << "PatternBasedHighlighter::addPattern - Regex error: " 
-                      << regex_ex.what() << " for pattern: " << patternStr << std::endl;
+            ErrorReporter::logError("PatternBasedHighlighter::addPattern - Regex error: " + 
+                                    std::string(regex_ex.what()) + " for pattern: " + patternStr);
             ErrorReporter::logException(SyntaxHighlightingException(
                 std::string("PatternBasedHighlighter::addPattern: Invalid regex '") + 
                 patternStr + "': " + regex_ex.what(), 
@@ -198,7 +235,7 @@ private:
 class CppHighlighter : public PatternBasedHighlighter {
 public:
     CppHighlighter() : PatternBasedHighlighter("C++") {
-        // THREAD_DEBUG("CppHighlighter Constructor - Start");
+        logDebug("CppHighlighter Constructor - Start");
         addSupportedExtension("cpp");
         addSupportedExtension("h");
         addSupportedExtension("hpp");
@@ -214,7 +251,7 @@ public:
         addPattern("^\\s*#\\s*(define|include|if|ifdef|ifndef|else|elif|endif|pragma|line|error|warning)(?:\\b|\\s|$)", SyntaxColor::Preprocessor, HighlightCategory::PREPROCESSOR);
         addPattern("\\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()", SyntaxColor::Function, HighlightCategory::IDENTIFIER);
         addPattern("[a-zA-Z_][a-zA-Z0-9_]*", SyntaxColor::Identifier, HighlightCategory::IDENTIFIER);
-        // THREAD_DEBUG("CppHighlighter Constructor - End - Patterns Added: Count Details...");
+        logDebug("CppHighlighter Constructor - End - Patterns Added: Count Details...");
     }
 
     std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t lineIndex) const override;
@@ -332,7 +369,6 @@ private:
         } catch (const std::exception& ex) {
             ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry Constructor: ") + ex.what(), EditorException::Severity::Error));
         } catch (...) {
-            std::cerr << "SyntaxHighlighterRegistry Constructor - Unknown exception!" << std::endl;
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry Constructor");
         }
     }
