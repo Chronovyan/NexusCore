@@ -75,7 +75,7 @@ public:
 
     void addLine(const std::string& text);
     void insertLine(size_t lineIndex, const std::string& text);
-    void deleteLine(size_t lineIndex); // This was a direct editor method, distinct from DeleteLineCommand
+    virtual void deleteLine(size_t lineIndex); // Made virtual to allow overriding in TestEditor
     void replaceLine(size_t lineIndex, const std::string& text);
 
     // Text editing operations (higher level, often use commands)
@@ -85,8 +85,8 @@ public:
     void deleteSelection();  // Uses DeleteSelectionCommand
     void backspace();        // Uses BackspaceCommand
     void deleteForward();    // Uses DeleteCommand
-    void newLine();          // Uses NewLineCommand
-    void joinWithNextLine(); // Uses JoinLinesCommand
+    virtual void newLine();          // Uses NewLineCommand, made virtual to allow overriding in TestEditor
+    virtual void joinWithNextLine(); // Uses JoinLinesCommand, made virtual to allow overriding in TestEditor
     // Add wordwise variants (deleteWordBackward, deleteWordForward) if needed
     
     // Indentation operations
@@ -102,17 +102,17 @@ public:
     // Selection operations
     bool hasSelection() const;
     void clearSelection();
-    void setSelectionRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
-    std::string getSelectedText() const;
-    void startSelection();
-    void updateSelection();
-    void replaceSelection(const std::string& text);
+    virtual void setSelectionRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
+    virtual std::string getSelectedText() const;
+    virtual void startSelection();
+    virtual void updateSelection();
+    virtual void replaceSelection(const std::string& text);
     void selectLine(); // Selects the entire current line
     void selectAll(); // Selects the entire buffer content
     void selectToLineStart(); // Extends selection from cursor to start of line
     void selectToLineEnd(); // Extends selection from cursor to end of line
     void expandSelection(SelectionUnit targetUnit = SelectionUnit::Word);
-    void shrinkSelection(SelectionUnit targetUnit = SelectionUnit::Word);
+    virtual void shrinkSelection(SelectionUnit targetUnit = SelectionUnit::Word);
     SelectionUnit getCurrentSelectionUnit() const;
     
     // Selection coordinate getters
@@ -122,25 +122,25 @@ public:
     size_t getSelectionEndCol() const;
     
     // Clipboard operations
-    void cutSelection();
-    void copySelection();
-    void pasteAtCursor();
-    std::string getClipboardText() const;
-    void setClipboardText(const std::string& text);
+    virtual void cutSelection();
+    virtual void copySelection();
+    virtual void pasteAtCursor();
+    virtual std::string getClipboardText() const;
+    virtual void setClipboardText(const std::string& text);
     
     // For backwards compatibility
-    void setSelectionStart() { startSelection(); }
-    void setSelectionEnd() { updateSelection(); }
-    void copySelectedText() { copySelection(); }
-    void cutSelectedText() { cutSelection(); }
-    void pasteText() { pasteAtCursor(); }
+    virtual void setSelectionStart() { startSelection(); }
+    virtual void setSelectionEnd() { updateSelection(); }
+    virtual void copySelectedText() { copySelection(); }
+    virtual void cutSelectedText() { cutSelection(); }
+    virtual void pasteText() { pasteAtCursor(); }
     
     // Search operations
     bool search(const std::string& searchTerm, bool caseSensitive = true, bool forward = true);
     bool searchPrevious();
 
     // Word operations (can be grouped with text editing or selection)
-    void deleteWord();
+    virtual void deleteWord();
     void selectWord();
 
     // Search and replace operations
@@ -222,6 +222,7 @@ protected:
     bool isWordChar(char c) const;
     void validateAndClampCursor(); // Makes sure cursor is within valid bounds
     std::string constructLine(const std::string&) const; // For view (stub for now)
+    std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
     // Helper method for search
     bool searchInRange(const std::string& searchTerm, bool caseSensitive, bool forward,
@@ -248,7 +249,6 @@ protected:
 
     // Selection expansion/shrinking helpers
     bool expandToWord();
-    bool expandToLine();
     bool expandToExpression();
     bool expandToParagraph();
     bool expandToBlock();
@@ -262,9 +262,9 @@ protected:
     bool shrinkFromBlockToLine();
     bool shrinkFromDocumentToParagraph();
     bool shrinkNestedExpression();
-    std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
-    
-    // Expression handling helpers
+    bool expandToLine();
+
+    // Expression handling
     struct ExpressionBoundary {
         Position start;
         Position end;
@@ -273,7 +273,7 @@ protected:
         ExpressionBoundary() : found(false) {}
         ExpressionBoundary(const Position& s, const Position& e) : start(s), end(e), found(true) {}
     };
-
+    
     ExpressionBoundary findEnclosingExpression(const Position& startPos, const Position& endPos) const;
     ExpressionBoundary findMatchingBracketPair(const Position& pos, char openBracket, char closeBracket) const;
     ExpressionBoundary findEnclosingQuotes(const Position& pos, char quoteChar) const;
@@ -282,17 +282,17 @@ protected:
     bool isClosingBracket(char c) const;
     bool isQuoteChar(char c) const;
     
-    // Block/Brace helpers
+    // Additional helpers for larger syntax structures
     Position findPreviousOpeningBrace(const Position& pos) const;
     ExpressionBoundary scanForEnclosingBraces(const Position& startPos, const Position& endPos) const;
     ExpressionBoundary findEnclosingBracePair(const Position& startPos, const Position& endPos) const;
     
-    // Helper to compare two positions
+    // Helper for position comparisons
     int comparePositions(const Position& a, const Position& b) const;
-
+    
     friend class Command; 
     friend class CompoundCommand;
-    // Consider making TestEditor a friend if it needs to poke at internals not exposed by public API.
+    
     friend class TestEditor; 
 
 protected:
@@ -313,31 +313,34 @@ protected:
     
     std::string clipboard_;
     
-    // Search state
+    std::string filename_;
+    
     std::string currentSearchTerm_;
     bool currentSearchCaseSensitive_ = true;
-    // bool currentSearchForward_ = true; // This was in .bat, but not in .h. Let's assume SearchCommand carries this.
+    
     size_t lastSearchLine_ = 0;
     size_t lastSearchCol_ = 0;
     bool searchWrapped_ = false;
     
-    // Syntax highlighting state
+    // Whether highlighting is enabled (managed separately from actual highlighter)
     bool syntaxHighlightingEnabled_ = false;
-    std::string filename_ = "untitled.txt"; // Initialized
-    std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr; // Changed to shared_ptr 
-    mutable std::vector<std::vector<SyntaxStyle>> highlightingStylesCache_;
-    mutable bool highlightingStylesCacheValid_ = false; // Renamed from highlightingCacheValid_ for clarity
     
-    // Modified flag
+    // Highlighter determined by language/extension
+    std::shared_ptr<SyntaxHighlighter> currentHighlighter_;
+    
+    // Basic line visibility tracking (placeholder for scrolling)
+    size_t topVisibleLine_ = 0; // First visible line in the viewport
+    size_t viewableLines_ = 20;  // Number of lines visible in viewport
+    
+    // Modified flag - set when buffer is modified and cleared on save
     bool modified_ = false;
     
-    // Display dimensions (for view calculations)
-    int displayWidth_ = 80;
-    int displayHeight_ = 24;
-    size_t topVisibleLine_ = 0;
-    size_t viewableLines_ = 22; // Default, calculated in constructor based on display height
+    // Additional variables used for display configuration
+    bool highlightingStylesCacheValid_ = false;
     size_t commandLineHeight_ = 1;
     size_t statusLineHeight_ = 1;
+    size_t displayWidth_ = 80;
+    size_t displayHeight_ = 24;
 };
 
 #endif // EDITOR_H 

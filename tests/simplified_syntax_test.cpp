@@ -77,10 +77,9 @@ public:
 // --- Google Test Cases ---
 
 TEST(SimplifiedSyntaxHighlightingTest, PreprocessorDirective) {
-    TextBuffer buffer;
-    buffer.addLine("#include <iostream>");
+    std::string testLine = "#include <iostream>";
     SimplifiedCppHighlighterTestVersion highlighter;
-    auto stylesPtr = highlighter.highlightLine(buffer.getLine(0), 0);
+    auto stylesPtr = highlighter.highlightLine(testLine, 0);
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 
@@ -95,10 +94,9 @@ TEST(SimplifiedSyntaxHighlightingTest, PreprocessorDirective) {
 }
 
 TEST(SimplifiedSyntaxHighlightingTest, StringLiteral) {
-    TextBuffer buffer;
-    buffer.addLine("    std::cout << \"Hello World\" << std::endl;");
+    std::string testLine = "    std::cout << \"Hello World\" << std::endl;";
     SimplifiedCppHighlighterTestVersion highlighter;
-    auto stylesPtr = highlighter.highlightLine(buffer.getLine(0), 0);
+    auto stylesPtr = highlighter.highlightLine(testLine, 0);
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
     
@@ -113,10 +111,9 @@ TEST(SimplifiedSyntaxHighlightingTest, StringLiteral) {
 }
 
 TEST(SimplifiedSyntaxHighlightingTest, KeywordAndType) {
-    TextBuffer buffer;
-    buffer.addLine("int main() { return 0; }");
+    std::string testLine = "int main() { return 0; }";
     SimplifiedCppHighlighterTestVersion highlighter;
-    auto stylesPtr = highlighter.highlightLine(buffer.getLine(0), 0);
+    auto stylesPtr = highlighter.highlightLine(testLine, 0);
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 

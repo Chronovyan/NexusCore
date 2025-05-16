@@ -1,5 +1,4 @@
-#ifndef SYNTAX_HIGHLIGHTING_MANAGER_H
-#define SYNTAX_HIGHLIGHTING_MANAGER_H
+#pragma once
 
 #include "SyntaxHighlighter.h"
 #include "EditorError.h"
@@ -18,6 +17,9 @@
 // Forward declarations
 class TextBuffer;
 class SyntaxHighlighter;
+
+// Declaration of global flag to completely disable all logging - used ONLY during tests
+extern bool DISABLE_ALL_LOGGING_FOR_TESTS;
 
 class SyntaxHighlightingManager {
 public:
@@ -175,6 +177,10 @@ public:
         return validCount;
     }
 
+    // Control debug logging
+    static void setDebugLoggingEnabled(bool enabled);
+    static bool isDebugLoggingEnabled();
+
 private:
     void invalidateAllLines_nolock(); // Internal use without locking
     
@@ -221,6 +227,9 @@ private:
     void logCacheMetrics(const char* method) const;
 
 private:
+    // Static flag to control debug logging
+    static std::atomic<bool> debugLoggingEnabled_;
+
     const TextBuffer* getBuffer() const;
     SyntaxHighlighter* getHighlighterPtr_nolock() const;
     
@@ -289,6 +298,4 @@ private:
             return valid && (line == endLine + 1);
         }
     } lastProcessedRange_;
-};
-
-#endif // SYNTAX_HIGHLIGHTING_MANAGER_H 
+}; 

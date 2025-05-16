@@ -29,7 +29,7 @@ void TextBuffer::insertLine(size_t index, const std::string& line) {
 
 void TextBuffer::deleteLine(size_t index) {
     if (index >= lines_.size()) {
-        return; // Silently ignore out-of-range indices
+        throw TextBufferException("Index out of range for deleteLine", EditorException::Severity::Error);
     }
     
     if (lines_.size() == 1 && index == 0) { // If it's the only line and we're deleting it
@@ -42,7 +42,7 @@ void TextBuffer::deleteLine(size_t index) {
 
 void TextBuffer::replaceLine(size_t index, const std::string& newLine) {
     if (index >= lines_.size()) {
-        return; // Silently ignore out-of-range indices
+        throw TextBufferException("Index out of range for replaceLine", EditorException::Severity::Error);
     }
     lines_[index] = newLine;
 }
@@ -171,9 +171,9 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     
     std::string& line = lines_[lineIndex];
     
-    // Limit colIndex to line.length() for safety
+    // Validate column index
     if (colIndex > line.length()) {
-        colIndex = line.length();  // Clamp to end of line
+        throw TextBufferException("Column index out of range for deleteCharForward", EditorException::Severity::Error);
     }
     
     if (colIndex < line.length()) {
@@ -292,9 +292,8 @@ std::string TextBuffer::getLineSegment(size_t lineIndex, size_t startCol, size_t
 
 size_t TextBuffer::lineLength(size_t lineIndex) const {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for lineLength", EditorException::Severity::Error);
+        throw std::out_of_range("Invalid line index in TextBuffer::lineLength");
     }
-    
     return lines_[lineIndex].length();
 }
 
@@ -314,8 +313,146 @@ void TextBuffer::setLine(size_t lineIndex, const std::string& text) {
     lines_[lineIndex] = text;
 }
 
+// New method: Get total character count in the buffer
+size_t TextBuffer::characterCount() const {
+    size_t count = 0;
+    for (const auto& line : lines_) {
+        count += line.length();
+    }
+    return count;
+}
+
+// New method: Get a copy of all lines in the buffer
+std::vector<std::string> TextBuffer::getAllLines() const {
+    // Special case: if there's only one line and it's empty, return an empty vector
+    if (lines_.size() == 1 && lines_[0].empty()) {
+        return std::vector<std::string>();
+    }
+    return lines_; // Returns a copy of the lines vector
+}
+
+// New method: Replace a segment of text within a line
+void TextBuffer::replaceLineSegment(size_t lineIndex, size_t startCol, size_t endCol, const std::string& newText) {
+    if (lineIndex >= lines_.size()) {
+        throw std::out_of_range("Invalid line index in TextBuffer::replaceLineSegment");
+    }
+    
+    // Ensure startCol <= endCol
+    if (startCol > endCol) {
+        std::swap(startCol, endCol);
+    }
+    
+    // Clamp endCol to line length if it exceeds it
+    const size_t lineLen = lines_[lineIndex].length();
+    endCol = std::min(endCol, lineLen);
+    
+    // If startCol is beyond line length, treat as append
+    if (startCol >= lineLen) {
+        lines_[lineIndex].append(newText);
+    } else {
+        // Replace the segment
+        lines_[lineIndex].replace(startCol, endCol - startCol, newText);
+    }
+}
+
+// New method: Delete a segment of text within a line
+void TextBuffer::deleteLineSegment(size_t lineIndex, size_t startCol, size_t endCol) {
+    if (lineIndex >= lines_.size()) {
+        throw std::out_of_range("Invalid line index in TextBuffer::deleteLineSegment");
+    }
+    
+    // Ensure startCol <= endCol
+    if (startCol > endCol) {
+        std::swap(startCol, endCol);
+    }
+    
+    // Clamp endCol to line length if it exceeds it
+    const size_t lineLen = lines_[lineIndex].length();
+    endCol = std::min(endCol, lineLen);
+    
+    // If startCol is beyond line length or startCol equals endCol, do nothing
+    if (startCol >= lineLen || startCol == endCol) {
+        return;
+    }
+    
+    // Delete the segment
+    lines_[lineIndex].erase(startCol, endCol - startCol);
+}
+
 // Optional: Implementation for a friend ostream operator if you prefer `std::cout << buffer;`
 // std::ostream& operator<<(std::ostream& os, const TextBuffer& buffer) {
 //     buffer.printToStream(os);
 //     return os;
-// } 
+// }
+
+// New method: Delete multiple lines from startIndex (inclusive) to endIndex (exclusive)
+void TextBuffer::deleteLines(size_t startIndex, size_t endIndex) {
+    // Handle empty buffer case
+    if (lines_.empty()) {
+        return;
+    }
+    
+    // Validate the indices
+    if (startIndex >= lines_.size() || startIndex >= endIndex) {
+        throw std::out_of_range("Invalid range in TextBuffer::deleteLines");
+    }
+    
+    // Clamp endIndex to prevent out-of-bounds access
+    endIndex = std::min(endIndex, lines_.size());
+    
+    // Delete the lines
+    lines_.erase(lines_.begin() + startIndex, lines_.begin() + endIndex);
+    
+    // Ensure buffer is never completely empty (consistent with clear(true) behavior)
+    if (lines_.empty()) {
+        lines_.emplace_back(""); // Add an empty line
+    }
+}
+
+// New method: Insert multiple lines at the specified index
+void TextBuffer::insertLines(size_t index, const std::vector<std::string>& newLines) {
+    // Validate the index
+    if (index > lines_.size()) {
+        throw std::out_of_range("Index out of range in TextBuffer::insertLines");
+    }
+    
+    // If newLines is empty, there's nothing to do
+    if (newLines.empty()) {
+        return;
+    }
+    
+    // Insert the new lines
+    lines_.insert(lines_.begin() + index, newLines.begin(), newLines.end());
+}
+
+// New method: Check if the position is valid within the buffer
+bool TextBuffer::isValidPosition(size_t lineIndex, size_t colIndex) const {
+    // Empty buffer has no valid positions
+    if (lines_.empty()) {
+        return false;
+    }
+    
+    // Check line index
+    if (lineIndex >= lines_.size()) {
+        return false;
+    }
+    
+    // Check column index (can be at the end of the line, hence <=)
+    return colIndex <= lines_[lineIndex].length();
+}
+
+// New method: Clamp a position to be within valid bounds of the buffer
+std::pair<size_t, size_t> TextBuffer::clampPosition(size_t lineIndex, size_t colIndex) const {
+    // Handle empty buffer case
+    if (lines_.empty()) {
+        return {0, 0};
+    }
+    
+    // Clamp line index
+    lineIndex = std::min(lineIndex, lines_.size() - 1);
+    
+    // Clamp column index
+    colIndex = std::min(colIndex, lines_[lineIndex].length());
+    
+    return {lineIndex, colIndex};
+} 

@@ -586,59 +586,73 @@ void Editor::pasteAtCursor() {
 }
 
 void Editor::deleteWord() {
-    const TextBuffer& buffer = getBuffer();
-    if (buffer.isEmpty()) return;
-    
+    if (buffer_.isEmpty()) return;
+
     if (hasSelection()) {
         deleteSelection();
         return;
     }
-    
-    const std::string& line = buffer.getLine(cursorLine_);
-    
+
+    const std::string& line = buffer_.getLine(cursorLine_);
+
     // If at end of line, join with next line
     if (cursorCol_ >= line.length()) {
-        if (cursorLine_ < buffer.lineCount() - 1) {
+        if (cursorLine_ < buffer_.lineCount() - 1) {
             joinWithNextLine();
         }
         return;
     }
-    
-    // Find the word boundaries
+
+    // Normal word deletion logic
+    // Determine word boundaries
     size_t wordStart = cursorCol_;
     size_t wordEnd = cursorCol_;
-    
+
     if (isWordChar(line[cursorCol_])) {
-        // On a word character - delete the whole word
-        
+        // Starting on a word character - delete the whole word
+
         // Find start of current word (backward)
         while (wordStart > 0 && isWordChar(line[wordStart - 1])) {
             wordStart--;
         }
-        
+
         // Find end of current word (forward)
         while (wordEnd < line.length() && isWordChar(line[wordEnd])) {
             wordEnd++;
         }
-        
-        // Include one space after if it exists
-        if (wordEnd < line.length() && !isWordChar(line[wordEnd]) && line[wordEnd] == ' ') {
+
+        // Delete one space after the word if it exists
+        if (wordEnd < line.length() && line[wordEnd] == ' ') {
             wordEnd++;
         }
     } else {
-        // On non-word character - delete until the next word starts
+        // Starting on a non-word character (like space)
         
-        // Skip current non-word character
-        while (wordEnd < line.length() && !isWordChar(line[wordEnd])) {
-            wordEnd++;
+        // Check if we're on a space after a word
+        if (cursorCol_ > 0 && isWordChar(line[cursorCol_ - 1]) && line[cursorCol_] == ' ') {
+            // We're on a space after a word - delete the preceding word too
+            wordEnd = cursorCol_ + 1; // Include the space
+            wordStart = cursorCol_ - 1; // Start from character before space
+            
+            // Find start of the word before the space
+            while (wordStart > 0 && isWordChar(line[wordStart - 1])) {
+                wordStart--;
+            }
+        } else {
+            // Delete any non-word characters until the next word starts
+            while (wordEnd < line.length() && !isWordChar(line[wordEnd])) {
+                wordEnd++;
+            }
         }
     }
-    
-    // Directly modify the buffer
+
+    // Create new line with the word removed
     std::string newLine = line.substr(0, wordStart) + line.substr(wordEnd);
+    
+    // Update the buffer
     buffer_.setLine(cursorLine_, newLine);
     
-    // Move cursor to wordStart
+    // Keep cursor at word start
     setCursor(cursorLine_, wordStart);
     
     // Mark document as modified
