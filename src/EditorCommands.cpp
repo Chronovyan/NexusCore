@@ -1,4 +1,4 @@
-#include "EditorCommands.h"
+﻿#include "EditorCommands.h"
 #include "Editor.h"       // For Editor&, editor.getBuffer(), editor.setCursor(), etc.
 #include "TextBuffer.h"   // For TextBuffer& (though often via Editor)
 #include <string>         // For std::string
@@ -75,190 +75,16 @@ std::string InsertTextCommand::getDescription() const {
 }
 
 // --- DeleteTextCommand --- 
-void DeleteTextCommand::execute(Editor& editor) {
-    // Store cursor position for undo
-    cursorLine_ = editor.getCursorLine();
-    cursorCol_ = editor.getCursorCol();
-    
-    // If cursor is at start of buffer, nothing to delete
-    if (cursorLine_ == 0 && cursorCol_ == 0) {
-        deletedText_ = "";
-        return;
-    }
-    
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // If cursor is at start of line and not first line, store the newline character
-    if (cursorCol_ == 0 && cursorLine_ > 0) {
-        deletedText_ = "\n";
-        
-        // Need to remember the previous line's length for cursor positioning
-        size_t prevLineLength = buffer.lineLength(cursorLine_ - 1);
-        
-        // Join with previous line
-        buffer.deleteChar(cursorLine_, cursorCol_); // This implies deleteChar handles the join
-        
-        // Update cursor position
-        editor.setCursor(cursorLine_ - 1, prevLineLength);
-        
-        // Mark the document as modified
-        editor.setModified(true);
-    } else {
-        // For regular backspace, store the character that will be deleted
-        size_t lineIdx = cursorLine_;
-        size_t colIdx = cursorCol_ - 1; // Character to be deleted is before cursor
-        const std::string& line = buffer.getLine(lineIdx);
-        if (colIdx < line.length()) { // Ensure colIdx is valid
-            deletedText_ = std::string(1, line[colIdx]);
-        } else { // Should not happen if cursor is valid
-            deletedText_ = "";
-            editor.invalidateHighlightingCache(); // Invalidate even if nothing changes due to guard
-            return;
-        }
-        
-        // Execute the deletion
-        buffer.deleteChar(cursorLine_, cursorCol_); // This implies deleteChar handles char deletion
-        
-        // Update cursor position
-        editor.setCursor(cursorLine_, cursorCol_ - 1);
-        
-        // Mark the document as modified
-        editor.setModified(true);
-    }
-    editor.invalidateHighlightingCache();
-}
-
-void DeleteTextCommand::undo(Editor& editor) {
-    // Restore cursor to original position
-    editor.setCursor(cursorLine_, cursorCol_);
-    
-    // If deletedText is empty, nothing was deleted
-    if (deletedText_.empty()) {
-        // Cursor was already set in execute if we returned early,
-        // but set it again to be sure of state before potential highlight invalidation.
-        editor.invalidateHighlightingCache();
-        return;
-    }
-    
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // If deletedText is a newline, we need to split the line
-    if (deletedText_ == "\n") {
-        // Set cursor to where the join occurred to split correctly
-        // cursorLine_ was decremented, cursorCol_ was end of prev line.
-        // So, split needs to happen at (cursorLine_, cursorCol_) which is now (original_line-1, end_of_prev_line)
-        buffer.splitLine(cursorLine_, cursorCol_);
-        editor.setCursor(cursorLine_ + 1, 0); // Cursor moves to start of new line (original line)
-    } else {
-        // Otherwise, insert the deleted character
-        editor.setCursor(cursorLine_, cursorCol_ -1); // Position before char to insert
-        buffer.insertString(cursorLine_, cursorCol_ -1, deletedText_); // Corrected to insertString
-        editor.setCursor(cursorLine_, cursorCol_); // Restore original cursor from command's perspective
-    }
-    editor.invalidateHighlightingCache();
-}
-
-std::string DeleteTextCommand::getDescription() const {
-    if (deletedText_ == "\n") {
-        return "Delete newline";
-    }
-    return "Delete character: " + deletedText_;
-}
-
-// --- DeleteForwardCommand --- 
-void DeleteForwardCommand::execute(Editor& editor) {
-    // Store cursor position for undo
-    cursorLine_ = editor.getCursorLine();
-    cursorCol_ = editor.getCursorCol();
-    
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // Check if we're at the end of the buffer
-    if (cursorLine_ >= buffer.lineCount() - 1 && 
-        cursorCol_ >= buffer.lineLength(cursorLine_)) {
-        deletedText_ = "";
-        return;
-    }
-    
-    // If at end of line but not last line, we'll delete a newline
-    if (cursorCol_ >= buffer.lineLength(cursorLine_) && 
-        cursorLine_ < buffer.lineCount() - 1) {
-        deletedText_ = "\n";
-        buffer.deleteCharForward(cursorLine_, cursorCol_); // This will join with next line
-        // Cursor position is handled by deleteCharForward or should remain
-        
-        // Mark the document as modified
-        editor.setModified(true);
-        
-        editor.invalidateHighlightingCache();
-        return;
-    }
-    
-    // For regular delete, store the character that will be deleted
-    const std::string& line = buffer.getLine(cursorLine_);
-    // Ensure cursorCol_ is within bounds before accessing line[cursorCol_]
-    if (cursorCol_ < line.length()) {
-        deletedText_ = std::string(1, line[cursorCol_]);
-    } else { // Should not be able to delete if cursor is at end of line and it's the last line (covered by first check)
-        deletedText_ = "";
-        editor.invalidateHighlightingCache(); // Invalidate if we return early
-        return;
-    }
-    
-    // Execute the deletion
-    buffer.deleteCharForward(cursorLine_, cursorCol_);
-    
-    // Mark the document as modified
-    editor.setModified(true);
-    
-    // Cursor position should not change for forward delete of a character
-    editor.invalidateHighlightingCache();
-}
-
-void DeleteForwardCommand::undo(Editor& editor) {
-    // Restore cursor to original position
-    editor.setCursor(cursorLine_, cursorCol_); // Important to restore cursor before potential insert
-    
-    // If deletedText is empty, nothing was deleted
-    if (deletedText_.empty()) {
-        editor.invalidateHighlightingCache(); // Ensure cache is handled even if no text change
-        return;
-    }
-    
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // If deletedText is a newline, we need to split the line
-    // The split should occur at the original cursor position
-    if (deletedText_ == "\n") {
-        buffer.splitLine(cursorLine_, cursorCol_);
-    } else {
-        // Otherwise, insert the deleted character at the original cursor position
-        buffer.insertString(cursorLine_, cursorCol_, deletedText_);
-    }
-    editor.invalidateHighlightingCache();
-}
-
-std::string DeleteForwardCommand::getDescription() const {
-    if (deletedText_ == "\n") {
-        return "Delete forward newline";
-    }
-    // Avoid issues if deletedText_ was not set properly (e.g. empty due to logic error)
-    if (deletedText_.empty()) {
-        return "Delete forward";
-    }
-    return "Delete forward character: " + deletedText_;
-}
-
 // --- NewLineCommand --- 
 void NewLineCommand::execute(Editor& editor) {
     // Store cursor position for undo
     cursorLine_ = editor.getCursorLine();
     cursorCol_ = editor.getCursorCol();
-    
+
     TextBuffer& buffer = editor.getBuffer();
-    
+
     // Check if buffer is empty and TestEditor is not being used (TestEditor might auto-add a line)
-    // A truly empty buffer (0 lines) might behave differently with splitLine than one with one empty line.
+    // A truly empty buffer (0 lines) might behave differently with splitLine than one with one empty line. 
     // For simplicity, if TextBuffer::isEmpty() means 0 lines, then addLine then split is safer.
     // However, current NewLineCommand test expects splitLine to work on a line, or if buffer is empty, it adds two lines.
     if (buffer.isEmpty()) { // Assuming isEmpty means truly no lines or one empty line that clear() might leave.
@@ -268,14 +94,38 @@ void NewLineCommand::execute(Editor& editor) {
         buffer.addLine(""); // Add second line
         editor.setCursor(1, 0); // Set cursor to beginning of second line
     } else {
+        // Get the current line before splitting to determine indentation
+        const std::string currentLine = buffer.getLine(cursorLine_);
+        
+        // Calculate the indentation level of the current line
+        size_t indentationLevel = 0;
+        for (char c : currentLine) {
+            if (c == ' ' || c == '\t') {
+                indentationLevel++;
+            } else {
+                break;
+            }
+        }
+        
         // Split the current line at cursor position
         buffer.splitLine(cursorLine_, cursorCol_);
-        editor.setCursor(cursorLine_ + 1, 0); // Move cursor to beginning of new line
+        
+        // The new line will be at cursorLine_ + 1
+        if (indentationLevel > 0 && cursorLine_ + 1 < buffer.lineCount()) {
+            // Add indentation to the new line
+            buffer.getLine(cursorLine_ + 1).insert(0, currentLine.substr(0, indentationLevel));
+            
+            // Move the cursor to after the indentation on the new line
+            editor.setCursor(cursorLine_ + 1, indentationLevel);
+        } else {
+            // Move the cursor to the beginning of the new line
+            editor.setCursor(cursorLine_ + 1, 0);
+        }
     }
-    
+
     // Mark the document as modified
     editor.setModified(true);
-    
+
     editor.invalidateHighlightingCache();
 }
 
@@ -321,13 +171,15 @@ void AddLineCommand::execute(Editor& editor) {
         buffer.splitLine(originalCursorLine_, originalCursorCol_);
         editor.setCursor(originalCursorLine_ + 1, 0); // Move cursor to the beginning of the new line
     } else {
-        // Add a new line with text to the buffer
+        // Add a new line at the end with specified text
         buffer.addLine(text_);
-        // Ensure cursor is at the START of the newly added line
-        editor.setCursor(buffer.lineCount() - 1, 0); 
+        
+        // Set cursor at the beginning of the new line
+        // The test cases expect cursor at column 0 of the new line, not preserving originalCursorCol_
+        editor.setCursor(buffer.lineCount() - 1, 0);
     }
     
-    editor.invalidateHighlightingCache();
+    editor.setModified(true);
 }
 
 void AddLineCommand::undo(Editor& editor) {
@@ -335,7 +187,7 @@ void AddLineCommand::undo(Editor& editor) {
     
     if (splitLine_) {
         // Undo for a line split operation
-        if (originalCursorLine_ < buffer.lineCount() && (originalCursorLine_ + 1) < buffer.lineCount()) {
+        if (originalCursorLine_ < buffer.lineCount() && (originalCursorLine_ + 1) < buffer.lineCount()) { 
             buffer.joinLines(originalCursorLine_);
             // Restore cursor to original position
             editor.setCursor(originalCursorLine_, originalCursorCol_);
@@ -344,33 +196,30 @@ void AddLineCommand::undo(Editor& editor) {
                       << originalCursorLine_ << ", lineCount=" << buffer.lineCount() << std::endl;
         }
     } else {
-        // Undo for AddLineCommand("text") 
+        // Undo for AddLineCommand("text")
         // If originalBufferLineCount_ was 1 and the buffer still has 1 line (it was replaced),
         // we need to revert it to an empty line.
         // If lines were added (lineCount_ > originalBufferLineCount_), we delete the last one.
-        
-        if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && !text_.empty() && originalCursorLine_ == 0 && buffer.getLine(0) == text_) {
+
+        if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && !text_.empty() &&
+            originalCursorLine_ == 0 && buffer.getLine(0) == text_) {
             // This handles the "replace initial empty line" case like in AddLineCommand_WithText_ToEmptyBuffer
             // Ensure we're reverting the line that was indeed set by this command's text_.
             buffer.replaceLine(0, ""); // Revert the content of the single line to empty
         } else if (buffer.lineCount() > originalBufferLineCount_ && buffer.lineCount() > 0) {
             // This handles appending a new line
             buffer.deleteLine(buffer.lineCount() - 1);
-        } else if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && text_.empty() && originalCursorLine_ == 0) {
-             // Handles AddLineCommand("", false) when buffer was [""], became ["", ""], undo should go back to [""].
-             // The previous condition (lineCount > originalBufferLineCount) would handle if it became ["First", ""]
-             // This case is if the *original* was [""], and we added an empty line, it should become ["", ""], then deleteLine(1) makes it [""].
-             // If buffer.addLine("") on [""] results in ["", ""], then the `else if (buffer.lineCount() > originalBufferLineCount_ ...)` handles it.
-             // If buffer.addLine("") on [""] results in [""] (no change), then this branch isn't strictly needed but doesn't harm.
-             // This specific sub-condition might be redundant if TextBuffer::addLine on an initial empty line always appends.
+        } else if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && text_.empty() &&
+                  originalCursorLine_ == 0) {
+            // Handles AddLineCommand("", false) when buffer was [""], became ["", ""], undo should go back to [""].
+            // The previous condition (lineCount > originalBufferLineCount) would handle if it became ["First", ""]
+            // This case is if the *original* was [""], and we added an empty line, it should become ["", ""], then deleteLine(1) makes it [""].
+            // If buffer.addLine("") on [""] results in ["", ""], then the `else if (buffer.lineCount() > originalBufferLineCount_ ...)` handles it.
+            buffer.replaceLine(0, "");
         }
-
-        // Always restore cursor to its position before the command was executed for non-splitLine case.
-        if (originalCursorLine_ == 0 && buffer.lineCount() > 0) {
-             editor.setCursor(0, 0); // Specific for AddLineCommand test expectation
-        } else {
-             editor.setCursor(originalCursorLine_, originalCursorCol_); // Fallback to original position
-        }
+        
+        // Always restore the original cursor position after undoing
+        editor.setCursor(originalCursorLine_, originalCursorCol_);
     }
     
     editor.invalidateHighlightingCache();
