@@ -20,23 +20,23 @@ void InsertTextCommand::execute(Editor& editor) {
     if (useSpecifiedPosition_) {
         // Use the specified line and column position
         if (linePos_ < buffer.lineCount()) {
-            buffer.insertString(linePos_, colPos_, text_);
-            
+                buffer.insertString(linePos_, colPos_, text_);
+                
             // Update cursor position to end of inserted text if cursor is on the modified line
-            if (cursorLine_ == linePos_ && cursorCol_ >= colPos_) {
-                // Cursor was after insertion point, move it by length of inserted text
-                editor.setCursor(cursorLine_, cursorCol_ + text_.length());
-            } else if (cursorLine_ == linePos_ && cursorCol_ < colPos_) {
-                // Cursor was before insertion point, leave it unchanged
-                editor.setCursor(cursorLine_, cursorCol_);
+                if (cursorLine_ == linePos_ && cursorCol_ >= colPos_) {
+                    // Cursor was after insertion point, move it by length of inserted text
+                    editor.setCursor(cursorLine_, cursorCol_ + text_.length());
+                } else if (cursorLine_ == linePos_ && cursorCol_ < colPos_) {
+                    // Cursor was before insertion point, leave it unchanged
+                    editor.setCursor(cursorLine_, cursorCol_);
             }
         }
     } else {
         // Use current cursor position
-        buffer.insertString(cursorLine_, cursorCol_, text_);
-        
-        // Update cursor position after insertion
-        editor.setCursor(cursorLine_, cursorCol_ + text_.length());
+            buffer.insertString(cursorLine_, cursorCol_, text_);
+            
+            // Update cursor position after insertion
+            editor.setCursor(cursorLine_, cursorCol_ + text_.length());
     }
     
     // Mark the document as modified
@@ -80,9 +80,9 @@ void NewLineCommand::execute(Editor& editor) {
     // Store cursor position for undo
     cursorLine_ = editor.getCursorLine();
     cursorCol_ = editor.getCursorCol();
-
+    
     TextBuffer& buffer = editor.getBuffer();
-
+    
     // Check if buffer is empty and TestEditor is not being used (TestEditor might auto-add a line)
     // A truly empty buffer (0 lines) might behave differently with splitLine than one with one empty line. 
     // For simplicity, if TextBuffer::isEmpty() means 0 lines, then addLine then split is safer.
@@ -100,16 +100,16 @@ void NewLineCommand::execute(Editor& editor) {
         // Calculate the indentation level of the current line
         size_t indentationLevel = 0;
         for (char c : currentLine) {
-            if (c == ' ' || c == '\t') {
+                if (c == ' ' || c == '\t') {
                 indentationLevel++;
-            } else {
-                break;
+                } else {
+                    break;
+                }
             }
-        }
-        
+            
         // Split the current line at cursor position
-        buffer.splitLine(cursorLine_, cursorCol_);
-        
+            buffer.splitLine(cursorLine_, cursorCol_);
+            
         // The new line will be at cursorLine_ + 1
         if (indentationLevel > 0 && cursorLine_ + 1 < buffer.lineCount()) {
             // Add indentation to the new line
@@ -117,15 +117,15 @@ void NewLineCommand::execute(Editor& editor) {
             
             // Move the cursor to after the indentation on the new line
             editor.setCursor(cursorLine_ + 1, indentationLevel);
-        } else {
+            } else {
             // Move the cursor to the beginning of the new line
-            editor.setCursor(cursorLine_ + 1, 0);
+                editor.setCursor(cursorLine_ + 1, 0);
         }
     }
-
+    
     // Mark the document as modified
     editor.setModified(true);
-
+    
     editor.invalidateHighlightingCache();
 }
 
@@ -138,10 +138,10 @@ void NewLineCommand::undo(Editor& editor) {
     // So, to undo, we join cursorLine_ (the first part) with what was originally cursorLine_ + 1.
     // The joinLines operation in TextBuffer should handle this: buffer.joinLines(cursorLine_)
     // joins line `cursorLine_` with `cursorLine_ + 1`.
-    buffer.joinLines(cursorLine_); 
+                buffer.joinLines(cursorLine_);
     
-    // Restore original cursor position
-    editor.setCursor(cursorLine_, cursorCol_);
+                // Restore original cursor position
+                editor.setCursor(cursorLine_, cursorCol_);
     editor.invalidateHighlightingCache();
 }
 
@@ -176,7 +176,7 @@ void AddLineCommand::execute(Editor& editor) {
         
         // Set cursor at the beginning of the new line
         // The test cases expect cursor at column 0 of the new line, not preserving originalCursorCol_
-        editor.setCursor(buffer.lineCount() - 1, 0);
+        editor.setCursor(buffer.lineCount() - 1, 0); 
     }
     
     editor.setModified(true);
@@ -187,7 +187,7 @@ void AddLineCommand::undo(Editor& editor) {
     
     if (splitLine_) {
         // Undo for a line split operation
-        if (originalCursorLine_ < buffer.lineCount() && (originalCursorLine_ + 1) < buffer.lineCount()) { 
+        if (originalCursorLine_ < buffer.lineCount() && (originalCursorLine_ + 1) < buffer.lineCount()) {
             buffer.joinLines(originalCursorLine_);
             // Restore cursor to original position
             editor.setCursor(originalCursorLine_, originalCursorCol_);
@@ -196,11 +196,11 @@ void AddLineCommand::undo(Editor& editor) {
                       << originalCursorLine_ << ", lineCount=" << buffer.lineCount() << std::endl;
         }
     } else {
-        // Undo for AddLineCommand("text")
+        // Undo for AddLineCommand("text") 
         // If originalBufferLineCount_ was 1 and the buffer still has 1 line (it was replaced),
         // we need to revert it to an empty line.
         // If lines were added (lineCount_ > originalBufferLineCount_), we delete the last one.
-
+        
         if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && !text_.empty() &&
             originalCursorLine_ == 0 && buffer.getLine(0) == text_) {
             // This handles the "replace initial empty line" case like in AddLineCommand_WithText_ToEmptyBuffer
@@ -211,10 +211,10 @@ void AddLineCommand::undo(Editor& editor) {
             buffer.deleteLine(buffer.lineCount() - 1);
         } else if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && text_.empty() &&
                   originalCursorLine_ == 0) {
-            // Handles AddLineCommand("", false) when buffer was [""], became ["", ""], undo should go back to [""].
-            // The previous condition (lineCount > originalBufferLineCount) would handle if it became ["First", ""]
-            // This case is if the *original* was [""], and we added an empty line, it should become ["", ""], then deleteLine(1) makes it [""].
-            // If buffer.addLine("") on [""] results in ["", ""], then the `else if (buffer.lineCount() > originalBufferLineCount_ ...)` handles it.
+             // Handles AddLineCommand("", false) when buffer was [""], became ["", ""], undo should go back to [""].
+             // The previous condition (lineCount > originalBufferLineCount) would handle if it became ["First", ""]
+             // This case is if the *original* was [""], and we added an empty line, it should become ["", ""], then deleteLine(1) makes it [""].
+             // If buffer.addLine("") on [""] results in ["", ""], then the `else if (buffer.lineCount() > originalBufferLineCount_ ...)` handles it.
             buffer.replaceLine(0, "");
         }
         
@@ -448,7 +448,7 @@ void ReplaceSelectionCommand::undo(Editor& editor) {
         newTextEndCol += newText_.length();
     }
     editor.directDeleteTextRange(cursorAfterDeleteLine_, cursorAfterDeleteCol_, newTextEndLine, newTextEndCol);
-
+    
     // 2. Re-insert the originalSelectedText_ at the original selection start point.
     //    (cursorAfterDeleteLine_, cursorAfterDeleteCol_) which is (selStartLine_, selStartCol_).
     size_t originalTextEndLine, originalTextEndCol;
@@ -458,7 +458,7 @@ void ReplaceSelectionCommand::undo(Editor& editor) {
     //    And re-select the originalSelectedText_.
     editor.setCursor(originalTextEndLine, originalTextEndCol);
     editor.setSelectionRange(selStartLine_, selStartCol_, originalTextEndLine, originalTextEndCol);
-
+    
     editor.invalidateHighlightingCache();
 }
 
