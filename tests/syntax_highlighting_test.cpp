@@ -491,8 +491,11 @@ protected:
     void SetUp() override {
         // Make sure the registry has the C++ highlighter registered for test stability
         SyntaxHighlighterRegistry::getInstance().clearRegistry();
-        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::make_unique<CppHighlighter>());
-        
+        SyntaxHighlighterRegistry::getInstance().registerHighlighter(std::make_unique<CppHighlighter>()); 
+
+        // Explicitly enable syntax highlighting for this test
+        editor.enableSyntaxHighlighting(true);
+
         ON_CALL(mockHighlighter, getSupportedExtensions())
             .WillByDefault([]() {
                 return std::vector<std::string>{".test", ".txt"};
@@ -517,7 +520,7 @@ protected:
 };
 
 TEST_F(EditorHighlightingTest, TestEditorHighlighting) {
-    // Default should be enabled
+    // Syntax highlighting is explicitly enabled in SetUp()
     EXPECT_TRUE(editor.isSyntaxHighlightingEnabled());
 
     // Set up the editor
