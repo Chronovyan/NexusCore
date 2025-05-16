@@ -210,6 +210,12 @@ public:
     
     // Additional text analysis methods
     std::string getWordUnderCursor() const;
+    
+    // Buffer-related const accessors for encapsulation
+    size_t getLineCount() const;
+    size_t getLineLength(size_t lineIndex) const;
+    bool isBufferEmpty() const;
+    std::string getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const;
 
 protected:
     // Helper methods
