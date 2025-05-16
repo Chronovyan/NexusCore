@@ -42,7 +42,8 @@ public:
 
     // File Operations
     bool openFile(const std::string& filename);
-    bool saveFile(const std::string& filename = ""); // filename optional, uses internal if empty
+    bool saveFile(); // Uses current filename
+    bool saveFile(const std::string& filename); // Uses specified filename
     bool isModified() const { return modified_; } // Already existed, ensure it's used consistently
     void setModified(bool modified) { modified_ = modified; }
 
@@ -80,6 +81,7 @@ public:
     // Text editing operations (higher level, often use commands)
     void typeText(const std::string& textToInsert); // Uses InsertTextCommand
     void typeChar(char charToInsert);  // Uses InsertTextCommand with a single char
+    void processCharacterInput(char ch); // Processes single character input using TypeTextCommand
     void deleteSelection();  // Uses DeleteSelectionCommand
     void backspace();        // Uses BackspaceCommand
     void deleteForward();    // Uses DeleteCommand
@@ -191,12 +193,36 @@ public:
     void setSelection(const Position& start, const Position& end);
     void setCursorPosition(const Position& pos);
 
+    // Enhanced file information methods
+    std::string getFileExtension() const;
+    bool isNewFile() const;
+    
+    // Cursor-centric text analysis methods
+    std::string getCurrentLineText() const;
+    bool isCursorAtLineStart() const;
+    bool isCursorAtLineEnd() const;
+    bool isCursorAtBufferStart() const;
+    bool isCursorAtBufferEnd() const;
+    
+    // Editor state information (viewport)
+    size_t getViewportStartLine() const;
+    size_t getViewportHeight() const;
+    
+    // Additional text analysis methods
+    std::string getWordUnderCursor() const;
+
 protected:
     // Helper methods
     bool isWordChar(char c) const;
     void validateAndClampCursor(); // Makes sure cursor is within valid bounds
     std::string constructLine(const std::string&) const; // For view (stub for now)
     
+    // Helper method for search
+    bool searchInRange(const std::string& searchTerm, bool caseSensitive, bool forward,
+                       size_t startLine, size_t startCol,
+                       size_t endLine, size_t endCol,
+                       size_t& outFoundLine, size_t& outFoundCol);
+
     // Helper for search functionality
     bool findMatchInLine(const std::string& line, const std::string& term,
                          size_t startPos, bool caseSensitive, 
@@ -226,6 +252,10 @@ protected:
     bool shrinkToExpression();
     bool shrinkFromLineToWord();
     bool shrinkFromExpressionToWord();
+    bool shrinkFromParagraphToLine();
+    bool shrinkFromBlockToLine();
+    bool shrinkFromDocumentToParagraph();
+    bool shrinkNestedExpression();
     std::pair<size_t, size_t> findWordBoundaries(size_t line, size_t col) const;
     
     // Expression handling helpers
@@ -289,7 +319,7 @@ protected:
     bool syntaxHighlightingEnabled_ = false;
     std::string filename_ = "untitled.txt"; // Initialized
     std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr; // Changed to shared_ptr 
-    mutable std::vector<std::vector<SyntaxStyle>> cachedHighlightStyles_;
+    mutable std::vector<std::vector<SyntaxStyle>> highlightingStylesCache_;
     mutable bool highlightingStylesCacheValid_ = false; // Renamed from highlightingCacheValid_ for clarity
     
     // Modified flag
