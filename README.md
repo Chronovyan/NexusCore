@@ -1,6 +1,6 @@
 # TextEditor (C++17)
 
-A command-line C++17 text editor focused on stability, performance, and core editing features.
+A command-line C++17 text editor focused on stability, performance, and core editing features, now enhanced with AI capabilities for code generation and project management.
 
 ## Key Features & Status
 
@@ -11,20 +11,39 @@ A command-line C++17 text editor focused on stability, performance, and core edi
 - ✅ Search & Replace with case sensitivity options
 - ✅ Indentation management (increase/decrease)
 - ✅ Undo/redo functionality with efficient command history
-- 🔄 Syntax highlighting for C++ (stable with ongoing optimizations)
-- ⏳ Basic Graphical UI (Planned)
+- ✅ Syntax highlighting for C++ (stable with ongoing optimizations)
+- ✅ Dear ImGui-based user interface with conversation view, file sidebar, and status display
+- ✅ OpenAI API integration with interface-based architecture for testing
+- ✅ AI orchestration system managing conversation flow and development process
+- ✅ Project generation from natural language descriptions
+- 🔄 Compilation, testing, and execution pipeline for generated code
 
-## AI-First TextEditor Pivot
+## AI-First TextEditor Capabilities
 
-We've pivoted to an AI-First approach where the textual editor serves as the foundation for an intelligent coding environment:
+Our AI-First approach reimagines the editor as an environment where users provide high-level guidance while the AI handles implementation details:
 
-- 🔄 Dear ImGui-based user interface with conversation view, file sidebar, and status display
-- 🔄 OpenAI API integration for AI-powered code generation and assistance
-- 🔄 AI orchestration system managing the conversation flow and development process
-- ⏳ Project generation from natural language descriptions
-- ⏳ Compilation, testing, and execution pipeline for generated code
+- **Conversational Code Generation**: Describe your project in natural language, and the AI guides you through creating a fully functional C++ project.
+- **Project Structure Planning**: The AI suggests a project structure with appropriate files and dependencies.
+- **Iterative Development**: Provide feedback to refine the AI's approach before any code is generated.
+- **File Generation**: AI generates source code, build files, and tests based on your specifications.
+- **Testable Architecture**: Interface-based design enables mock-based testing without real API calls.
 
-This "AI-First" approach reimagines the editor as an environment where users provide high-level guidance while the AI handles implementation details.
+## Project Architecture
+
+The project follows a clean, modular architecture:
+
+- **Text Editor Core**: Foundational editing capabilities with robust text manipulation.
+- **OpenAI API Integration**: 
+  - Interface-based design (`IOpenAI_API_Client`) enabling real API calls and mock testing
+  - Type definitions in separate header for clean dependency management
+  - Full mock implementation for unit testing without API calls
+  - CPR (C++ Requests) library for robust HTTP communications
+- **AI Agent Orchestrator**: 
+  - Manages conversation flow between user and AI
+  - Processes tool calls for planning, code generation, and building
+  - Tracks project state through file generation pipeline
+- **Workspace Manager**: Handles file operations for AI-generated content
+- **UI Layer**: Dear ImGui-based interface with chat, file browser, and status components
 
 ## Building & Running
 
@@ -32,6 +51,7 @@ This "AI-First" approach reimagines the editor as an environment where users pro
 
 - C++17 compatible compiler (MSVC, GCC, Clang)
 - CMake (version 3.10+ recommended)
+- OpenAI API key (for AI functionality)
 
 ### Build Instructions
 
@@ -67,66 +87,54 @@ REM From project root
 build_and_run_unit_tests.bat
 ```
 
-## Basic Usage (CLI)
+## Testing the AI Features
 
-Launch the editor from its build location (e.g., `./build/src/TextEditor` or `bin\TextEditor.exe`).
+The project includes a comprehensive testing framework for AI components:
 
-It provides an interactive command prompt. Key commands:
+- **Mock OpenAI API Client**: Test AI orchestration without making real API calls
+- **Simulated Response Queue**: Prime the mock with tailored API responses
+- **Request Inspection**: Verify the exact contents of API requests
+- **Temporary Workspace**: Create and clean up test file directories automatically
 
-| Command                                      | Description                                      |
-| -------------------------------------------- | ------------------------------------------------ |
-| `load <filename>`                            | Load file into buffer.                           |
-| `save <filename>`                            | Save buffer to file.                             |
-| `add <text>`                                 | Add text as a new line at the end.               |
-| `insert <line_idx> <text>`                   | Insert text at specified 0-based line index.     |
-| `delete <line_idx>`                          | Delete line at 0-based index.                    |
-| `view`                                       | Print buffer with cursor.                        |
-| `setcursor <line> <col>`                     | Set cursor position.                             |
-| `type <text>`                                | Insert text at cursor.                           |
-| `search <term>` / `find <term>`              | Find text.                                       |
-| `replace <search_term> <replace_text>`       | Find and replace first occurrence.               |
-| `replaceall <search_term> <replace_text>`    | Replace all occurrences.                         |
-| `help`                                       | Show all commands.                               |
-| `quit` / `exit`                              | Exit the editor.                                 |
+Example test:
+```cpp
+// Create dependencies with mocks
+UIModel uiModel;
+MockOpenAI_API_Client mockApiClient;
+WorkspaceManager workspaceManager("./test_dir");
 
-(Use the `help` command for a comprehensive list of all available operations.)
+// Prime the mock with specific response
+mockApiClient.primeJsonResponse(jsonResponse, true);
 
-## Selection Units
+// Test orchestrator behavior
+AIAgentOrchestrator orchestrator(mockApiClient, uiModel, workspaceManager);
+orchestrator.handleSubmitUserPrompt("Create a C++ calculator");
 
-The editor supports semantic selection units for intelligent text selection:
+// Verify results
+assert(mockApiClient.last_sent_messages_.size() > 0);
+assert(orchestrator.getCurrentState() == AIAgentOrchestrator::OrchestratorState::AWAITING_USER_FEEDBACK_ON_PLAN);
+```
 
-- Character: Individual character selection
-- Word: Word-level selection (alphanumeric + underscore)
-- Expression: Expression-level selection (e.g., function call, parenthesized expression)
-- Line: Line-level selection (entire line)
-- Paragraph: Paragraph-level selection (consecutive non-empty lines)
-- Block: Block-level selection (code blocks in curly braces)
-- Document: Entire document selection
+## GitHub Repository
 
-Selections can be expanded or shrunk between these units, providing intuitive text manipulation.
-
-## Project Architecture
-
-The project follows a modular architecture with clean separation between components:
-
-- **Text Buffer Layer**: Manages the storage and manipulation of text content
-- **Command Layer**: Implements the command pattern for all operations with undo/redo support
-- **Editor Layer**: Provides the high-level API for text editing operations
-- **Syntax Highlighting Layer**: Handles language-specific syntax highlighting
-
-For a detailed breakdown of the project structure, features, and API, see [docs/EDITOR_OUTLINE.md](docs/EDITOR_OUTLINE.md).
+The project is available on GitHub at: [https://github.com/your-username/AI-First-TextEditor](https://github.com/your-username/AI-First-TextEditor)
 
 ## Project Documentation
 
+- **AI Integration:**
+  - [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md): Architecture of the AI components.
+  - [`docs/TESTING_FRAMEWORK.md`](docs/TESTING_FRAMEWORK.md): Testing approach for AI components.
+  - [`docs/MOCK_API_CLIENT.md`](docs/MOCK_API_CLIENT.md): Using the mock API client in tests.
+  - [`docs/CPR_IMPLEMENTATION.md`](docs/CPR_IMPLEMENTATION.md): HTTP request implementation using CPR.
 - **Core Principles & Practices:**
-  - [`docs/STABILITY.MD`](docs/STABILITY.md): Editor stability principles.
-  - [`docs/THREAD_SAFETY.MD`](docs/THREAD_SAFETY.md): Thread safety patterns.
-  - [`docs/REFINEMENTS.MD`](docs/REFINEMENTS.md): C++ code refinements and best practices.
-  - [`docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.MD`](docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.md): Technical investigation of the syntax highlighting manager.
-  - [`docs/SYNTAX_HIGHLIGHTING_FIXES.MD`](docs/SYNTAX_HIGHLIGHTING_FIXES.md): Recent fixes to the syntax highlighting system.
+  - [`docs/STABILITY.md`](docs/STABILITY.md): Editor stability principles.
+  - [`docs/THREAD_SAFETY.md`](docs/THREAD_SAFETY.md): Thread safety patterns.
+  - [`docs/REFINEMENTS.md`](docs/REFINEMENTS.md): C++ code refinements and best practices.
+  - [`docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.md`](docs/SYNTAX_HIGHLIGHTING_INVESTIGATION.md): Technical investigation of the syntax highlighting manager.
+  - [`docs/SYNTAX_HIGHLIGHTING_FIXES.md`](docs/SYNTAX_HIGHLIGHTING_FIXES.md): Recent fixes to the syntax highlighting system.
 - **Development & Progress:**
-  - [`ROADMAP.MD`](ROADMAP.md): Project development roadmap.
-  - [`docs/FUTURE_IMPROVEMENTS.MD`](docs/FUTURE_IMPROVEMENTS.md): Ideas for future enhancements.
+  - [`ROADMAP.md`](ROADMAP.md): Project development roadmap.
+  - [`docs/FUTURE_IMPROVEMENTS.md`](docs/FUTURE_IMPROVEMENTS.md): Ideas for future enhancements.
 
 ## License
 
