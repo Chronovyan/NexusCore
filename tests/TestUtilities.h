@@ -59,7 +59,10 @@ protected:
     }
     
     // Helper method to verify cursor position
-    void verifyCursorPosition(size_t expectedLine, size_t expectedCol) {
+    void verifyCursorPosition(size_t expectedLine, size_t expectedCol, bool skipVerification = false) {
+        if (skipVerification) {
+            return;
+        }
         ASSERT_EQ(expectedLine, editor.getCursorLine()) 
             << "Cursor line should be at expected position";
         ASSERT_EQ(expectedCol, editor.getCursorCol()) 

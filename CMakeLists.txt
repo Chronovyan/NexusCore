@@ -15,6 +15,7 @@ set(EDITOR_LIB_SOURCES
     src/EditorCommands.cpp
     src/SyntaxHighlighter.cpp
     src/SyntaxHighlightingManager.cpp
+    src/EditorError.cpp
     # Headers that are part of the library's interface or implementation details
     src/Editor.h
     src/TextBuffer.h

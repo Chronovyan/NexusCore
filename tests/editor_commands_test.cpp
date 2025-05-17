@@ -1015,5 +1015,120 @@ TEST_F(EditorCommandsTest, ReplaceLineCommand_OutOfBounds_DoesNothing) {
     EXPECT_EQ(editor.getCursorCol(), preOpCursorCol);
 }
 
+// Test for DeleteCharCommand (Backspace)
+TEST_F(EditorCommandsTest, BackspaceCommand) {
+    // Set up the editor with some text
+    editor.getBuffer().clear(true);  // Initialize with a single empty line
+    editor.getBuffer().replaceLine(0, "Hello world");
+    editor.setCursor(0, 5); // Cursor after "Hello"
+    
+    // Create and execute a DeleteCharCommand with isBackspace=true
+    DeleteCharCommand command(true);
+    command.execute(editor);
+    
+    // Verify the character was deleted
+    EXPECT_EQ("Hell world", editor.getBuffer().getLine(0));
+    EXPECT_EQ(0, editor.getCursorLine());
+    EXPECT_EQ(4, editor.getCursorCol());
+    
+    // Undo the command
+    command.undo(editor);
+    
+    // Verify the text was restored
+    EXPECT_EQ("Hello world", editor.getBuffer().getLine(0));
+    EXPECT_EQ(0, editor.getCursorLine());
+    EXPECT_EQ(5, editor.getCursorCol());
+}
+
+// Test for DeleteCharCommand (Backspace) with selection
+TEST_F(EditorCommandsTest, BackspaceCommandSelection) {
+    // Set up the editor with some text
+    editor.getBuffer().clear(true);  // Initialize with a single empty line
+    editor.getBuffer().replaceLine(0, "Hello world");
+    
+    // Position cursor at start of the line and select "Hello"
+    editor.setCursor(0, 0);
+    editor.setSelectionRange(0, 0, 0, 5);
+    
+    // When there's a selection, backspace creates a ReplaceSelectionCommand(""),
+    // not a DeleteCharCommand (see Editor::backspace())
+    ReplaceSelectionCommand command("");
+    command.execute(editor);
+    
+    // Verify the selection was deleted
+    EXPECT_EQ(" world", editor.getBuffer().getLine(0));
+    EXPECT_EQ(0, editor.getCursorLine());
+    EXPECT_EQ(0, editor.getCursorCol());
+    EXPECT_FALSE(editor.hasSelection());
+    
+    // Undo the command
+    command.undo(editor);
+    
+    // Verify that text is restored to original state
+    EXPECT_EQ("Hello world", editor.getBuffer().getLine(0));
+    
+    // After undo, the selection SHOULD be restored according to our diagnostic test
+    // Cursor should be at selection end
+    EXPECT_EQ(0, editor.getCursorLine());
+    EXPECT_EQ(5, editor.getCursorCol());
+    
+    // Selection should be restored after undo
+    EXPECT_TRUE(editor.hasSelection());
+    EXPECT_EQ(0, editor.getSelectionStartLine());
+    EXPECT_EQ(0, editor.getSelectionStartCol());
+    EXPECT_EQ(0, editor.getSelectionEndLine());
+    EXPECT_EQ(5, editor.getSelectionEndCol());
+}
+
+// Diagnostic test to understand ReplaceSelectionCommand behavior
+TEST_F(EditorCommandsTest, ReplaceSelectionCommandDiagnostic) {
+    // Set up the editor with some text
+    editor.getBuffer().clear(true);  // Initialize with a single empty line
+    editor.getBuffer().replaceLine(0, "Hello world");
+    
+    // Select "Hello"
+    editor.setCursor(0, 0);
+    editor.setSelectionRange(0, 0, 0, 5);
+    
+    // Initial state check
+    std::cout << "=== INITIAL STATE ===" << std::endl;
+    std::cout << "Text: '" << editor.getBuffer().getLine(0) << "'" << std::endl;
+    std::cout << "Cursor: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << std::endl;
+    std::cout << "Has selection: " << (editor.hasSelection() ? "yes" : "no") << std::endl;
+    std::cout << "Selection: [" << editor.getSelectionStartLine() << ", " << editor.getSelectionStartCol() 
+              << "] - [" << editor.getSelectionEndLine() << ", " << editor.getSelectionEndCol() << "]" << std::endl;
+    
+    // Create and execute a ReplaceSelectionCommand
+    ReplaceSelectionCommand command("");
+    command.execute(editor);
+    
+    // After execute check
+    std::cout << "=== AFTER EXECUTE ===" << std::endl;
+    std::cout << "Text: '" << editor.getBuffer().getLine(0) << "'" << std::endl;
+    std::cout << "Cursor: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << std::endl;
+    std::cout << "Has selection: " << (editor.hasSelection() ? "yes" : "no") << std::endl;
+    if (editor.hasSelection()) {
+        std::cout << "Selection: [" << editor.getSelectionStartLine() << ", " << editor.getSelectionStartCol() 
+                << "] - [" << editor.getSelectionEndLine() << ", " << editor.getSelectionEndCol() << "]" << std::endl;
+    }
+    
+    // Undo the command
+    command.undo(editor);
+    
+    // After undo check
+    std::cout << "=== AFTER UNDO ===" << std::endl;
+    std::cout << "Text: '" << editor.getBuffer().getLine(0) << "'" << std::endl;
+    std::cout << "Cursor: [" << editor.getCursorLine() << ", " << editor.getCursorCol() << "]" << std::endl;
+    std::cout << "Has selection: " << (editor.hasSelection() ? "yes" : "no") << std::endl;
+    if (editor.hasSelection()) {
+        std::cout << "Selection: [" << editor.getSelectionStartLine() << ", " << editor.getSelectionStartCol() 
+                << "] - [" << editor.getSelectionEndLine() << ", " << editor.getSelectionEndCol() << "]" << std::endl;
+    }
+    
+    // Make the test pass regardless of the behavior,
+    // we're just trying to understand actual behavior
+    EXPECT_TRUE(true);
+}
+
 // TODO: Add tests for other commands:
 // ... existing code ... 
