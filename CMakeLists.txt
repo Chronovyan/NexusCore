@@ -7,6 +7,43 @@ set(CMAKE_CXX_EXTENSIONS OFF) # Prefer not to use compiler-specific extensions
 
 include(FetchContent)
 
+# Fetch Dear ImGui
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.89.9
+)
+FetchContent_MakeAvailable(imgui)
+
+# Create ImGui library with GLFW and OpenGL3 backends
+set(IMGUI_SOURCES
+  ${imgui_SOURCE_DIR}/imgui.cpp
+  ${imgui_SOURCE_DIR}/imgui_draw.cpp
+  ${imgui_SOURCE_DIR}/imgui_tables.cpp
+  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+# --- GLFW (required for ImGui) ---
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+  GIT_TAG 3.3.8
+)
+set(GLFW_BUILD_EXAMPLES OFF CACHE INTERNAL "Build the GLFW example programs")
+set(GLFW_BUILD_TESTS OFF CACHE INTERNAL "Build the GLFW test programs")
+set(GLFW_BUILD_DOCS OFF CACHE INTERNAL "Build the GLFW documentation")
+set(GLFW_INSTALL OFF CACHE INTERNAL "Generate installation target")
+FetchContent_MakeAvailable(glfw)
+
+add_library(imgui STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui PUBLIC 
+  ${imgui_SOURCE_DIR}
+  ${imgui_SOURCE_DIR}/backends
+)
+target_link_libraries(imgui PUBLIC glfw)
+
 # --- Editor Library (EditorLib) ---
 # Source files for the static library (all .cpp from src/ except main.cpp)
 set(EDITOR_LIB_SOURCES
@@ -45,14 +82,18 @@ endif()
 # --- Main Editor Executable (TextEditor) ---
 # Now only includes main.cpp and links against EditorLib
 add_executable(TextEditor src/main.cpp)
-
 target_link_libraries(TextEditor PRIVATE EditorLib)
 
-# No need for target_include_directories(TextEditor PUBLIC src) anymore for TextEditor itself,
-# as EditorLib provides its headers via its PUBLIC include directory.
-# However, main.cpp might still need to find headers from src, so if EditorLib's PUBLIC isn't enough,
-# we might need it. But usually, linking the library that has PUBLIC include dirs is sufficient.
+# --- AI-First TextEditor Executable ---
+add_executable(AITextEditor
+    src/AITextEditorApp.cpp
+    src/UIModel.h
+)
+target_link_libraries(AITextEditor PRIVATE EditorLib imgui)
 
+# Find OpenGL for ImGui backend
+find_package(OpenGL REQUIRED)
+target_link_libraries(AITextEditor PRIVATE OpenGL::GL)
 
 # Link against pthreads if on a POSIX system
 if(UNIX AND NOT APPLE)
@@ -89,15 +130,7 @@ enable_testing()
 add_subdirectory(tests) 
 
 # Optional: Print a message
-message(STATUS "Configured TextEditor project with EditorLib and GoogleTest.")
-
-# The section for runMcve and gmock_mcve.cpp has been removed.
-
-# The following complex find_package and linking logic for runMcve is removed
-# as FetchContent_MakeAvailable should make GTest targets directly usable.
-# // ... existing code ... (from original find_package(GTest CONFIG) down to its endif)
-# // ... existing code ... (from original linking logic for runMcve down to its endif)
-# // ... existing code ... (original message about MCVE configuration)
+message(STATUS "Configured TextEditor project with EditorLib, ImGui, and GoogleTest.")
 
 # Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
 set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST) 
