@@ -15,6 +15,7 @@ namespace ai_editor {
 
 // Global state
 UIModel g_uiModel;
+bool g_shouldSetFocus = false;  // Flag to set focus on input field
 
 // Error callback for GLFW
 static void glfw_error_callback(int error, const char* description) {
@@ -54,17 +55,81 @@ void RenderConversationPanel() {
     }
     
     // Auto-scroll to bottom when a new message is added
-    static float lastHeight = 0.0f;
-    if (ImGui::GetScrollMaxY() > 0 && (ImGui::GetScrollY() == lastHeight || lastHeight == 0.0f)) {
-        ImGui::SetScrollHereY(1.0f);
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 20.0f || g_uiModel.aiIsProcessing) {
+        ImGui::SetScrollHereY(1.0f);  // Scroll to bottom
     }
-    lastHeight = ImGui::GetScrollMaxY();
     
     ImGui::EndChild();
 }
 
+// Helper function to simulate an AI response based on user input
+std::string SimulateAIResponse(const std::string& userInput) {
+    // In a real app, this would call the AI model
+    // For now, we'll just provide different responses based on simple patterns
+    
+    // Convert to lowercase for case-insensitive comparison
+    std::string lowerInput = userInput;
+    for (auto& c : lowerInput) c = std::tolower(c);
+    
+    if (lowerInput.find("hello") != std::string::npos || 
+        lowerInput.find("hi") != std::string::npos) {
+        return "Hello! I'm your AI assistant. How can I help you with your coding project today?";
+    }
+    else if (lowerInput.find("create") != std::string::npos && lowerInput.find("file") != std::string::npos) {
+        // Simulate creating a new file
+        if (lowerInput.find("header") != std::string::npos || lowerInput.find(".h") != std::string::npos) {
+            g_uiModel.AddProjectFile("myclass.h", ProjectFile::Status::GENERATING, "C++ header file");
+            
+            // Simulate that after a delay, the file would be generated
+            g_uiModel.AddSystemMessage("File 'myclass.h' has been created");
+            
+            return "I'm creating a new header file called 'myclass.h' for you. What should this class do?";
+        }
+        else if (lowerInput.find("cpp") != std::string::npos || lowerInput.find(".cpp") != std::string::npos) {
+            g_uiModel.AddProjectFile("myclass.cpp", ProjectFile::Status::GENERATING, "C++ implementation file");
+            
+            // Simulate that after a delay, the file would be generated
+            g_uiModel.AddSystemMessage("File 'myclass.cpp' has been created");
+            
+            return "I'm creating a new C++ implementation file called 'myclass.cpp'. This will contain the implementation of your class.";
+        }
+        else {
+            return "I can help you create files for your project. What kind of file would you like to create? For example, a .cpp file or a header (.h) file?";
+        }
+    }
+    else if (lowerInput.find("help") != std::string::npos) {
+        return "I can assist with coding tasks, project organization, and explaining concepts. What specific help do you need?";
+    }
+    else if (lowerInput.find("thank") != std::string::npos) {
+        return "You're welcome! Let me know if you need anything else.";
+    }
+    else if (lowerInput.find("code") != std::string::npos || 
+             lowerInput.find("function") != std::string::npos ||
+             lowerInput.find("class") != std::string::npos) {
+        // If user asks for code generation, simulate adding a file
+        if (lowerInput.find("class") != std::string::npos) {
+            g_uiModel.AddProjectFile("exampleclass.h", ProjectFile::Status::GENERATING, "Example C++ class");
+            
+            return "I can help you write a class. I've started creating an 'exampleclass.h' file. "
+                   "Would you like a simple class or something more complex with inheritance?";
+        }
+        else {
+            return "I can help you write code. Could you describe what functionality you need in more detail?";
+        }
+    }
+    
+    // Default response
+    return "I understand you said: \"" + userInput + "\". How would you like me to help with this?";
+}
+
 // Helper function to render the chat input panel
 void RenderChatInputPanel() {
+    // Set keyboard focus if needed
+    if (g_shouldSetFocus) {
+        ImGui::SetKeyboardFocusHere();
+        g_shouldSetFocus = false;
+    }
+    
     // Chat input text field
     ImGui::PushItemWidth(-100); // Make text field fill available width minus button width
     bool input_submitted = ImGui::InputTextMultiline(
@@ -82,27 +147,27 @@ void RenderChatInputPanel() {
     
     // Process input if Send button clicked or Enter pressed
     if ((input_submitted || send_clicked) && g_uiModel.userInputBuffer[0] != '\0') {
-        // Add user message to conversation
-        g_uiModel.chatHistory.emplace_back(
-            ChatMessage::Sender::USER,
-            "You",
-            g_uiModel.userInputBuffer
-        );
+        // Store the user input for processing
+        std::string userInput = g_uiModel.userInputBuffer;
+        
+        // Add user message to conversation using the helper method
+        g_uiModel.AddUserMessage(userInput);
         
         // Clear input buffer
         g_uiModel.userInputBuffer[0] = '\0';
+        
+        // Set focus for next input
+        g_shouldSetFocus = true;
         
         // In a real app, we would trigger AI processing here
         g_uiModel.aiIsProcessing = true;
         g_uiModel.currentGlobalStatus = "Processing...";
         
-        // For demo purposes, simulate AI response after a delay
-        // In a real app, this would be handled by a separate thread/task
-        g_uiModel.chatHistory.emplace_back(
-            ChatMessage::Sender::AI,
-            "AI",
-            "I received your message. This is a placeholder AI response."
-        );
+        // For demo purposes, simulate AI response
+        std::string aiResponse = SimulateAIResponse(userInput);
+        
+        // Add AI response to the conversation using the helper method
+        g_uiModel.AddAIMessage(aiResponse);
         
         // Reset processing state
         g_uiModel.aiIsProcessing = false;
@@ -127,6 +192,10 @@ void RenderFileListSidebar() {
             statusColor = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // Gray for planned
         } else if (file.status == "New") {
             statusColor = ImVec4(0.1f, 0.6f, 0.1f, 1.0f); // Green for new
+        } else if (file.status == "Generating...") {
+            statusColor = ImVec4(0.9f, 0.7f, 0.0f, 1.0f); // Yellow for generating
+        } else if (file.status == "Error") {
+            statusColor = ImVec4(0.9f, 0.1f, 0.1f, 1.0f); // Red for error
         } else {
             statusColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // White for default
         }
