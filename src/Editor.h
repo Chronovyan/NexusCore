@@ -217,6 +217,9 @@ public:
     bool isBufferEmpty() const;
     std::string getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const;
 
+    // Helper for shrinkSelection
+    SelectionUnit getNextSmallerUnit(SelectionUnit currentUnit);
+
 protected:
     // Helper methods
     bool isWordChar(char c) const;

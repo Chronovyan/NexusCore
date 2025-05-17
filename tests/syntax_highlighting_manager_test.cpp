@@ -102,73 +102,85 @@ private:
 
 class SyntaxHighlightingManagerTest : public ::testing::Test {
 protected:
-    SyntaxHighlightingManager manager_;
+    std::shared_ptr<SyntaxHighlightingManager> manager_;
     std::shared_ptr<testing::NiceMock<MockSyntaxHighlighter>> mock_highlighter_;
     TextBuffer text_buffer_;
 
     void SetUp() override {
+        // Disable ALL logging for tests
+        DISABLE_ALL_LOGGING_FOR_TESTS = false;
+        
+        // Disable debug logging and set severity threshold to suppress warnings
+        ErrorReporter::debugLoggingEnabled = false; 
+        ErrorReporter::suppressAllWarnings = true;
+        ErrorReporter::setSeverityThreshold(EditorException::Severity::Error);
+        
+        // Debug output to stdout (not cerr)
         std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - Start" << std::endl;
         
-        try {
-            // Create new buffer with known content
-            text_buffer_ = TextBuffer(); // Reset the buffer
-            // TextBuffer starts with an empty line at index 0
-            text_buffer_.addLine("Line 1 content");
-            text_buffer_.addLine("Line 2 content");
-            
-            // Create the mock with NiceMock to suppress irrelevant warnings
-            mock_highlighter_ = std::make_shared<testing::NiceMock<MockSyntaxHighlighter>>();
-            
-            // Set up the test environment
-            manager_.setHighlighter(mock_highlighter_);
-            manager_.setBuffer(&text_buffer_);
-            manager_.setEnabled(true);
-            
-            std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - End" << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << "[ERROR] Exception in SetUp: " << e.what() << std::endl;
-            throw; // Re-throw to let the test framework know setup failed
+        // Reset buffer for each test
+        text_buffer_ = TextBuffer();
+
+        // Add some lines to the buffer for testing
+        for (int i = 0; i < 10000; ++i) {
+            std::string line = "Line " + std::to_string(i) + " content";
+            if (i % 100 == 0) {
+                line = "#include <iostream>";
+            } else if (i % 100 == 1) {
+                line = "int main() {";
+            } else if (i % 100 == 99) {
+                line = "}";
+            } else if (i % 10 == 5) {
+                line = "  std::cout << \"Hello, World!\" << std::endl;";
+            }
+            text_buffer_.addLine(line);
         }
+
+        // Create test manager
+        mock_highlighter_ = std::make_shared<testing::NiceMock<MockSyntaxHighlighter>>();
+        manager_ = std::make_shared<SyntaxHighlightingManager>();
+        
+        // Configure manager - set buffer first, then highlighter
+        manager_->setBuffer(&text_buffer_);
+        manager_->setHighlighter(mock_highlighter_);
     }
 
     void TearDown() override {
         std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - Start" << std::endl;
         
-        try {
-            // Clean up resources in reverse order of acquisition
-            manager_.setHighlighter(nullptr);
-            manager_.setBuffer(nullptr);
-            mock_highlighter_.reset();
-            
-            std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - End" << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << "[ERROR] Exception in TearDown: " << e.what() << std::endl;
-            // We don't re-throw in TearDown as it would mask test failures
-        }
+        // Explicitly clean up to avoid memory leak warnings
+        manager_->setHighlighter(nullptr);
+        manager_->setBuffer(nullptr);
+        
+        mock_highlighter_.reset();
+        text_buffer_ = TextBuffer();
+        manager_.reset();
+        
+        std::cout << "[DEBUG] SyntaxHighlightingManagerTest::TearDown() - End" << std::endl;
     }
 };
 
 TEST_F(SyntaxHighlightingManagerTest, InitialStateIsEnabled) {
     // Verify default initial state is enabled
-    EXPECT_TRUE(manager_.isEnabled());
+    EXPECT_TRUE(manager_->isEnabled());
 }
 
 TEST_F(SyntaxHighlightingManagerTest, EnableDisableToggleWorks) {
     // Initially the manager is enabled (from SetUp)
-    EXPECT_TRUE(manager_.isEnabled());
+    EXPECT_TRUE(manager_->isEnabled());
     
     // Test disabling
-    manager_.setEnabled(false);
-    EXPECT_FALSE(manager_.isEnabled());
+    manager_->setEnabled(false);
+    EXPECT_FALSE(manager_->isEnabled());
     
     // Validate that getHighlightingStyles returns empty when disabled
-    auto styles = manager_.getHighlightingStyles(0, 0);
+    auto styles = manager_->getHighlightingStyles(0, 0);
     EXPECT_EQ(styles.size(), 1);
     EXPECT_TRUE(styles[0].empty());
     
     // Re-enable and verify
-    manager_.setEnabled(true);
-    EXPECT_TRUE(manager_.isEnabled());
+    manager_->setEnabled(true);
+    EXPECT_TRUE(manager_->isEnabled());
 }
 
 TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlighter) {
@@ -286,10 +298,10 @@ TEST_F(SyntaxHighlightingManagerTest, GetHighlightingStylesReturnsEmptyWhenHighl
 
 TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) {
     std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) - Start" << std::endl;
-    ASSERT_NO_THROW(manager_.setHighlighter(nullptr));
+    ASSERT_NO_THROW(manager_->setHighlighter(nullptr));
     // After setting a null highlighter, getHighlightingStyles should return empty styles
     // without attempting to call the highlighter.
-    auto styles = manager_.getHighlightingStyles(0,0);
+    auto styles = manager_->getHighlightingStyles(0,0);
     ASSERT_EQ(styles.size(), 1);
     EXPECT_TRUE(styles[0].empty());
     std::cout << "[DEBUG] TEST_F(SyntaxHighlightingManagerTest, SetHighlighterHandlesNull) - End" << std::endl;
@@ -306,8 +318,8 @@ TEST_F(SyntaxHighlightingManagerTest, CacheHitsAfterHighlighting) {
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
     // Initial highlighting should call the highlighter for all three lines
-    manager_.invalidateAllLines();
-    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    manager_->invalidateAllLines();
+    auto styles1 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles1.size(), 3);
     
     // Second request without invalidation should use cache (no more calls to highlighter)
@@ -316,7 +328,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheHitsAfterHighlighting) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(0); // Should not be called again if cache is used
     
-    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    auto styles2 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles2.size(), 3);
 }
 
@@ -329,7 +341,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLine) {
         .Times(3) // Once for each line
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    auto styles1 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles1.size(), 3);
     
     // Clear expectations and set up for next test phase
@@ -344,8 +356,8 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLine) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 2))
         .Times(0); // Line 2 should still be in cache
     
-    manager_.invalidateLine(0);
-    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    manager_->invalidateLine(0);
+    auto styles2 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles2.size(), 3);
 }
 
@@ -358,7 +370,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLines) {
         .Times(3) // Once for each line
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    auto styles1 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles1.size(), 3);
     
     // Clear expectations and set up for next test phase
@@ -369,8 +381,8 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateLines) {
         .Times(2) // Lines 0 and 1 should be rehighlighted
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    manager_.invalidateLines(0, 1);
-    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    manager_->invalidateLines(0, 1);
+    auto styles2 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles2.size(), 3);
 }
 
@@ -383,7 +395,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateAllLines) {
         .Times(3) // Once for each line
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    auto styles1 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles1.size(), 3);
     
     // Clear expectations and set up for next test phase
@@ -394,29 +406,29 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterInvalidateAllLines) {
         .Times(3) // All lines should be rehighlighted
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    manager_.invalidateAllLines();
-    auto styles2 = manager_.getHighlightingStyles(0, 2);
+    manager_->invalidateAllLines();
+    auto styles2 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles2.size(), 3);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, HighlightingTimeoutSettings) {
     // Verify default timeout setting
-    EXPECT_EQ(manager_.getHighlightingTimeout(), SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+    EXPECT_EQ(manager_->getHighlightingTimeout(), SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
     
     // Set a custom timeout
     size_t customTimeout = 100;
-    manager_.setHighlightingTimeout(customTimeout);
-    EXPECT_EQ(manager_.getHighlightingTimeout(), customTimeout);
+    manager_->setHighlightingTimeout(customTimeout);
+    EXPECT_EQ(manager_->getHighlightingTimeout(), customTimeout);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, ContextLinesSettings) {
     // Verify default context lines setting
-    EXPECT_EQ(manager_.getContextLines(), SyntaxHighlightingManager::DEFAULT_CONTEXT_LINES);
+    EXPECT_EQ(manager_->getContextLines(), SyntaxHighlightingManager::DEFAULT_CONTEXT_LINES);
     
     // Set custom context lines
     size_t customContextLines = 50;
-    manager_.setContextLines(customContextLines);
-    EXPECT_EQ(manager_.getContextLines(), customContextLines);
+    manager_->setContextLines(customContextLines);
+    EXPECT_EQ(manager_->getContextLines(), customContextLines);
 }
 
 // Tests for Visible Range functionality
@@ -425,14 +437,14 @@ TEST_F(SyntaxHighlightingManagerTest, VisibleRangeAffectsCacheLifetime) {
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
     
     // Set a visible range and ensure it affects which lines are prioritized
-    manager_.setVisibleRange(0, 0); // Only line 0 is visible
+    manager_->setVisibleRange(0, 0); // Only line 0 is visible
     
     // Initial highlighting for all lines
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(3) // Once for each line
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
-    auto styles1 = manager_.getHighlightingStyles(0, 2);
+    auto styles1 = manager_->getHighlightingStyles(0, 2);
     EXPECT_EQ(styles1.size(), 3);
     
     // Clear expectations and set up for next test phase
@@ -445,7 +457,7 @@ TEST_F(SyntaxHighlightingManagerTest, VisibleRangeAffectsCacheLifetime) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 0))
         .Times(0); // Line 0 should still be in cache as it's in the visible range
     
-    auto styles2 = manager_.getHighlightingStyles(0, 0);
+    auto styles2 = manager_->getHighlightingStyles(0, 0);
     EXPECT_EQ(styles2.size(), 1);
 }
 
@@ -488,13 +500,13 @@ TEST_F(SyntaxHighlightingManagerTest, ExceptionThrowingHighlighterTest) {
     
     // Create and set a dedicated exception-throwing highlighter
     auto exceptionHighlighter = std::make_shared<ExceptionThrowingHighlighter>();
-    manager_.setHighlighter(exceptionHighlighter);
+    manager_->setHighlighter(exceptionHighlighter);
     
     // Test that the exception is properly caught by the manager
     std::vector<std::vector<SyntaxStyle>> styles;
     ASSERT_NO_THROW({
-        manager_.invalidateLine(0);
-        styles = manager_.getHighlightingStyles(0, 0);
+        manager_->invalidateLine(0);
+        styles = manager_->getHighlightingStyles(0, 0);
     });
     
     // Verify the result is valid but contains empty styles due to the exception
@@ -560,7 +572,7 @@ TEST(StandaloneExceptionTest, HighlightingManagerHandlesExceptions) {
 
 TEST_F(SyntaxHighlightingManagerTest, DisabledStateReturnsEmptyStyles) {
     // Test that a disabled manager returns empty styling
-    manager_.setEnabled(false);
+    manager_->setEnabled(false);
     
     // Create some test expectations for verification
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
@@ -570,7 +582,7 @@ TEST_F(SyntaxHighlightingManagerTest, DisabledStateReturnsEmptyStyles) {
         .Times(0);
     
     // Request styling while disabled
-    auto styles = manager_.getHighlightingStyles(0, 2);
+    auto styles = manager_->getHighlightingStyles(0, 2);
     
     // Verify we got the right number of lines back
     ASSERT_EQ(styles.size(), 3);
@@ -586,16 +598,16 @@ TEST_F(SyntaxHighlightingManagerTest, ReenabledStateResumesHighlighting) {
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
     
     // First disable the manager
-    manager_.setEnabled(false);
+    manager_->setEnabled(false);
     
     // Request styling while disabled (should not call highlighter)
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(0);
-    auto disabledStyles = manager_.getHighlightingStyles(0, 2);
+    auto disabledStyles = manager_->getHighlightingStyles(0, 2);
     
     // Re-enable the manager
     testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
-    manager_.setEnabled(true);
+    manager_->setEnabled(true);
     
     // Now the highlighter should be called for each line
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
@@ -603,7 +615,7 @@ TEST_F(SyntaxHighlightingManagerTest, ReenabledStateResumesHighlighting) {
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
     // Request styling while enabled
-    auto enabledStyles = manager_.getHighlightingStyles(0, 2);
+    auto enabledStyles = manager_->getHighlightingStyles(0, 2);
     
     // Verify we got the right number of lines back
     ASSERT_EQ(enabledStyles.size(), 3);
@@ -624,13 +636,13 @@ TEST_F(SyntaxHighlightingManagerTest, InvalidateLineRemovesFromCache) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(3)  // For lines 0, 1, and 2
         .WillRepeatedly(ReturnStyleVector(testStyle));
-    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    auto initialStyles = manager_->getHighlightingStyles(0, 2);
     
     // Clear expectations for the next phase
     testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
     
     // Now, invalidate just line 1
-    manager_.invalidateLine(1);
+    manager_->invalidateLine(1);
     
     // Set expectations for the next request - only line 1 should be re-highlighted
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, 0))
@@ -642,7 +654,7 @@ TEST_F(SyntaxHighlightingManagerTest, InvalidateLineRemovesFromCache) {
         .Times(0);  // Line 2 should still be cached
     
     // Request highlighting again
-    auto updatedStyles = manager_.getHighlightingStyles(0, 2);
+    auto updatedStyles = manager_->getHighlightingStyles(0, 2);
     
     // Verify the result
     ASSERT_EQ(updatedStyles.size(), 3);
@@ -660,7 +672,7 @@ TEST_F(SyntaxHighlightingManagerTest, VerifyInvalidateAllLinesCleanupBehavior) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(3)  // For lines 0, 1, and 2
         .WillRepeatedly(ReturnStyleVector(testStyle));
-    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    auto initialStyles = manager_->getHighlightingStyles(0, 2);
     
     // Verify initial cache state
     ASSERT_EQ(initialStyles.size(), 3);
@@ -672,7 +684,7 @@ TEST_F(SyntaxHighlightingManagerTest, VerifyInvalidateAllLinesCleanupBehavior) {
     testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
     
     // Now, invalidate all lines - this should clear the entire cache
-    manager_.invalidateAllLines();
+    manager_->invalidateAllLines();
     
     // Expect all lines to be re-highlighted
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
@@ -680,7 +692,7 @@ TEST_F(SyntaxHighlightingManagerTest, VerifyInvalidateAllLinesCleanupBehavior) {
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
     // Request highlighting again
-    auto updatedStyles = manager_.getHighlightingStyles(0, 2);
+    auto updatedStyles = manager_->getHighlightingStyles(0, 2);
     
     // Verify that the manager properly re-highlighted all lines
     ASSERT_EQ(updatedStyles.size(), 3);
@@ -698,7 +710,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .Times(3)  // For lines 0, 1, and 2
         .WillRepeatedly(ReturnStyleVector(testStyle));
-    auto initialStyles = manager_.getHighlightingStyles(0, 2);
+    auto initialStyles = manager_->getHighlightingStyles(0, 2);
     
     // Clear expectations for the next phase
     testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
@@ -708,7 +720,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
     text_buffer_.addLine("New line content");  // Add a new line, now we have 4 lines
     
     // Invalidate the affected range (the whole buffer in this simple case)
-    manager_.invalidateAllLines();
+    manager_->invalidateAllLines();
     
     // Expect all lines to be re-highlighted, now including the new line
     EXPECT_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
@@ -716,7 +728,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
         .WillRepeatedly(ReturnStyleVector(testStyle));
     
     // Request highlighting for all lines
-    auto updatedStyles = manager_.getHighlightingStyles(0, 3);
+    auto updatedStyles = manager_->getHighlightingStyles(0, 3);
     
     // Verify that the manager properly handled the buffer change
     ASSERT_EQ(updatedStyles.size(), 4);  // Should now have 4 lines of styles
@@ -728,10 +740,10 @@ TEST_F(SyntaxHighlightingManagerTest, CacheManagementWithBufferChanges) {
 
 // Thread-safety test for concurrent reads and writes
 TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) {
-    const size_t LINE_COUNT = 10; // Reduced from 20
-    const size_t READER_THREADS = 2; // Reduced from 3
-    const size_t WRITER_THREADS = 1; // Reduced from 2
-    const int OPERATIONS_PER_THREAD = 3; // Reduced from 5
+    const size_t LINE_COUNT = 10;
+    const size_t READER_THREADS = 2;
+    const size_t WRITER_THREADS = 1;
+    const int OPERATIONS_PER_THREAD = 3;
 
     // Reset the text buffer with multiple lines
     text_buffer_ = TextBuffer();
@@ -744,68 +756,80 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) {
     ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .WillByDefault(ReturnStyleVector(testStyle));
 
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setEnabled(true);
-    manager_.setHighlightingTimeout(50); // Reduced from 100
+    manager_->setBuffer(&text_buffer_);
+    manager_->setHighlighter(mock_highlighter_);
+    manager_->setEnabled(true);
+    manager_->setHighlightingTimeout(50);
 
     std::atomic<bool> encounteredIssues(false);
-    std::vector<std::future<bool>> results;
+    std::vector<std::thread> threads;
 
     // Create reader threads
     for (size_t t = 0; t < READER_THREADS; ++t) {
-        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT]() {
+        threads.emplace_back([this, t, LINE_COUNT, READER_THREADS, OPERATIONS_PER_THREAD, &encounteredIssues]() {
             try {
-                for (int i = 0; i < 3; ++i) {
+                for (int i = 0; i < OPERATIONS_PER_THREAD && !encounteredIssues.load(); ++i) {
+                    // Calculate range for this thread to avoid overlaps
                     size_t startLine = (t * LINE_COUNT) / READER_THREADS;
                     size_t endLine = ((t + 1) * LINE_COUNT) / READER_THREADS - 1;
                     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-                    auto styles = manager_.getHighlightingStyles(startLine, endLine);
+                    
+                    // Get highlighting styles - this should not crash
+                    auto styles = manager_->getHighlightingStyles(startLine, endLine);
+                    
                     if (styles.size() != (endLine - startLine + 1)) {
-                        return false;
+                        encounteredIssues.store(true);
                     }
                 }
-                return true;
+            } catch (const std::exception& ex) {
+                std::cerr << "Reader thread exception: " << ex.what() << std::endl;
+                encounteredIssues.store(true);
             } catch (...) {
-                return false;
+                std::cerr << "Reader thread unknown exception" << std::endl;
+                encounteredIssues.store(true);
             }
-        }));
+        });
     }
 
     // Create writer threads
     for (size_t t = 0; t < WRITER_THREADS; ++t) {
-        results.push_back(std::async(std::launch::async, [this, t, LINE_COUNT]() {
+        threads.emplace_back([this, t, LINE_COUNT, OPERATIONS_PER_THREAD, &encounteredIssues]() {
             try {
-                for (int i = 0; i < OPERATIONS_PER_THREAD; ++i) {
+                for (int i = 0; i < OPERATIONS_PER_THREAD && !encounteredIssues.load(); ++i) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    
+                    // Perform different invalidation operations in sequence
                     switch (i % 3) {
                         case 0:
-                            manager_.invalidateLine(0);
+                            manager_->invalidateLine(0);
                             break;
                         case 1:
-                            manager_.invalidateLines(0, 1);
+                            manager_->invalidateLines(0, 1);
                             break;
                         case 2:
-                            manager_.invalidateAllLines();
+                            manager_->invalidateAllLines();
                             break;
                     }
                 }
-                return true;
+            } catch (const std::exception& ex) {
+                std::cerr << "Writer thread exception: " << ex.what() << std::endl;
+                encounteredIssues.store(true);
             } catch (...) {
-                return false;
+                std::cerr << "Writer thread unknown exception" << std::endl;
+                encounteredIssues.store(true);
             }
-        }));
+        });
     }
 
-    // Wait for all threads
-    for (auto& result : results) {
-        if (!result.get()) {
-            encounteredIssues = true;
+    // Wait for all threads to complete
+    for (auto& thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
         }
     }
 
-    EXPECT_FALSE(encounteredIssues);
-    manager_.setHighlightingTimeout(SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
+    EXPECT_FALSE(encounteredIssues.load());
+    manager_->setHighlightingTimeout(SyntaxHighlightingManager::DEFAULT_HIGHLIGHTING_TIMEOUT_MS);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
@@ -817,10 +841,10 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
     for (size_t i = 0; i < BUFFER_LINE_COUNT; ++i) {
         text_buffer_.addLine("Line " + std::to_string(i));
     }
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setEnabled(true);
-    manager_.invalidateAllLines();
+    manager_->setBuffer(&text_buffer_);
+    manager_->setHighlighter(mock_highlighter_);
+    manager_->setEnabled(true);
+    manager_->invalidateAllLines();
 
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
     ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
@@ -836,7 +860,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
                 current_enabled_state = !current_enabled_state;
-                manager_.setEnabled(current_enabled_state);
+                manager_->setEnabled(current_enabled_state);
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
             } catch (...) {
                 errors++;
@@ -850,7 +874,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
         threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, BUFFER_LINE_COUNT, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
-                    auto styles = manager_.getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
+                    auto styles = manager_->getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
                     std::this_thread::sleep_for(std::chrono::microseconds(100));
                 } catch (...) {
                     errors++;
@@ -881,10 +905,10 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
     for (size_t i = 0; i < BUFFER_LINE_COUNT; ++i) {
         text_buffer_.addLine("Line " + std::to_string(i));
     }
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setEnabled(true);
-    manager_.invalidateAllLines();
+    manager_->setBuffer(&text_buffer_);
+    manager_->setHighlighter(mock_highlighter_);
+    manager_->setEnabled(true);
+    manager_->invalidateAllLines();
 
     SyntaxStyle testStyle(0, 5, SyntaxColor::Keyword);
     ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
@@ -898,7 +922,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
     threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
-                manager_.setHighlightingTimeout(10 + i * 5); // Simple incremental timeout
+                manager_->setHighlightingTimeout(10 + i * 5); // Simple incremental timeout
                 std::this_thread::sleep_for(std::chrono::microseconds(70));
             } catch (...) {
                 errors++;
@@ -912,7 +936,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
         threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, BUFFER_LINE_COUNT, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
-                    auto styles = manager_.getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
+                    auto styles = manager_->getHighlightingStyles(0, std::min(size_t(1), BUFFER_LINE_COUNT - 1));
                     std::this_thread::sleep_for(std::chrono::microseconds(120));
                 } catch (...) {
                     errors++;
@@ -932,7 +956,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
     }
 
     EXPECT_EQ(errors.load(), 0);
-    manager_.setHighlightingTimeout(50);
+    manager_->setHighlightingTimeout(50);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
@@ -951,9 +975,9 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
     ON_CALL(*mock_highlighter_, highlightLine(testing::_, testing::_))
         .WillByDefault(ReturnStyleVector(default_style));
 
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(mock_highlighter_);
-    manager_.setEnabled(true);
+    manager_->setBuffer(&text_buffer_);
+    manager_->setHighlighter(mock_highlighter_);
+    manager_->setEnabled(true);
 
     std::atomic<bool> stop_flag(false);
     std::vector<std::thread> threads;
@@ -965,7 +989,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
                 const TextBuffer* buffer_to_set = use_buffer_A ? &text_buffer_ : &bufferB;
-                manager_.setBuffer(buffer_to_set);
+                manager_->setBuffer(buffer_to_set);
                 use_buffer_A = !use_buffer_A;
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             } catch (...) {
@@ -980,7 +1004,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
         threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
-                    auto styles = manager_.getHighlightingStyles(0, 0);
+                    auto styles = manager_->getHighlightingStyles(0, 0);
                     std::this_thread::sleep_for(std::chrono::microseconds(150));
                 } catch (...) {
                     errors++;
@@ -1000,7 +1024,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
     }
 
     EXPECT_EQ(errors.load(), 0);
-    manager_.setBuffer(&text_buffer_);
+    manager_->setBuffer(&text_buffer_);
 }
 
 // A highlighter that produces distinct styles based on its instance ID
@@ -1059,10 +1083,10 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
     auto highlighter1 = std::make_shared<DistinctStyleHighlighter>(1); // Will use color Keyword + 1
     auto highlighter2 = std::make_shared<DistinctStyleHighlighter>(2); // Will use color Keyword + 2
 
-    manager_.setBuffer(&text_buffer_);
-    manager_.setHighlighter(highlighter1);
-    manager_.setEnabled(true);
-    manager_.invalidateAllLines();
+    manager_->setBuffer(&text_buffer_);
+    manager_->setHighlighter(highlighter1);
+    manager_->setEnabled(true);
+    manager_->invalidateAllLines();
 
     std::atomic<bool> stop_flag(false);
     std::vector<std::thread> threads;
@@ -1075,7 +1099,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
                 auto highlighter_to_set = use_highlighter1 ? highlighter1 : highlighter2;
-                manager_.setHighlighter(highlighter_to_set);
+                manager_->setHighlighter(highlighter_to_set);
                 use_highlighter1 = !use_highlighter1;
                 std::this_thread::sleep_for(std::chrono::microseconds(70));
             } catch (...) {
@@ -1090,7 +1114,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
         threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
-                    auto styles = manager_.getHighlightingStyles(0, 1);
+                    auto styles = manager_->getHighlightingStyles(0, 1);
                     // Verify we got valid styles (not checking specific colors as they may change mid-read)
                     if (styles.size() != 2) {
                         errors++;
@@ -1119,9 +1143,9 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
     EXPECT_EQ(errors.load(), 0);
 
     // Final verification - set a known highlighter and verify its output
-    manager_.setHighlighter(highlighter1);
-    manager_.invalidateAllLines();
-    auto final_styles = manager_.getHighlightingStyles(0, 0);
+    manager_->setHighlighter(highlighter1);
+    manager_->invalidateAllLines();
+    auto final_styles = manager_->getHighlightingStyles(0, 0);
     ASSERT_EQ(final_styles.size(), 1);
     ASSERT_FALSE(final_styles[0].empty());
     // Highlighter1 should produce styles with color = Keyword + 1
@@ -1130,7 +1154,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
                                      (static_cast<int>(SyntaxColor::Operator) + 1)));
 
     // Reset to default highlighter for cleanup
-    manager_.setHighlighter(mock_highlighter_);
+    manager_->setHighlighter(mock_highlighter_);
 }
 
 TEST_F(SyntaxHighlightingManagerTest, CacheHitForUnmodifiedLine) {
@@ -1156,7 +1180,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheHitForUnmodifiedLine) {
     }
     
     // First call - should miss cache and call highlighter
-    auto styles1 = manager_.getHighlightingStyles(0, 1);
+    auto styles1 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles1.size(), 2);
     ASSERT_FALSE(styles1[0].empty());
     ASSERT_FALSE(styles1[1].empty());
@@ -1171,7 +1195,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheHitForUnmodifiedLine) {
         .Times(0);
     
     // Second call - should hit cache and not call highlighter
-    auto styles2 = manager_.getHighlightingStyles(0, 1);
+    auto styles2 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles2.size(), 2);
     ASSERT_FALSE(styles2[0].empty());
     ASSERT_FALSE(styles2[1].empty());
@@ -1209,7 +1233,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterLineInvalidation) {
     }
     
     // First call - should miss cache and call highlighter
-    auto styles1 = manager_.getHighlightingStyles(0, 1);
+    auto styles1 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles1.size(), 2);
     ASSERT_FALSE(styles1[0].empty());
     ASSERT_FALSE(styles1[1].empty());
@@ -1220,7 +1244,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterLineInvalidation) {
     testing::Mock::VerifyAndClearExpectations(mock_highlighter_.get());
     
     // Invalidate line 1 only
-    manager_.invalidateLine(1);
+    manager_->invalidateLine(1);
     
     // Set up expectations for second call - only line 1 should be rehighlighted
     EXPECT_CALL(*mock_highlighter_, highlightLine("", 0))
@@ -1230,7 +1254,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterLineInvalidation) {
         .WillOnce(ReturnStyleVector(testStyle2)); // Return different style to verify update
     
     // Second call - should miss cache for line 1 but hit for line 0
-    auto styles2 = manager_.getHighlightingStyles(0, 1);
+    auto styles2 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles2.size(), 2);
     ASSERT_FALSE(styles2[0].empty());
     ASSERT_FALSE(styles2[1].empty());
@@ -1273,7 +1297,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterBufferEdit) {
     }
     
     // First call - should miss cache and call highlighter
-    auto styles1 = manager_.getHighlightingStyles(0, 1);
+    auto styles1 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles1.size(), 2);
     ASSERT_FALSE(styles1[0].empty());
     ASSERT_FALSE(styles1[1].empty());
@@ -1285,7 +1309,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterBufferEdit) {
     
     // Modify the buffer content and invalidate the modified line
     text_buffer_.setLine(1, "Modified text");
-    manager_.invalidateLine(1);
+    manager_->invalidateLine(1);
     
     // Set up expectations for second call - only modified line should be rehighlighted
     EXPECT_CALL(*mock_highlighter_, highlightLine("", 0))
@@ -1295,7 +1319,7 @@ TEST_F(SyntaxHighlightingManagerTest, CacheMissAfterBufferEdit) {
         .WillOnce(ReturnStyleVector(testStyle2)); // Return different style to verify update
     
     // Second call - should miss cache for modified line but hit for unmodified line
-    auto styles2 = manager_.getHighlightingStyles(0, 1);
+    auto styles2 = manager_->getHighlightingStyles(0, 1);
     ASSERT_EQ(styles2.size(), 2);
     ASSERT_FALSE(styles2[0].empty());
     ASSERT_FALSE(styles2[1].empty());
@@ -1337,12 +1361,12 @@ TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
     const size_t BATCH_SIZE = 1000;
     for (size_t start = 0; start < NUM_LINES; start += BATCH_SIZE) {
         size_t end = std::min(start + BATCH_SIZE - 1, NUM_LINES - 1);
-        auto styles = manager_.getHighlightingStyles(start, end);
+        auto styles = manager_->getHighlightingStyles(start, end);
         ASSERT_EQ(styles.size(), end - start + 1);
     }
 
     // Verify the cache size is capped at MAX_CACHE_LINES
-    size_t cacheSize = manager_.getCacheSize();
+    size_t cacheSize = manager_->getCacheSize();
     EXPECT_LE(cacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
     EXPECT_GT(cacheSize, 0);
 
@@ -1350,18 +1374,18 @@ TEST_F(SyntaxHighlightingManagerTest, CacheGrowthAndMemoryBehavior) {
     // This tests our fix for handling lines beyond cache capacity
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
     size_t highLineEnd = highLineStart + 50; // Since NUM_LINES = MAX_CACHE_LINES + 100, this is within range
-    auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    auto styles1 = manager_->getHighlightingStyles(highLineStart, highLineEnd);
     
     // In this test, high line start (10000) is less than high line end (10050)
     // since NUM_LINES = MAX_CACHE_LINES + 100, so we expect styles to be returned
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
-    auto styles2 = manager_.getHighlightingStyles(0, 50);
+    auto styles2 = manager_->getHighlightingStyles(0, 50);
     EXPECT_EQ(styles2.size(), 51);
 
     // Verify cache size is still valid
-    size_t finalCacheSize = manager_.getCacheSize();
+    size_t finalCacheSize = manager_->getCacheSize();
     EXPECT_LE(finalCacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
     EXPECT_GT(finalCacheSize, 0);
 }
@@ -1383,11 +1407,11 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEntryLifetime) {
         }));
 
     // First request should trigger highlighting
-    auto styles1 = manager_.getHighlightingStyles(0, 1);
+    auto styles1 = manager_->getHighlightingStyles(0, 1);
     EXPECT_EQ(styles1.size(), 2);
 
     // Immediate second request should use cache
-    auto styles2 = manager_.getHighlightingStyles(0, 1);
+    auto styles2 = manager_->getHighlightingStyles(0, 1);
     EXPECT_EQ(styles2.size(), 2);
 
     // Note: We can't effectively test the CACHE_ENTRY_LIFETIME_MS timeout
@@ -1426,12 +1450,12 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEvictionAndCleanup) {
         size_t end = std::min(start + linesPerBatch - 1, NUM_LINES - 1);
         
         // Request highlighting styles to populate cache through normal mechanism
-        auto styles = manager_.getHighlightingStyles(start, end);
+        auto styles = manager_->getHighlightingStyles(start, end);
         ASSERT_EQ(styles.size(), end - start + 1);
     }
 
     // Verify the cache size is capped at MAX_CACHE_LINES
-    size_t cacheSize = manager_.getCacheSize();
+    size_t cacheSize = manager_->getCacheSize();
     EXPECT_LE(cacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
     EXPECT_GT(cacheSize, 0);
 
@@ -1439,18 +1463,18 @@ TEST_F(SyntaxHighlightingManagerTest, CacheEvictionAndCleanup) {
     // This tests our fix for handling lines beyond cache capacity
     size_t highLineStart = SyntaxHighlightingManager::MAX_CACHE_LINES;
     size_t highLineEnd = highLineStart + 50; // Since NUM_LINES = MAX_CACHE_LINES + 100, this is within range
-    auto styles1 = manager_.getHighlightingStyles(highLineStart, highLineEnd);
+    auto styles1 = manager_->getHighlightingStyles(highLineStart, highLineEnd);
     
     // In this test, high line start (10000) is less than high line end (10050)
     // since NUM_LINES = MAX_CACHE_LINES + 100, so we expect styles to be returned
     EXPECT_EQ(styles1.size(), highLineEnd - highLineStart + 1);
 
     // Third pass: Request some low-numbered lines to verify eviction and re-highlighting
-    auto styles2 = manager_.getHighlightingStyles(0, 50);
+    auto styles2 = manager_->getHighlightingStyles(0, 50);
     EXPECT_EQ(styles2.size(), 51);
 
     // Verify cache size is still valid
-    size_t finalCacheSize = manager_.getCacheSize();
+    size_t finalCacheSize = manager_->getCacheSize();
     EXPECT_LE(finalCacheSize, SyntaxHighlightingManager::MAX_CACHE_LINES);
     EXPECT_GT(finalCacheSize, 0);
     

@@ -23,6 +23,9 @@ target_link_libraries(EditorTest PRIVATE EditorLib GTest::gtest GTest::gtest_mai
 add_executable(TextBufferTest TextBufferTest.cpp)
 target_link_libraries(TextBufferTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
+add_executable(EditorApiExtensionsTest EditorApiExtensionsTest.cpp)
+target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+
 # Other test files for individual running
 add_executable(FutureFeatureTests FutureFeatureTests.cpp)
 target_link_libraries(FutureFeatureTests PRIVATE EditorLib GTest::gtest GTest::gtest_main)
@@ -52,6 +55,8 @@ add_executable(RunAllTests
     command_join_lines_test.cpp
     command_insert_text_test.cpp
     command_delete_char_test.cpp
+    command_backspace_test.cpp
+    command_forward_delete_test.cpp
     command_replace_test.cpp
     command_new_line_test.cpp
     command_delete_line_test.cpp
@@ -59,6 +64,10 @@ add_executable(RunAllTests
     command_find_replace_test.cpp
     command_compound_test.cpp
     syntax_highlighting_manager_test.cpp
+    TypeTextCommandTest.cpp
+    editor_commands_test.cpp
+    TextBufferTest.cpp
+    EditorApiExtensionsTest.cpp
 )
 
 # Add GMock to RunAllTests

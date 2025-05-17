@@ -3,10 +3,12 @@
 
 #include "Command.h"
 #include "Editor.h"
+#include "TextBuffer.h"
 #include <string>
 #include <utility>
 #include <iostream>
 #include <vector>
+#include <set>
 
 // InsertTextCommand - Handles insertion of text at current cursor position
 class InsertTextCommand : public Command {
@@ -31,42 +33,6 @@ private:
     size_t linePos_; // Line position for specified insertion
     size_t colPos_;  // Column position for specified insertion
     bool useSpecifiedPosition_; // Whether to use specified position or cursor position
-};
-
-// DeleteTextCommand - Handles deletion of text (backspace)
-// @deprecated - Use DeleteCharCommand(true) instead. This class is being phased out.
-class DeleteTextCommand : public Command {
-public:
-    DeleteTextCommand() = default;
-    
-    void execute(Editor& editor) override;
-    
-    void undo(Editor& editor) override;
-    
-    std::string getDescription() const override;
-    
-private:
-    std::string deletedText_;
-    size_t cursorLine_;
-    size_t cursorCol_;
-};
-
-// DeleteForwardCommand - Handles forward deletion (delete key)
-// @deprecated - Use DeleteCharCommand(false) instead. This class is being phased out.
-class DeleteForwardCommand : public Command {
-public:
-    DeleteForwardCommand() = default;
-    
-    void execute(Editor& editor) override;
-    
-    void undo(Editor& editor) override;
-    
-    std::string getDescription() const override;
-    
-private:
-    std::string deletedText_;
-    size_t cursorLine_;
-    size_t cursorCol_;
 };
 
 // NewLineCommand - Handles line splitting (Enter key)
@@ -362,9 +328,15 @@ private:
     bool executed_;
 };
 
-// DeleteCharCommand - Deletes a character (handles backspace or forward delete)
-// This is the consolidated replacement for DeleteTextCommand and DeleteForwardCommand.
-// Use this with isBackspace=true for backspace and isBackspace=false for forward delete.
+// DeleteCharCommand - Deletes a single character in either backspace or forward delete mode
+// This command handles both backspace (isBackspace=true) and forward delete (isBackspace=false) operations
+// when no selection is active. The command properly handles:
+// - Character deletion within a line
+// - Line joining when deleting at line boundaries
+// - Edge cases (buffer start/end)
+// 
+// NOTE: This command does not handle text selections. When a selection is active, the editor uses
+// ReplaceSelectionCommand("") through the Editor::deleteSelection() method instead.
 class DeleteCharCommand : public Command {
 public:
     DeleteCharCommand(bool isBackspace)

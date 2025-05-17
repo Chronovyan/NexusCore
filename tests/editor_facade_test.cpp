@@ -571,62 +571,46 @@ TEST_F(EditorFacadeTest, NewLineAndJoinOperations) {
     // Set up buffer with a single line
     setBufferContent("Line for newline testing.");
     editor.setCursor(0, 9); // After "Line for "
-    
-    // Test newLine - directly manipulate buffer instead of calling editor.newLine()
+
+    // Test newLine - use the newLine method instead of direct buffer manipulation
     {
-        // Split the line at cursor position
-        std::string firstPart = editor.getBuffer().getLine(0).substr(0, 9);  // "Line for "
-        std::string secondPart = editor.getBuffer().getLine(0).substr(9);    // "newline testing."
-        
-        // Update buffer
-        editor.getBuffer().setLine(0, firstPart);
-        editor.getBuffer().insertLine(1, secondPart);
-        editor.setCursor(1, 0);
-        
+        editor.newLine();
+
         // Verify state
         EXPECT_EQ(2, editor.getBuffer().lineCount());
         EXPECT_EQ("Line for ", editor.getBuffer().getLine(0));
         EXPECT_EQ("newline testing.", editor.getBuffer().getLine(1));
         verifyCursorPosition(1, 0);
     }
-    
-    // Test join lines - directly manipulate buffer instead of calling editor.joinWithNextLine()
+
+    // Test join lines - use joinWithNextLine instead of direct buffer manipulation
     {
-        // Join the two lines
-        std::string joinedLine = editor.getBuffer().getLine(0) + editor.getBuffer().getLine(1);
-        editor.getBuffer().setLine(0, joinedLine);
-        editor.getBuffer().deleteLine(1);
-        editor.setCursor(0, 9);
-        
+        editor.setCursor(0, editor.getBuffer().getLine(0).length());
+        editor.joinWithNextLine();
+
         // Verify state
         EXPECT_EQ(1, editor.getBuffer().lineCount());
         EXPECT_EQ("Line for newline testing.", editor.getBuffer().getLine(0));
         verifyCursorPosition(0, 9);
     }
-    
-    // Test newLine at beginning of line - directly manipulate buffer
+
+    // Test newLine at beginning of line
     {
         editor.setCursor(0, 0);
-        
-        // Insert empty line at beginning
-        editor.getBuffer().insertLine(0, "");
-        editor.setCursor(1, 0);
-        
+        editor.newLine();
+
         // Verify state
         EXPECT_EQ(2, editor.getBuffer().lineCount());
         EXPECT_EQ("", editor.getBuffer().getLine(0));
         EXPECT_EQ("Line for newline testing.", editor.getBuffer().getLine(1));
         verifyCursorPosition(1, 0);
     }
-    
-    // Test newLine at end of line - directly manipulate buffer
+
+    // Test newLine at end of line
     {
         editor.setCursor(1, editor.getBuffer().getLine(1).length());
-        
-        // Add empty line at end
-        editor.getBuffer().insertLine(2, "");
-        editor.setCursor(2, 0);
-        
+        editor.newLine();
+
         // Verify state
         EXPECT_EQ(3, editor.getBuffer().lineCount());
         EXPECT_EQ("", editor.getBuffer().getLine(0));
