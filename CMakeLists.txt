@@ -5,44 +5,56 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Prefer not to use compiler-specific extensions
 
-include(FetchContent)
+# Instead of using FetchContent, use local repositories
+# ImGui path
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
+# GLFW path
+set(GLFW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
+# JSON path
+set(JSON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/json)
+# CPR path
+set(CPR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/cpr)
+# GoogleTest path
+set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/googletest)
 
-# Fetch Dear ImGui
-FetchContent_Declare(
-  imgui
-  GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG v1.89.9
-)
-FetchContent_MakeAvailable(imgui)
+# --- GLFW (required for ImGui) ---
+option(GLFW_BUILD_EXAMPLES OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_BUILD_DOCS OFF)
+option(GLFW_INSTALL OFF)
+add_subdirectory(${GLFW_DIR})
+
+# --- CPR (C++ Requests) for HTTP ---
+set(CPR_BUILD_TESTS OFF CACHE INTERNAL "Build CPR tests")
+set(CPR_BUILD_TESTS_SSL OFF CACHE INTERNAL "Build CPR SSL tests")
+set(CPR_ENABLE_CERTIFICATE_OPTIMIZATION OFF CACHE INTERNAL "Enable certificate optimization (CPR)")
+set(CPR_FORCE_USE_SYSTEM_CURL OFF CACHE INTERNAL "Use system curl instead of built-in")
+add_subdirectory(${CPR_DIR})
+
+# --- nlohmann/json for JSON parsing ---
+add_subdirectory(${JSON_DIR})
 
 # Create ImGui library with GLFW and OpenGL3 backends
 set(IMGUI_SOURCES
-  ${imgui_SOURCE_DIR}/imgui.cpp
-  ${imgui_SOURCE_DIR}/imgui_draw.cpp
-  ${imgui_SOURCE_DIR}/imgui_tables.cpp
-  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-  ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-  ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+  ${IMGUI_DIR}/imgui.cpp
+  ${IMGUI_DIR}/imgui_draw.cpp
+  ${IMGUI_DIR}/imgui_tables.cpp
+  ${IMGUI_DIR}/imgui_widgets.cpp
+  ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+  ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# --- GLFW (required for ImGui) ---
-FetchContent_Declare(
-  glfw
-  GIT_REPOSITORY https://github.com/glfw/glfw.git
-  GIT_TAG 3.3.8
+# Create a separate static library for ImGui
+add_library(imgui_lib STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui_lib PUBLIC 
+  ${IMGUI_DIR}
+  ${IMGUI_DIR}/backends
 )
-set(GLFW_BUILD_EXAMPLES OFF CACHE INTERNAL "Build the GLFW example programs")
-set(GLFW_BUILD_TESTS OFF CACHE INTERNAL "Build the GLFW test programs")
-set(GLFW_BUILD_DOCS OFF CACHE INTERNAL "Build the GLFW documentation")
-set(GLFW_INSTALL OFF CACHE INTERNAL "Generate installation target")
-FetchContent_MakeAvailable(glfw)
+target_link_libraries(imgui_lib PUBLIC glfw)
 
-add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC 
-  ${imgui_SOURCE_DIR}
-  ${imgui_SOURCE_DIR}/backends
-)
-target_link_libraries(imgui PUBLIC glfw)
+# Find OpenGL for ImGui backend
+find_package(OpenGL REQUIRED)
+target_link_libraries(imgui_lib PRIVATE OpenGL::GL)
 
 # --- Editor Library (EditorLib) ---
 # Source files for the static library (all .cpp from src/ except main.cpp)
@@ -88,12 +100,35 @@ target_link_libraries(TextEditor PRIVATE EditorLib)
 add_executable(AITextEditor
     src/AITextEditorApp.cpp
     src/UIModel.h
+    src/OpenAI_API_Client.cpp
+    src/OpenAI_API_Client.h
+    src/IOpenAI_API_Client.h
+    src/OpenAI_API_Client_types.h
+    src/MockOpenAI_API_Client.cpp
+    src/MockOpenAI_API_Client.h
+    src/AIAgentOrchestrator.cpp
+    src/AIAgentOrchestrator.h
+    src/WorkspaceManager.cpp
+    src/WorkspaceManager.h
 )
-target_link_libraries(AITextEditor PRIVATE EditorLib imgui)
+# Link against imgui_lib instead of compiling ImGui sources directly
+target_link_libraries(AITextEditor PRIVATE 
+    EditorLib 
+    imgui_lib 
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+    OpenGL::GL
+)
 
-# Find OpenGL for ImGui backend
-find_package(OpenGL REQUIRED)
-target_link_libraries(AITextEditor PRIVATE OpenGL::GL)
+# --- OpenAI API Client Test Executable ---
+add_executable(OpenAIClientTest
+    src/OpenAIClientTest.cpp
+    src/OpenAI_API_Client.cpp
+    src/OpenAI_API_Client.h
+    src/IOpenAI_API_Client.h
+    src/OpenAI_API_Client_types.h
+)
+target_link_libraries(OpenAIClientTest PRIVATE cpr::cpr nlohmann_json::nlohmann_json)
 
 # Link against pthreads if on a POSIX system
 if(UNIX AND NOT APPLE)
@@ -105,23 +140,13 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # --- GoogleTest Integration ---
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG    release-1.12.1 # Or a version compatible with your main project
-)
-# For GTest versions >= 1.10, set these to avoid building tests/samples if not needed
-# For older versions, these might not be available or might be named differently.
 set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
 set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
 # Depending on GTest version, these might also be useful:
 set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
 set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
-# set(gtest_build_tests OFF CACHE INTERNAL "Disable building gtest's own tests")
-# set(gtest_build_samples OFF CACHE INTERNAL "Disable building gtest's samples")
-# set(gmock_build_tests OFF CACHE INTERNAL "Disable building gmock's own tests")
 
-FetchContent_MakeAvailable(googletest)
+add_subdirectory(${GTEST_DIR})
 
 # --- Testing ---
 enable_testing()
