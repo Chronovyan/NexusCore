@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <ctime>
 
 namespace ai_editor {
 
@@ -13,14 +14,17 @@ struct ChatMessage {
     Sender senderType;
     std::string senderName;
     std::string text;
+    std::time_t timestamp;
     
     // Constructor for easy creation
     ChatMessage(Sender type, const std::string& name, const std::string& content)
-        : senderType(type), senderName(name), text(content) {}
+        : senderType(type), senderName(name), text(content), timestamp(std::time(nullptr)) {}
 };
 
 // Represents a file in the project
 struct ProjectFile {
+    enum class Status { PLANNED, GENERATING, GENERATED, MODIFIED, ERROR };
+    
     std::string filename;
     std::string status;  // e.g., "Modified", "Planned", "New", etc.
     std::string description;
@@ -28,6 +32,18 @@ struct ProjectFile {
     // Constructor for easy creation
     ProjectFile(const std::string& name, const std::string& fileStatus, const std::string& desc = "")
         : filename(name), status(fileStatus), description(desc) {}
+        
+    // Helper method to convert Status enum to string
+    static std::string StatusToString(Status status) {
+        switch (status) {
+            case Status::PLANNED: return "Planned";
+            case Status::GENERATING: return "Generating...";
+            case Status::GENERATED: return "Generated";
+            case Status::MODIFIED: return "Modified";
+            case Status::ERROR: return "Error";
+            default: return "Unknown";
+        }
+    }
 };
 
 // The central data model for the UI
@@ -53,12 +69,52 @@ struct UIModel {
         chatHistory.emplace_back(
             ChatMessage::Sender::AI,
             "AI",
-            "Hello! How can I help you design your project today?"
+            "Hello! How can I help you design your project today? You can ask me to create files, "
+            "explain concepts, or help with coding tasks."
         );
         
         // Add some example files
-        projectFiles.emplace_back("main.cpp", "Planned");
-        projectFiles.emplace_back("CMakeLists.txt", "Planned");
+        projectFiles.emplace_back(
+            "main.cpp", 
+            ProjectFile::StatusToString(ProjectFile::Status::PLANNED),
+            "Main entry point for the application"
+        );
+        
+        projectFiles.emplace_back(
+            "CMakeLists.txt", 
+            ProjectFile::StatusToString(ProjectFile::Status::PLANNED),
+            "Build configuration file"
+        );
+        
+        projectFiles.emplace_back(
+            "README.md", 
+            ProjectFile::StatusToString(ProjectFile::Status::GENERATING),
+            "Project documentation"
+        );
+    }
+    
+    // Add a user message and return it
+    ChatMessage& AddUserMessage(const std::string& text) {
+        chatHistory.emplace_back(ChatMessage::Sender::USER, "You", text);
+        return chatHistory.back();
+    }
+    
+    // Add an AI message and return it
+    ChatMessage& AddAIMessage(const std::string& text) {
+        chatHistory.emplace_back(ChatMessage::Sender::AI, "AI", text);
+        return chatHistory.back();
+    }
+    
+    // Add a system message and return it
+    ChatMessage& AddSystemMessage(const std::string& text) {
+        chatHistory.emplace_back(ChatMessage::Sender::SYSTEM, "System", text);
+        return chatHistory.back();
+    }
+    
+    // Add a project file and return it
+    ProjectFile& AddProjectFile(const std::string& filename, ProjectFile::Status status, const std::string& description = "") {
+        projectFiles.emplace_back(filename, ProjectFile::StatusToString(status), description);
+        return projectFiles.back();
     }
 };
 
