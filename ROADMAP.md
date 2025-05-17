@@ -113,19 +113,70 @@ This roadmap outlines the strategic plan to enhance the text editor, prioritizin
 - [ ] Finalize build system for release configurations (all platforms).
 - [ ] Consider packaging/distribution methods.
 
+## Phase 5: AI-First TextEditor Pivot (Current Focus)
+*Focus: Reimagining the editor as an AI-orchestrated development environment where the user primarily provides high-level guidance.*
+
+### 5.1 Vision & High-Level Planning (Completed)
+- [x] Define core vision: AI-first TextEditor where the user acts as designer/architect, and the AI agent is the primary coder.
+- [x] Establish MVP scope: Generate, compile, (basic) test, and run a simple "Greeter App" in C++ from high-level user prompts.
+- [x] Design UI concept: Chat-like interface for prompts and feedback, sidebar for generated files, and global status display.
+- [x] Select core technologies: C++ for application logic, Dear ImGui for UI, OpenAI API for AI agent integration.
+- [x] Design editor-AI orchestration workflow: Step-by-step dialogue model including planning, preview, generation, compilation, testing, and execution.
+- [x] Define UI-backend interaction model: `UIModel` struct to bridge backend state (managed by `AIAgentOrchestrator`) with ImGui rendering loop.
+
+### 5.2 UI Implementation (Completed)
+- [x] Implement foundational C++/Dear ImGui application shell.
+- [x] Create placeholder UI layout with conversation view, chat input, file sidebar, and status display.
+- [x] Develop the `UIModel` data structure for state management.
+- [x] Implement basic UI interactivity (send button functionality, scrolling, etc.).
+- [x] Add theming and styling for a cohesive visual experience.
+
+### 5.3 AI Agent Integration (In Progress)
+- [x] Implement OpenAI API integration with the application.
+- [x] Create API client wrapper with proper error handling and response parsing.
+- [~] Develop the `AIAgentOrchestrator` to manage AI interactions.
+- [ ] Create tool schemas for AI function calling.
+- [ ] Implement JSON parsing for AI responses.
+- [ ] Develop prompt templates for different stages of the development workflow.
+- [ ] Create a natural language error parser for simplified compilation feedback.
+
+### 5.4 C++ Development Pipeline (Planned)
+- [ ] Implement project generation from AI output.
+- [ ] Create a CMake project builder for AI-generated code.
+- [ ] Develop a compilation system with error handling.
+- [ ] Implement a basic test runner for generated code.
+- [ ] Create an execution environment for the compiled application.
+- [ ] Develop file system utilities for managing generated projects.
+
+### 5.5 MVP Completion & Testing (Planned)
+- [ ] Complete end-to-end workflow for generating a simple application.
+- [ ] Test with various user prompts and complexity levels.
+- [ ] Optimize prompt templates based on testing results.
+- [ ] Implement error recovery and fallback mechanisms.
+- [ ] Document the AI-first workflow and usage guidelines.
+
 ## Key Success Criteria
 
+### Original TextEditor Goals
 - Handles large files (e.g., 10MB+) without noticeable operational slowdowns.
 - No crashes or hangs during typical and stress-test usage.
 - Command history memory usage is bounded and configurable.
 - Syntax highlighting does not freeze or significantly lag the UI.
 - Text input and core editing commands are consistently responsive.
 
+### AI-First TextEditor Goals
+- Successful generation of compilable C++ code from natural language prompts.
+- Intuitive UI that abstracts away code details for non-technical users.
+- Meaningful, conversational feedback throughout the development process.
+- Reliable error handling and recovery in the AI-orchestrated workflow.
+- Lightweight application with responsive performance.
+
 ## High-Level Timeline
 
 - **Phase 1 (Core Backend):** Largely complete. Ongoing refinements as needed.
-- **Phase 2 (Testing & Validation):** Next major focus.
-- **Phase 3 (GUI Integration):** To commence after robust backend validation.
-- **Phase 4 (Final Polishing):** Prior to any potential "1.0" release.
+- **Phase 2 (Testing & Validation):** Partial completion, paused for AI-first pivot.
+- **Phase 3 (GUI Integration):** Paused for AI-first pivot.
+- **Phase 4 (Final Polishing):** Paused for AI-first pivot.
+- **Phase 5 (AI-First TextEditor):** Current focus, actively in development.
 
 *(This roadmap is a living document and will be updated as the project progresses.)* 
