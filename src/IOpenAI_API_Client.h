@@ -6,6 +6,9 @@
 #include <vector>
 #include <cstdint>
 #include <chrono>
+#include <atomic>
+#include <mutex>
+#include <map>
 
 namespace ai_editor {
 
@@ -20,26 +23,123 @@ struct ApiRetryPolicy {
     // Maximum number of retry attempts
     int maxRetries = 3;
     
-    // Initial backoff delay in milliseconds
+    // Initial backoff duration before first retry
     std::chrono::milliseconds initialBackoff = std::chrono::milliseconds(1000);
     
-    // Maximum backoff delay in milliseconds
-    std::chrono::milliseconds maxBackoff = std::chrono::milliseconds(15000);
+    // Maximum backoff duration for any retry
+    std::chrono::milliseconds maxBackoff = std::chrono::milliseconds(30000);
     
-    // Exponential factor for backoff (e.g., 2.0 means each retry waits twice as long)
+    // Backoff multiplier (exponential backoff factor)
     double backoffFactor = 2.0;
     
-    // Jitter factor (0.0-1.0) to add randomness to backoff times to prevent thundering herd
-    double jitterFactor = 0.2;
+    // Jitter factor to add randomness to backoff (-jitterFactor to +jitterFactor)
+    double jitterFactor = 0.1;
     
-    // Whether to retry on rate limiting errors (HTTP 429)
+    // Whether to retry on rate limit errors (HTTP 429)
     bool retryOnRateLimit = true;
     
-    // Whether to retry on server errors (HTTP 500-599)
+    // Whether to retry on server errors (HTTP 5xx)
     bool retryOnServerErrors = true;
     
-    // Whether to retry on network/connection errors
+    // Whether to retry on network errors
     bool retryOnNetworkErrors = true;
+};
+
+// Structure to track retry statistics for monitoring and diagnostics
+struct RetryStatistics {
+    // Total number of requests that required at least one retry
+    std::atomic<size_t> totalRequestsWithRetries{0};
+    
+    // Total number of retries performed across all requests
+    std::atomic<size_t> totalRetryAttempts{0};
+    
+    // Number of requests that succeeded after retries
+    std::atomic<size_t> successfulRetriedRequests{0};
+    
+    // Number of requests that failed even after all retries
+    std::atomic<size_t> failedAfterRetries{0};
+    
+    // Map of retry reasons to counts
+    std::map<std::string, size_t> retryReasonCounts;
+    mutable std::mutex retryReasonMutex;
+    
+    // Record retry statistics for a completed request
+    void recordRetryAttempt(const std::string& reason, bool ultimateSuccess, int attempts) {
+        if (attempts > 0) {
+            totalRequestsWithRetries++;
+            totalRetryAttempts += attempts;
+            
+            if (ultimateSuccess) {
+                successfulRetriedRequests++;
+            } else {
+                failedAfterRetries++;
+            }
+            
+            // Update retry reason counts
+            std::lock_guard<std::mutex> lock(retryReasonMutex);
+            retryReasonCounts[reason]++;
+        }
+    }
+    
+    // Get a formatted report of retry statistics
+    std::string getReport() const {
+        std::string report = "Retry Statistics:\n";
+        report += "  Total requests with retries: " + std::to_string(totalRequestsWithRetries) + "\n";
+        report += "  Total retry attempts: " + std::to_string(totalRetryAttempts) + "\n";
+        report += "  Successful after retries: " + std::to_string(successfulRetriedRequests) + "\n";
+        report += "  Failed after retries: " + std::to_string(failedAfterRetries) + "\n";
+        
+        // Add retry reason breakdown
+        {
+            std::lock_guard<std::mutex> lock(retryReasonMutex);
+            report += "  Retry reasons:\n";
+            for (const auto& [reason, count] : retryReasonCounts) {
+                report += "    " + reason + ": " + std::to_string(count) + "\n";
+            }
+        }
+        
+        return report;
+    }
+    
+    // Reset all statistics
+    void reset() {
+        totalRequestsWithRetries = 0;
+        totalRetryAttempts = 0;
+        successfulRetriedRequests = 0;
+        failedAfterRetries = 0;
+        
+        std::lock_guard<std::mutex> lock(retryReasonMutex);
+        retryReasonCounts.clear();
+    }
+    
+    // Make RetryStatistics movable but not copyable
+    RetryStatistics() = default;
+    RetryStatistics(RetryStatistics&& other) noexcept 
+        : totalRequestsWithRetries(other.totalRequestsWithRetries.load()),
+          totalRetryAttempts(other.totalRetryAttempts.load()),
+          successfulRetriedRequests(other.successfulRetriedRequests.load()),
+          failedAfterRetries(other.failedAfterRetries.load()) {
+        std::lock_guard<std::mutex> lock(other.retryReasonMutex);
+        retryReasonCounts = std::move(other.retryReasonCounts);
+    }
+    
+    RetryStatistics& operator=(RetryStatistics&& other) noexcept {
+        if (this != &other) {
+            totalRequestsWithRetries = other.totalRequestsWithRetries.load();
+            totalRetryAttempts = other.totalRetryAttempts.load();
+            successfulRetriedRequests = other.successfulRetriedRequests.load();
+            failedAfterRetries = other.failedAfterRetries.load();
+            
+            std::lock_guard<std::mutex> lock1(retryReasonMutex);
+            std::lock_guard<std::mutex> lock2(other.retryReasonMutex);
+            retryReasonCounts = std::move(other.retryReasonCounts);
+        }
+        return *this;
+    }
+    
+    // Delete copy constructor and assignment operator
+    RetryStatistics(const RetryStatistics&) = delete;
+    RetryStatistics& operator=(const RetryStatistics&) = delete;
 };
 
 /**
@@ -101,6 +201,18 @@ public:
      * @return True if automatic retries are enabled, false otherwise
      */
     virtual bool isRetryEnabled() const = 0;
+    
+    /**
+     * @brief Get retry statistics
+     * 
+     * @return The current retry statistics
+     */
+    virtual RetryStatistics getRetryStatistics() const = 0;
+    
+    /**
+     * @brief Reset retry statistics
+     */
+    virtual void resetRetryStatistics() = 0;
 };
 
 } // namespace ai_editor
