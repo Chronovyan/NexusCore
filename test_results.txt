@@ -1,4 +1,0 @@
-Testing C++ compilation...
-Running test: Basic Compilation Test
-Test successful!
-All tests completed!
