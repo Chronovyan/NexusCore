@@ -27,13 +27,18 @@ public:
     explicit WorkspaceManager(const std::string& workspacePath);
     
     /**
+     * @brief Virtual destructor for proper cleanup in derived classes
+     */
+    virtual ~WorkspaceManager() = default;
+    
+    /**
      * @brief Write content to a file
      * 
      * @param filename The name of the file to write
      * @param content The content to write to the file
      * @return bool True if the file was written successfully
      */
-    bool writeFile(const std::string& filename, const std::string& content);
+    virtual bool writeFile(const std::string& filename, const std::string& content);
     
     /**
      * @brief Check if a file exists in the workspace
@@ -41,14 +46,14 @@ public:
      * @param filename The name of the file to check
      * @return bool True if the file exists
      */
-    bool fileExists(const std::string& filename) const;
+    virtual bool fileExists(const std::string& filename) const;
     
     /**
      * @brief Get a list of all files in the workspace
      * 
      * @return std::vector<std::string> A list of filenames
      */
-    std::vector<std::string> listFiles() const;
+    virtual std::vector<std::string> listFiles() const;
     
     /**
      * @brief Get the content of a file
@@ -56,14 +61,14 @@ public:
      * @param filename The name of the file to read
      * @return std::string The content of the file, or empty string if the file doesn't exist
      */
-    std::string readFile(const std::string& filename) const;
+    virtual std::string readFile(const std::string& filename) const;
     
     /**
      * @brief Get the workspace path
      * 
      * @return std::string The base directory for the workspace
      */
-    std::string getWorkspacePath() const { return workspacePath_; }
+    virtual std::string getWorkspacePath() const { return workspacePath_; }
 
 private:
     // The base directory for the workspace
