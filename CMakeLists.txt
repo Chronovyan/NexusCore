@@ -133,6 +133,9 @@ add_executable(OpenAIClientTest
     src/OpenAI_API_Client.h
     src/IOpenAI_API_Client.h
     src/OpenAI_API_Client_types.h
+    src/EditorError.cpp
+    src/MockOpenAI_API_Client.cpp
+    src/MockOpenAI_API_Client.h
 )
 target_link_libraries(OpenAIClientTest PRIVATE cpr::cpr nlohmann_json::nlohmann_json)
 
