@@ -26,10 +26,16 @@ namespace test {
 
 // Helper function to read API key from .env file
 std::string readApiKeyFromEnvFile() {
-    // Try .env file in current directory
-    std::ifstream envFile(".env");
+    // Try .env file in the project root directory first (two levels up from build/tests)
+    std::ifstream envFile("../../.env");
     
-    // If can't open, try parent directory (for build subdirectories)
+    // If can't open, try current directory
+    if (!envFile.is_open()) {
+        std::cout << "No .env in root directory, trying current directory..." << std::endl;
+        envFile.open(".env");
+    }
+    
+    // If still can't open, try parent directory (for build subdirectories)
     if (!envFile.is_open()) {
         std::cout << "No .env in current directory, trying parent directory..." << std::endl;
         envFile.open("../.env");
@@ -100,7 +106,16 @@ std::string readApiKeyFromEnvFile() {
 class OpenAIApiEndpointsTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // First try to get API key from environment variable
+        // First try to read from .env file
+        apiKeyStr = readApiKeyFromEnvFile();
+        if (!apiKeyStr.empty()) {
+            apiKeySource = ".env file";
+            std::cout << "Using API key from .env file" << std::endl;
+            std::cout << "API key prefix: " << apiKeyStr.substr(0, 5) << std::endl;
+            return;
+        }
+
+        // If not found in .env file, try environment variable
         #ifdef _MSC_VER
         // Windows-specific safe environment variable handling
         char* apiKey = nullptr;
@@ -110,6 +125,8 @@ protected:
         if (err == 0 && apiKey != nullptr) {
             apiKeyStr = std::string(apiKey);
             apiKeySource = "environment variable";
+            std::cout << "Using API key from environment variable" << std::endl;
+            std::cout << "Full API key from env: " << apiKeyStr << std::endl;
             free(apiKey);
         }
         #else
@@ -118,24 +135,19 @@ protected:
         if (apiKey) {
             apiKeyStr = std::string(apiKey);
             apiKeySource = "environment variable";
+            std::cout << "Using API key from environment variable" << std::endl;
+            std::cout << "Full API key from env: " << apiKeyStr << std::endl;
         }
         #endif
-        
-        // If not found in environment, try to read from .env file
-        if (apiKeyStr.empty()) {
-            apiKeyStr = readApiKeyFromEnvFile();
-            if (!apiKeyStr.empty()) {
-                apiKeySource = ".env file";
-            }
-        }
 
         // Skip tests if API key not available
         if (apiKeyStr.empty()) {
             GTEST_SKIP() << "Skipping test because OPENAI_API_KEY is not set in environment or .env file";
         }
         
-        std::cout << "Using API key from " << apiKeySource << std::endl;
-        std::cout << "API key prefix: " << apiKeyStr.substr(0, 5) << std::endl;
+        if (!apiKeyStr.empty()) {
+            std::cout << "API key prefix: " << apiKeyStr.substr(0, 5) << std::endl;
+        }
     }
 
     std::string apiKeyStr;
