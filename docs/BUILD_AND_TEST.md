@@ -116,6 +116,61 @@ To pass GoogleTest flags (e.g., filtering tests):
 ./tests/runTests --gtest_filter=MyTestSuite.*
 ```
 
+## Testing with Mock Objects
+
+The application uses dependency injection and mock objects to facilitate unit testing without external dependencies.
+
+### OpenAI API Client Mocking
+
+The `MockOpenAI_API_Client` class provides a testable implementation of the `IOpenAI_API_Client` interface:
+
+```cpp
+#include "MockOpenAI_API_Client.h"
+#include <gtest/gtest.h>
+
+TEST(AIAgentOrchestratorTest, HandlesMessageGeneration) {
+    // Create a mock client and configure responses
+    auto mockClient = std::make_unique<MockOpenAI_API_Client>();
+    mockClient->setNextResponse({
+        .id = "mock-response-123",
+        .model = "gpt-4o-mock",
+        .content = "This is a test response",
+        .success = true
+    });
+    
+    // Initialize the component under test with the mock
+    UIModel uiModel;
+    AIAgentOrchestrator orchestrator(std::move(mockClient), uiModel);
+    
+    // Execute the test
+    orchestrator.sendMessage("Test prompt");
+    
+    // Verify expected behavior
+    EXPECT_EQ(mockClient->getChatCompletionCallCount(), 1);
+    auto messages = mockClient->getRecordedMessages();
+    EXPECT_EQ(messages.size(), 1);
+    EXPECT_EQ(messages[0].back().content, "Test prompt");
+}
+```
+
+### Benefits of Mock Testing
+
+1. **Deterministic Results**: Tests produce consistent results independent of network or API availability.
+2. **Faster Execution**: No network calls or waiting for API responses.
+3. **Isolated Testing**: Components can be tested in isolation without dependencies.
+4. **Scenario Testing**: Easily test error handling and edge cases by configuring the mock responses.
+
+### Creating New Mock Objects
+
+When adding new external dependencies:
+
+1. Create an interface class (`IMyService`) for the dependency.
+2. Implement the concrete class (`MyService`) for production use.
+3. Create a mock implementation (`MockMyService`) for testing.
+4. Use dependency injection to allow swapping implementations.
+
+This pattern ensures testable, maintainable code that can evolve independently of external services.
+
 ## Quick Summary of Commands (from project root)
 
 ```bash

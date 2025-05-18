@@ -57,6 +57,11 @@ struct UIModel {
     // Files in the project
     std::vector<ProjectFile> projectFiles;
     
+    // OpenAI API key
+    std::string apiKey;
+    bool apiKeyValid = false;
+    char apiKeyBuffer[1024] = {0};
+    
     // Buffer for user input text (for ImGui)
     char userInputBuffer[4096] = {0};
     
@@ -67,10 +72,9 @@ struct UIModel {
     UIModel() : currentGlobalStatus("Idle") {
         // Add a welcome message
         chatHistory.emplace_back(
-            ChatMessage::Sender::AI,
-            "AI",
-            "Hello! How can I help you design your project today? You can ask me to create files, "
-            "explain concepts, or help with coding tasks."
+            ChatMessage::Sender::SYSTEM,
+            "System",
+            "Welcome to AI-First TextEditor! Please enter your OpenAI API key in the settings to enable AI features."
         );
         
         // Add some example files
@@ -115,6 +119,21 @@ struct UIModel {
     ProjectFile& AddProjectFile(const std::string& filename, ProjectFile::Status status, const std::string& description = "") {
         projectFiles.emplace_back(filename, ProjectFile::StatusToString(status), description);
         return projectFiles.back();
+    }
+    
+    // Validate and set the API key
+    bool SetApiKey(const std::string& key) {
+        // Simple validation: API key should be non-empty and at least 20 chars
+        if (key.length() >= 20) {
+            apiKey = key;
+            apiKeyValid = true;
+            AddSystemMessage("API key saved. You can now use AI features.");
+            return true;
+        }
+        
+        AddSystemMessage("Invalid API key format. Please check your key and try again.");
+        apiKeyValid = false;
+        return false;
     }
 };
 

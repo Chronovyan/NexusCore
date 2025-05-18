@@ -26,6 +26,19 @@ target_link_libraries(TextBufferTest PRIVATE EditorLib GTest::gtest GTest::gtest
 add_executable(EditorApiExtensionsTest EditorApiExtensionsTest.cpp)
 target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
+# AI Agent Orchestrator tests
+add_executable(AIAgentOrchestratorTest 
+    AIAgentOrchestratorTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
+    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
+)
+target_link_libraries(AIAgentOrchestratorTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    nlohmann_json::nlohmann_json
+)
+
 # Other test files for individual running
 add_executable(FutureFeatureTests FutureFeatureTests.cpp)
 target_link_libraries(FutureFeatureTests PRIVATE EditorLib GTest::gtest GTest::gtest_main)
@@ -42,6 +55,7 @@ target_link_libraries(ManualUndoRedoTest PRIVATE EditorLib GTest::gtest GTest::g
 # Main test executor with all tests
 add_executable(RunAllTests
     RunAllTests.cpp
+    MockUtils.cpp
     ComprehensiveFunctionalityTest.cpp
     PerformanceBenchmark.cpp
     editor_file_io_test.cpp
@@ -68,10 +82,20 @@ add_executable(RunAllTests
     editor_commands_test.cpp
     TextBufferTest.cpp
     EditorApiExtensionsTest.cpp
+    AIAgentOrchestratorTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
+    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
 )
 
 # Add GMock to RunAllTests
-target_link_libraries(RunAllTests PRIVATE EditorLib GTest::gtest GTest::gtest_main GTest::gmock)
+target_link_libraries(RunAllTests PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main 
+    GTest::gmock
+    GTest::gmock_main
+    nlohmann_json::nlohmann_json
+)
 
 # Add test discovery via CTest
 include(GoogleTest)

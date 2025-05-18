@@ -31,6 +31,12 @@ set(CPR_ENABLE_CERTIFICATE_OPTIMIZATION OFF CACHE INTERNAL "Enable certificate o
 set(CPR_FORCE_USE_SYSTEM_CURL OFF CACHE INTERNAL "Use system curl instead of built-in")
 add_subdirectory(${CPR_DIR})
 
+# Disable unsafe buffer usage warning for CPR (third-party library)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    get_target_property(CPR_INCLUDE_DIRS cpr INCLUDE_DIRECTORIES)
+    target_compile_options(cpr PRIVATE -Wno-unsafe-buffer-usage)
+endif()
+
 # --- nlohmann/json for JSON parsing ---
 add_subdirectory(${JSON_DIR})
 
@@ -145,6 +151,9 @@ set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
 # Depending on GTest version, these might also be useful:
 set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
 set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
+
+# Force GoogleTest to use the same runtime library as the rest of the project
+set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib")
 
 add_subdirectory(${GTEST_DIR})
 
