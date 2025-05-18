@@ -1,9 +1,11 @@
 #include "OpenAI_API_Client.h"
+#include "MockOpenAI_API_Client.h"
 #include "AppDebugLog.h"
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <fstream>
 
 #ifdef _MSC_VER
 #include <cstdlib>
@@ -11,54 +13,63 @@
 
 using namespace ai_editor;
 
+// Helper function to read API key from .env file
+std::string readApiKeyFromEnvFile() {
+    LOG_DEBUG("Attempting to read .env file...");
+    
+    // Try .env file in the current directory first
+    std::ifstream envFile(".env");
+    
+    // If can't open, try parent directory
+    if (!envFile.is_open()) {
+        LOG_DEBUG("No .env in current directory, trying parent directory...");
+        envFile.open("../.env");
+    }
+    
+    // If still can't open, try project root directory
+    if (!envFile.is_open()) {
+        LOG_DEBUG("No .env in parent directory, trying project root...");
+        envFile.open("../../.env");
+    }
+    
+    if (!envFile.is_open()) {
+        LOG_ERROR("Failed to open .env file");
+        return "";
+    }
+    
+    std::string line;
+    std::string apiKey;
+    
+    while (std::getline(envFile, line)) {
+        // Look for OPENAI_API_KEY=
+        if (line.find("OPENAI_API_KEY=") == 0) {
+            apiKey = line.substr(15); // Length of "OPENAI_API_KEY="
+            LOG_DEBUG("Found API key in .env file");
+            return apiKey;
+        }
+    }
+    
+    LOG_ERROR("API key not found in .env file");
+    return "";
+}
+
 int main(int argc, char** argv) {
     // Initialize debug logging
     LOG_INIT("OpenAIClientTest");
     LOG_DEBUG("Starting OpenAIClientTest");
     
     try {
-        // Check for API key
-        LOG_DEBUG("Checking for API key environment variable");
+        // Get API key (for real client, not used for mock)
+        std::string apiKeyStr = "test-api-key"; // Placeholder, not needed for mock
         
-        #ifdef _MSC_VER
-        // Windows-specific safe environment variable handling
-        char* apiKey = nullptr;
-        size_t len = 0;
-        errno_t err = _dupenv_s(&apiKey, &len, "OPENAI_API_KEY");
+        // Create a mock OpenAI API client instead of real one
+        LOG_DEBUG("Creating mock OpenAI API client");
+        MockOpenAI_API_Client client;
+        LOG_DEBUG("Mock OpenAI API client created");
         
-        if (err != 0 || apiKey == nullptr) {
-            LOG_ERROR("OPENAI_API_KEY environment variable not set");
-            std::cerr << "ERROR: OPENAI_API_KEY environment variable not set!" << std::endl;
-            std::cerr << "Please set your OpenAI API key as an environment variable." << std::endl;
-            return 1;
-        }
-        
-        // Store a copy of the key
-        std::string apiKeyStr(apiKey);
-        
-        // Free the memory allocated by _dupenv_s
-        free(apiKey);
-        apiKey = nullptr;
-        #else
-        // Standard getenv for other platforms
-        char* apiKey = std::getenv("OPENAI_API_KEY");
-        if (!apiKey) {
-            LOG_ERROR("OPENAI_API_KEY environment variable not set");
-            std::cerr << "ERROR: OPENAI_API_KEY environment variable not set!" << std::endl;
-            std::cerr << "Please set your OpenAI API key as an environment variable." << std::endl;
-            return 1;
-        }
-        
-        // Store a copy of the key
-        std::string apiKeyStr(apiKey);
-        #endif
-        
-        LOG_DEBUG("API key found");
-        
-        // Create the OpenAI API client
-        LOG_DEBUG("Creating OpenAI API client");
-        OpenAI_API_Client client(apiKeyStr);
-        LOG_DEBUG("OpenAI API client created");
+        // Set up a mock successful response
+        LOG_DEBUG("Setting up mock response");
+        client.setResponseContent("I'm a helpful assistant and I can provide information, answer questions, and assist with various tasks. How can I help you today?");
         
         // Create a simple request
         LOG_DEBUG("Creating API request");
@@ -68,8 +79,8 @@ int main(int argc, char** argv) {
         
         std::vector<ApiToolDefinition> tools; // Empty tools vector for now
         
-        // Send request to OpenAI
-        LOG_DEBUG("Sending request to OpenAI API");
+        // Send request to mock OpenAI client
+        LOG_DEBUG("Sending request to mock OpenAI API");
         ApiResponse response = client.sendChatCompletionRequest(
             messages,
             tools,
