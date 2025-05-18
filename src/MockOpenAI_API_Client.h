@@ -19,7 +19,7 @@ public:
     /**
      * @brief Constructor
      */
-    MockOpenAI_API_Client() = default;
+    MockOpenAI_API_Client() : retry_enabled_(true), retry_policy_() {}
     
     /**
      * @brief Mock implementation of sendChatCompletionRequest
@@ -100,6 +100,44 @@ public:
         std::swap(response_queue_, empty);
     }
     
+    /**
+     * @brief Set the retry policy for API requests
+     * 
+     * @param policy The retry policy configuration to use
+     */
+    void setRetryPolicy(const ApiRetryPolicy& policy) override {
+        retry_policy_ = policy;
+        last_set_retry_policy_ = policy; // Store for test inspection
+    }
+    
+    /**
+     * @brief Get the current retry policy
+     * 
+     * @return The current retry policy configuration
+     */
+    ApiRetryPolicy getRetryPolicy() const override {
+        return retry_policy_;
+    }
+    
+    /**
+     * @brief Enable or disable automatic retries
+     * 
+     * @param enable Whether to enable automatic retries
+     */
+    void enableRetries(bool enable) override {
+        retry_enabled_ = enable;
+        last_retry_enabled_value_ = enable; // Store for test inspection
+    }
+    
+    /**
+     * @brief Check if automatic retries are enabled
+     * 
+     * @return True if automatic retries are enabled, false otherwise
+     */
+    bool isRetryEnabled() const override {
+        return retry_enabled_;
+    }
+    
     // Stored request parameters for test inspection
     std::vector<ApiChatMessage> last_sent_messages_;
     std::vector<ApiToolDefinition> last_sent_tools_;
@@ -107,9 +145,17 @@ public:
     float last_sent_temperature_ = 0.0f;
     int32_t last_sent_max_tokens_ = 0;
     
+    // Store retry-related calls for test inspection
+    ApiRetryPolicy last_set_retry_policy_;
+    bool last_retry_enabled_value_ = true;
+    
 private:
     // Queue of responses to return
     std::queue<ApiResponse> response_queue_;
+    
+    // Retry-related members
+    bool retry_enabled_;
+    ApiRetryPolicy retry_policy_;
 };
 
 } // namespace ai_editor
