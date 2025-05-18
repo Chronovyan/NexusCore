@@ -65,3 +65,4 @@ Thumbs.db
 # Other
 large_generated_file.txt
 *.log 
+.env

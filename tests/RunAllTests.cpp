@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-
-// Include all test function declarations
+#include "gmock/gmock.h"
+#include "MockUtils.h"
 #include "TestDeclarations.h"
 #include "../src/SyntaxHighlightingManager.h"
 #include "../src/EditorError.h"

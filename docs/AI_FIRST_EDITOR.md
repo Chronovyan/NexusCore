@@ -15,13 +15,15 @@ The application features a modern Dear ImGui-based interface with:
 - **Chat Input Panel**: Multi-line input for user prompts and instructions
 - **Global Status Display**: Shows the current state of the application
 
-### 2. AI Integration (OpenAI_API_Client.h/cpp)
+### 2. AI Integration (IOpenAI_API_Client.h, OpenAI_API_Client.h/cpp, MockOpenAI_API_Client.h/cpp)
 
 Integration with OpenAI's API enables:
 
+- **Modular API Client Architecture**: Interface-based design with concrete and mock implementations
 - **Chat Completion Requests**: Communication with models like GPT-4o
 - **Function Calling**: Allows the AI to call predefined tools to manipulate the codebase
 - **Asynchronous Processing**: Handles API communication without blocking the UI
+- **Testable Design**: Mock implementation facilitates unit testing without API dependencies
 
 ### 3. Development Pipeline (In Progress)
 
@@ -48,7 +50,8 @@ The system orchestrates a complete development workflow:
 The AI-First TextEditor is currently in active development with:
 
 - ✅ Basic UI framework implemented
-- ✅ OpenAI API client integration
+- ✅ OpenAI API client integration with interface-based design
+- ✅ Mock OpenAI client for testing
 - 🔄 AI agent orchestration system
 - ⏳ Project generation from natural language
 - ⏳ Compilation and execution pipeline
