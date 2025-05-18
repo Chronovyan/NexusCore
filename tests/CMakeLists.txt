@@ -26,12 +26,25 @@ target_link_libraries(TextBufferTest PRIVATE EditorLib GTest::gtest GTest::gtest
 add_executable(EditorApiExtensionsTest EditorApiExtensionsTest.cpp)
 target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
-# AI Agent Orchestrator tests
-add_executable(AIAgentOrchestratorTest 
-    AIAgentOrchestratorTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
-    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
+# OpenAI API endpoints test
+add_executable(OpenAIApiEndpointsTest 
+  OpenAIApiEndpointsTest.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
 )
+target_link_libraries(OpenAIApiEndpointsTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# AI Agent Orchestrator tests
+add_executable(AIAgentOrchestratorTest AIAgentOrchestratorTest.cpp)
 target_link_libraries(AIAgentOrchestratorTest PRIVATE 
     EditorLib 
     GTest::gtest 
@@ -83,8 +96,6 @@ add_executable(RunAllTests
     TextBufferTest.cpp
     EditorApiExtensionsTest.cpp
     AIAgentOrchestratorTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
-    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
 )
 
 # Add GMock to RunAllTests
@@ -100,5 +111,6 @@ target_link_libraries(RunAllTests PRIVATE
 # Add test discovery via CTest
 include(GoogleTest)
 gtest_discover_tests(RunAllTests)
+gtest_discover_tests(OpenAIApiEndpointsTest)
 
 message(STATUS "Configured test executables for TextEditor") 

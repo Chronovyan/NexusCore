@@ -18,9 +18,6 @@
 
 using namespace ai_editor;
 
-// Forward declarations
-bool saveApiKeyToEnvFile(const std::string& apiKey, const std::string& filePath);
-
 // Function to read API key from .env file
 std::string readApiKeyFromEnvFile(const std::string& filePath) {
     std::ifstream envFile(filePath);
@@ -48,62 +45,6 @@ std::string readApiKeyFromEnvFile(const std::string& filePath) {
     }
     
     return apiKey;
-}
-
-// Function to save API key to .env file
-bool saveApiKeyToEnvFile(const std::string& apiKey, const std::string& filePath) {
-    // First check if file exists and if it contains the API key line
-    bool fileExists = std::filesystem::exists(filePath);
-    bool keyExists = false;
-    std::string fileContent;
-    
-    if (fileExists) {
-        std::ifstream envFile(filePath);
-        if (envFile.is_open()) {
-            std::string line;
-            std::regex keyPattern("OPENAI_API_KEY=.*");
-            
-            while (std::getline(envFile, line)) {
-                if (std::regex_match(line, keyPattern)) {
-                    // Replace existing key line
-                    fileContent += "OPENAI_API_KEY=" + apiKey + "\n";
-                    keyExists = true;
-                } else {
-                    // Keep existing line
-                    fileContent += line + "\n";
-                }
-            }
-            envFile.close();
-        } else {
-            LOG_ERROR("Could not read .env file for updating: " + filePath);
-            return false;
-        }
-    }
-    
-    // Now write the updated content or create a new file
-    std::ofstream envFileOut(filePath);
-    if (!envFileOut.is_open()) {
-        LOG_ERROR("Could not open .env file for writing: " + filePath);
-        return false;
-    }
-    
-    if (keyExists) {
-        // Write the updated content
-        envFileOut << fileContent;
-    } else {
-        // Either new file or file without API key, add the key
-        if (!fileContent.empty()) {
-            envFileOut << fileContent;
-            if (fileContent.back() != '\n') {
-                envFileOut << "\n";
-            }
-        }
-        envFileOut << "OPENAI_API_KEY=" + apiKey << std::endl;
-    }
-    
-    envFileOut.close();
-    LOG_DEBUG("API key saved to .env file");
-    return true;
 }
 
 // Simple callback for text input when user clicks "Send"
@@ -351,8 +292,6 @@ int main(int argc, char** argv) {
                 if (ImGui::BeginMenu("Settings")) {
                     if (ImGui::MenuItem("API Key Settings")) {
                         // Open API key settings
-                        uiModel.showApiKeyDialog = true;
-                        LOG_DEBUG("API Key Settings menu item clicked, showApiKeyDialog set to true");
                     }
                     ImGui::EndMenu();
                 }
@@ -438,48 +377,6 @@ int main(int argc, char** argv) {
             
             ImGui::End();
             
-            // API Key Settings dialog - this is a separate window that appears when showApiKeyDialog is true
-            if (uiModel.showApiKeyDialog) {
-                ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-                ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
-                
-                if (ImGui::Begin("API Key Settings", &uiModel.showApiKeyDialog, ImGuiWindowFlags_AlwaysAutoResize)) {
-                    ImGui::Text("Enter your OpenAI API Key:");
-                    ImGui::InputText("##apikey", uiModel.apiKeyBuffer, IM_ARRAYSIZE(uiModel.apiKeyBuffer), ImGuiInputTextFlags_Password);
-                    
-                    ImGui::Spacing();
-                    ImGui::Text("API keys start with 'sk-' and are ~50 characters long.");
-                    ImGui::Text("You can find your API key in the OpenAI dashboard.");
-                    
-                    ImGui::Spacing();
-                    if (ImGui::Button("Save", ImVec2(120, 0))) {
-                        std::string newKey = uiModel.apiKeyBuffer;
-                        if (uiModel.SetApiKey(newKey)) {
-                            // Update the API client with the new key
-                            apiClient = OpenAI_API_Client(newKey);
-                            
-                            // Save to .env file
-                            if (saveApiKeyToEnvFile(newKey, ".env")) {
-                                LOG_DEBUG("API key saved to .env file");
-                                uiModel.AddSystemMessage("API key saved successfully to .env file.");
-                            } else {
-                                LOG_ERROR("Failed to save API key to .env file");
-                                uiModel.AddSystemMessage("Warning: API key set but could not save to .env file.");
-                            }
-                            
-                            uiModel.showApiKeyDialog = false;
-                        }
-                    }
-                    
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                        uiModel.showApiKeyDialog = false;
-                    }
-                    
-                    ImGui::End();
-                }
-            }
-
             // Rendering
             ImGui::Render();
             int display_w, display_h;
