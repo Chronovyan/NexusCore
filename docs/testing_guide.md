@@ -23,6 +23,63 @@ cmake --build . --target RunAllTests
 .\tests\RunAllTests.exe --gtest_filter=OpenAIApiEndpointsTest.HandleAuthenticationErrors
 ```
 
+### Advanced Test Filtering
+
+GoogleTest provides powerful filtering capabilities to run exactly the tests you need:
+
+```bash
+# Run all tests from a specific test suite
+.\tests\RunAllTests.exe --gtest_filter=AIAgentOrchestratorTest.*
+
+# Run multiple test suites
+.\tests\RunAllTests.exe --gtest_filter=UIModelTest.*:EditorCommandsTest.*
+
+# Run tests matching a pattern
+.\tests\RunAllTests.exe --gtest_filter=*FileContent*
+
+# Exclude specific tests using negative patterns
+.\tests\RunAllTests.exe --gtest_filter=AIAgentOrchestratorTest.*-*.ProcessWriteFileContentWithMoreFiles
+
+# Run only disabled/skipped tests (those with DISABLED_ prefix or using GTEST_SKIP())
+.\tests\RunAllTests.exe --gtest_also_run_disabled_tests
+
+# List all test names without running them
+.\tests\RunAllTests.exe --gtest_list_tests
+
+# Run tests in random order (helps detect interdependencies)
+.\tests\RunAllTests.exe --gtest_shuffle
+```
+
+These filtering options can be combined with other GoogleTest flags like `--gtest_repeat=N` to run tests multiple times or `--gtest_brief=1` for less verbose output.
+
+### Test Output Control and Parallel Execution
+
+Control the verbosity and method of test output:
+
+```bash
+# Generate XML output for CI systems
+.\tests\RunAllTests.exe --gtest_output=xml:test_results.xml
+
+# Generate JSON output
+.\tests\RunAllTests.exe --gtest_output=json:test_results.json
+
+# Reduce output verbosity
+.\tests\RunAllTests.exe --gtest_brief=1
+
+# Show colors in console output
+.\tests\RunAllTests.exe --gtest_color=yes
+
+# Show test execution time
+.\tests\RunAllTests.exe --gtest_print_time=1
+```
+
+For large test suites, parallel execution can significantly reduce total execution time:
+
+```bash
+# Run tests in parallel (recommended only for tests without interdependencies)
+.\tests\RunAllTests.exe --gtest_filter=* --gtest_stream_result_to=localhost:8080
+```
+
 ### Run Individual Test Executables
 
 ```bash
@@ -185,4 +242,41 @@ For command line:
 ```bash
 # Run with verbose output
 .\tests\RunAllTests.exe --gtest_filter=FailingTest* --gtest_also_run_disabled_tests --gtest_print_time
+```
+
+### Debugging Test Failures
+
+When tests fail, being able to focus on specific tests and get detailed output is essential:
+
+```bash
+# Run just the failing tests with more detailed output
+.\tests\RunAllTests.exe --gtest_filter=FailingTest.* --gtest_break_on_failure
+
+# Increase verbosity to see exactly what's happening
+.\tests\RunAllTests.exe --gtest_filter=FailingTest.* --gtest_catch_exceptions=0
+
+# Repeat a flaky test until it fails, then break
+.\tests\RunAllTests.exe --gtest_filter=FlakyTest.* --gtest_repeat=-1 --gtest_break_on_failure
+
+# Show all assertions, even the passing ones
+.\tests\RunAllTests.exe --gtest_filter=FailingTest.* --gtest_also_run_disabled_tests --gtest_print_time
+```
+
+For debugging complex test fixtures or multi-step tests, you can temporarily add progress statements:
+
+```cpp
+TEST_F(ComplexTest, FailingScenario) {
+    std::cout << "Starting test setup..." << std::endl;
+    
+    // Setup code
+    
+    std::cout << "Setup complete, executing critical operation..." << std::endl;
+    
+    // Critical operation that might be failing
+    
+    std::cout << "Operation complete, verifying results..." << std::endl;
+    
+    // Assertions that are failing
+    EXPECT_TRUE(condition) << "Debug info: " << someVariable;
+}
 ``` 

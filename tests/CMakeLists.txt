@@ -130,19 +130,19 @@ add_executable(RunAllTests
     editor_commands_test.cpp
     TextBufferTest.cpp
     EditorApiExtensionsTest.cpp
-    # Temporarily exclude tests with complex dependencies
-    # AIAgentOrchestratorTest.cpp
-    # OpenAISchemaValidationTest.cpp
-    # OpenAIApiErrorHandlingTest.cpp
-    # ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
-    # ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
-    # ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
-    # ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
-    # ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
-    # ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
-    # ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.h
-    # ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
-    # ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.h
+    AIAgentOrchestratorTest.cpp
+    OpenAISchemaValidationTest.cpp
+    OpenAIApiErrorHandlingTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
+    ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
+    ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+    ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+    ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
+    ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.cpp
+    ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.h
+    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.h
 )
 
 # Add GMock to RunAllTests
@@ -153,6 +153,7 @@ target_link_libraries(RunAllTests PRIVATE
     GTest::gmock
     GTest::gmock_main
     nlohmann_json::nlohmann_json
+    cpr::cpr
 )
 
 # Add test discovery via CTest
