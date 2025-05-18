@@ -65,13 +65,31 @@ void AIAgentOrchestrator::handleSubmitUserPrompt(const std::string& userInput)
         "language", "string", "Programming language for the project", true
     });
     
-    proposePlanTool.function.parameters.push_back({
-        "files", "array", "List of files to be created with their descriptions", true
-    });
+    // Create a parameter for files with proper items definition
+    ApiFunctionParameter filesParam;
+    filesParam.name = "files";
+    filesParam.type = "array";
+    filesParam.description = "List of files to be created with their descriptions";
+    filesParam.required = true;
+    filesParam.items_type = "object";
+    filesParam.items_properties = {
+        {"filename", "string", "Name of the file to create", true},
+        {"description", "string", "Purpose and contents of the file", true}
+    };
+    proposePlanTool.function.parameters.push_back(filesParam);
     
-    proposePlanTool.function.parameters.push_back({
-        "steps", "array", "Ordered steps to implement the project", true
-    });
+    // Create a parameter for steps with proper items definition
+    ApiFunctionParameter stepsParam;
+    stepsParam.name = "steps";
+    stepsParam.type = "array";
+    stepsParam.description = "Ordered steps to implement the project";
+    stepsParam.required = true;
+    stepsParam.items_type = "object";
+    stepsParam.items_properties = {
+        {"step_number", "integer", "The sequence number of this step", true},
+        {"description", "string", "What to do in this step", true}
+    };
+    proposePlanTool.function.parameters.push_back(stepsParam);
     
     proposePlanTool.function.parameters.push_back({
         "description", "string", "Brief description of the project's purpose and functionality", true
@@ -83,9 +101,14 @@ void AIAgentOrchestrator::handleSubmitUserPrompt(const std::string& userInput)
     ApiToolDefinition askClarificationTool("ask_user_for_clarification",
         "Ask the user for clarification about their request when requirements are unclear.");
     
-    askClarificationTool.function.parameters.push_back({
-        "questions", "array", "List of specific questions for the user", true
-    });
+    // Create a parameter for questions with proper items definition
+    ApiFunctionParameter questionsParam;
+    questionsParam.name = "questions";
+    questionsParam.type = "array";
+    questionsParam.description = "List of specific questions for the user";
+    questionsParam.required = true;
+    questionsParam.items_type = "string";
+    askClarificationTool.function.parameters.push_back(questionsParam);
     
     askClarificationTool.function.parameters.push_back({
         "context", "string", "Explanation of why clarification is needed", true
@@ -285,9 +308,14 @@ void AIAgentOrchestrator::handleSubmitUserFeedback(const std::string& userFeedba
     ApiToolDefinition askClarificationTool("ask_user_for_clarification",
         "Ask the user for clarification about their request when requirements are unclear.");
     
-    askClarificationTool.function.parameters.push_back({
-        "questions", "array", "List of specific questions for the user", true
-    });
+    // Create a parameter for questions with proper items definition
+    ApiFunctionParameter questionsParam;
+    questionsParam.name = "questions";
+    questionsParam.type = "array";
+    questionsParam.description = "List of specific questions for the user";
+    questionsParam.required = true;
+    questionsParam.items_type = "string";
+    askClarificationTool.function.parameters.push_back(questionsParam);
     
     askClarificationTool.function.parameters.push_back({
         "context", "string", "Explanation of why clarification is needed", true
@@ -481,9 +509,14 @@ void AIAgentOrchestrator::handleSubmitUserApprovalOfPreview(const std::string& u
     ApiToolDefinition askClarificationTool("ask_user_for_clarification",
         "Ask the user for clarification about their request when requirements are unclear.");
     
-    askClarificationTool.function.parameters.push_back({
-        "questions", "array", "List of specific questions for the user", true
-    });
+    // Create a parameter for questions with proper items definition
+    ApiFunctionParameter questionsParam;
+    questionsParam.name = "questions";
+    questionsParam.type = "array";
+    questionsParam.description = "List of specific questions for the user";
+    questionsParam.required = true;
+    questionsParam.items_type = "string";
+    askClarificationTool.function.parameters.push_back(questionsParam);
     
     askClarificationTool.function.parameters.push_back({
         "context", "string", "Explanation of why clarification is needed", true
@@ -578,7 +611,7 @@ void AIAgentOrchestrator::handleSubmitUserApprovalOfPreview(const std::string& u
         uiModel_.AddSystemMessage("Error communicating with AI: " + response.error_message);
         
         // Update the global status
-        uiModel_.currentGlobalStatus = "Error from AI while generating file content.";
+        uiModel_.currentGlobalStatus = "Error from AI.";
         
         // Update the orchestrator state
         orchestratorState_ = OrchestratorState::ERROR_STATE;
@@ -615,7 +648,7 @@ bool AIAgentOrchestrator::processProposePlanToolCall(const ApiToolCall& toolCall
             uiModel_.AddAIMessage("**Files to create**:");
             
             for (const auto& file : argsJson["files"]) {
-                std::string fileName = file["name"];
+                std::string fileName = file["filename"];
                 std::string fileDesc = file["description"];
                 
                 // Add to UI model's project files
@@ -632,7 +665,7 @@ bool AIAgentOrchestrator::processProposePlanToolCall(const ApiToolCall& toolCall
             
             int stepNumber = 1;
             for (const auto& step : argsJson["steps"]) {
-                std::string stepDesc = step;
+                std::string stepDesc = step["description"];
                 uiModel_.AddAIMessage(std::to_string(stepNumber) + ". " + stepDesc);
                 stepNumber++;
             }
@@ -840,7 +873,7 @@ std::string AIAgentOrchestrator::determineNextFileToGenerate() const
     // If we have the plan JSON, check the files array
     if (lastPlanJson_.contains("files") && lastPlanJson_["files"].is_array()) {
         for (const auto& file : lastPlanJson_["files"]) {
-            std::string filename = file["name"];
+            std::string filename = file["filename"];
             
             // Check if this file has already been generated
             bool alreadyGenerated = false;
@@ -999,9 +1032,14 @@ void AIAgentOrchestrator::requestNextFileOrCompilation(
     ApiToolDefinition askClarificationTool("ask_user_for_clarification",
         "Ask the user for clarification about their request when requirements are unclear.");
     
-    askClarificationTool.function.parameters.push_back({
-        "questions", "array", "List of specific questions for the user", true
-    });
+    // Create a parameter for questions with proper items definition
+    ApiFunctionParameter questionsParam;
+    questionsParam.name = "questions";
+    questionsParam.type = "array";
+    questionsParam.description = "List of specific questions for the user";
+    questionsParam.required = true;
+    questionsParam.items_type = "string";
+    askClarificationTool.function.parameters.push_back(questionsParam);
     
     askClarificationTool.function.parameters.push_back({
         "context", "string", "Explanation of why clarification is needed", true

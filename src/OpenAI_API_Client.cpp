@@ -71,6 +71,37 @@ public:
                             {"description", param.description}
                         };
                         
+                        // Add items definition for array parameters
+                        if (param.type == "array" && !param.items_type.empty()) {
+                            json itemsJson;
+                            itemsJson["type"] = param.items_type;
+                            
+                            // If it's an object type with properties
+                            if (param.items_type == "object" && !param.items_properties.empty()) {
+                                json propertiesJson = json::object();
+                                std::vector<std::string> requiredItemProps;
+                                
+                                for (const auto& prop : param.items_properties) {
+                                    propertiesJson[prop.name] = {
+                                        {"type", prop.type},
+                                        {"description", prop.description}
+                                    };
+                                    
+                                    if (prop.required) {
+                                        requiredItemProps.push_back(prop.name);
+                                    }
+                                }
+                                
+                                itemsJson["properties"] = propertiesJson;
+                                
+                                if (!requiredItemProps.empty()) {
+                                    itemsJson["required"] = requiredItemProps;
+                                }
+                            }
+                            
+                            parametersJson["properties"][param.name]["items"] = itemsJson;
+                        }
+                        
                         if (param.required) {
                             requiredParams.push_back(param.name);
                         }

@@ -61,6 +61,7 @@ struct UIModel {
     std::string apiKey;
     bool apiKeyValid = false;
     char apiKeyBuffer[1024] = {0};
+    bool showApiKeyDialog = false; // Flag to control API key dialog visibility
     
     // Buffer for user input text (for ImGui)
     char userInputBuffer[4096] = {0};

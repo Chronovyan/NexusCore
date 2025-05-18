@@ -29,6 +29,25 @@ struct ApiFunctionParameter {
     std::string type;  // e.g., "string", "integer", "boolean"
     std::string description;
     bool required = false;
+    
+    // For array type parameters
+    std::string items_type;  // The type of items in the array (e.g., "object", "string")
+    
+    // For object type items in an array
+    struct Property {
+        std::string name;
+        std::string type;
+        std::string description;
+        bool required;
+    };
+    std::vector<Property> items_properties;  // Properties of object items
+    
+    // Constructor for simple parameters
+    ApiFunctionParameter() = default;
+    
+    // Constructor for basic parameters
+    ApiFunctionParameter(const std::string& name, const std::string& type, const std::string& description, bool required)
+        : name(name), type(type), description(description), required(required) {}
 };
 
 // Represents a tool definition the AI can call
