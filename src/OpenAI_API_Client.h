@@ -3,6 +3,7 @@
 
 #include "IOpenAI_API_Client.h"
 #include "OpenAI_API_Client_types.h"
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 #include <optional>
@@ -82,6 +83,17 @@ public:
      * @return True if automatic retries are enabled, false otherwise
      */
     bool isRetryEnabled() const override;
+    
+    // Retry statistics methods
+    RetryStatistics getRetryStatistics() const override;
+    void resetRetryStatistics() override;
+    
+    // Generate headers and signature
+    static nlohmann::json generateChatRequestBodyWithSystemAndUserMessage(
+        const std::string& systemMessage,
+        const std::string& userPrompt,
+        const std::string& model = "gpt-3.5-turbo"
+    );
     
 private:
     // Implementation details hidden for PIMPL pattern

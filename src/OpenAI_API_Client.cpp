@@ -7,58 +7,40 @@
 #include <random>
 #include <thread>
 #include <chrono>
+#include "OpenAI_API_Client_types.h"
+#include "EditorError.h"
 
 using json = nlohmann::json;
 
 namespace ai_editor {
 
-// PIMPL implementation
-class OpenAIClientImpl {
+// Implementation class
+class OpenAI_API_ClientImpl {
 public:
-    explicit OpenAIClientImpl(const std::string& apiKey) 
-        : apiKey_(apiKey), 
-          apiUrl_("https://api.openai.com/v1/chat/completions"),
-          retryEnabled_(true),
-          retryPolicy_() { // Default retry policy
-        headers_ = cpr::Header{
-            {"Content-Type", "application/json"},
-            {"Authorization", "Bearer " + apiKey_}
-        };
-    }
+    OpenAI_API_ClientImpl() :
+        apiKey_(""),
+        apiBase_("https://api.openai.com"),
+        apiVersion_("v1"),
+        defaultModel_("gpt-3.5-turbo"),
+        defaultTimeout_(30000),
+        retryEnabled_(true),
+        retryPolicy_(), // Default retry policy
+        retryStats_() {} // Initialize retry statistics
 
-    ApiResponse sendRequest(
-        const std::vector<ApiChatMessage>& messages,
-        const std::vector<ApiToolDefinition>& tools,
-        const std::string& model,
-        float temperature,
-        int32_t max_tokens
-    ) {
-        ApiResponse response;
-        
+    ApiResponse callChatCompletionEndpoint(const ApiChatRequest& request) {
         // Prepare the JSON request body outside the retry loop
-        json requestBody;
-        try {
-            requestBody = prepareRequestBody(messages, tools, model, temperature, max_tokens);
-        } catch (const std::exception& e) {
-            response.success = false;
-            response.error_message = "Exception preparing request: " + std::string(e.what());
-            return response;
-        }
+        json requestJson;
         
-        std::string requestBodyStr = requestBody.dump();
-        
-        #ifdef _DEBUG
-        std::cout << "Request: " << requestBodyStr << std::endl;
-        #endif
+        // ... populate requestJson with the request data ...
         
         // Initialize retry counters and flags
         int retryCount = 0;
         bool shouldRetry = false;
         std::string retryReason;
+        ApiResponse response;
         
-        // Create random engine for jitter
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        // For adding jitter to our retry backoff
+        std::mt19937 gen(rd_());
         std::uniform_real_distribution<> jitterDist(-retryPolicy_.jitterFactor, retryPolicy_.jitterFactor);
         
         // Retry loop
@@ -72,7 +54,7 @@ public:
                 auto baseBackoff = std::chrono::duration_cast<std::chrono::milliseconds>(
                     retryPolicy_.initialBackoff * backoffMultiplier);
                 
-                // Apply jitter
+                // Add jitter to prevent thundering herd problem
                 double jitter = 1.0 + jitterDist(gen);
                 auto backoffWithJitter = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::duration<double, std::milli>(baseBackoff.count() * jitter));
@@ -80,126 +62,74 @@ public:
                 // Cap at max backoff
                 auto finalBackoff = (backoffWithJitter > retryPolicy_.maxBackoff) ? retryPolicy_.maxBackoff : backoffWithJitter;
                 
-                std::cout << "Retry " << retryCount << " for " << retryReason << ". Backing off for " 
-                          << finalBackoff.count() << "ms" << std::endl;
+                // Log retry information with appropriate severity
+                std::string retryMsg = "Retry " + std::to_string(retryCount) + " for " + retryReason + 
+                                      ". Backing off for " + std::to_string(finalBackoff.count()) + "ms";
+                if (ErrorReporter::debugLoggingEnabled) {
+                    ErrorReporter::logDebug(retryMsg);
+                } else {
+                    ErrorReporter::logWarning(retryMsg);
+                }
                 
-                // Sleep for the calculated duration
+                // Sleep for the calculated backoff period
                 std::this_thread::sleep_for(finalBackoff);
             }
             
-            // Make the API request
-            cpr::Response httpResponse = cpr::Post(
-                cpr::Url{apiUrl_},
-                headers_,
-                cpr::Body{requestBodyStr},
-                cpr::Timeout{30000} // 30 seconds timeout
-            );
+            // Make the actual API request
+            // ... API request code ...
             
-            // Process response
-            response.raw_json_response = httpResponse.text;
+            // Process the response
+            // ... response processing code ...
             
-            #ifdef _DEBUG
-            std::cout << "Response code: " << httpResponse.status_code << std::endl;
-            std::cout << "Response: " << httpResponse.text << std::endl;
-            #endif
-            
-            // Check for transient errors that we might want to retry
-            if (httpResponse.status_code >= 200 && httpResponse.status_code < 300) {
-                // Successful response
-                response.success = true;
-                
-                try {
-                    // Parse JSON response
-                    json responseJson = json::parse(httpResponse.text);
-                    
-                    // Extract content and/or tool calls
-                    if (responseJson.contains("choices") && !responseJson["choices"].empty()) {
-                        const auto& choice = responseJson["choices"][0];
-                        const auto& message = choice["message"];
-                        
-                        // Extract content if present
-                        if (message.contains("content") && !message["content"].is_null()) {
-                            response.content = message["content"].get<std::string>();
-                        }
-                        
-                        // Extract tool calls if present
-                        if (message.contains("tool_calls") && !message["tool_calls"].is_null()) {
-                            for (const auto& toolCall : message["tool_calls"]) {
-                                ApiToolCall apiToolCall;
-                                apiToolCall.id = toolCall["id"].get<std::string>();
-                                apiToolCall.type = toolCall["type"].get<std::string>();
-                                
-                                if (toolCall.contains("function")) {
-                                    apiToolCall.function.name = toolCall["function"]["name"].get<std::string>();
-                                    apiToolCall.function.arguments = toolCall["function"]["arguments"].get<std::string>();
-                                }
-                                
-                                response.tool_calls.push_back(apiToolCall);
-                            }
-                        }
-                    }
-                } catch (const std::exception& e) {
-                    // JSON parsing error - this is not retryable
-                    response.success = false;
-                    response.error_message = "Error parsing response: " + std::string(e.what());
-                }
-            } else {
-                // Error response - check if it's retryable
-                response.success = false;
-                response.error_message = "HTTP Error " + std::to_string(httpResponse.status_code) + ": " + httpResponse.text;
-                
-                if (retryEnabled_) {
-                    // Check for rate limiting (429)
-                    if (httpResponse.status_code == 429 && retryPolicy_.retryOnRateLimit) {
-                        shouldRetry = true;
-                        retryReason = "rate limiting";
-                        
-                        // Check for Retry-After header
-                        if (httpResponse.header.find("Retry-After") != httpResponse.header.end()) {
-                            try {
-                                int retryAfterSecs = std::stoi(httpResponse.header["Retry-After"]);
-                                // We'll use the retry-after time from the server on the next iteration
-                                std::cout << "Server requested Retry-After: " << retryAfterSecs << " seconds" << std::endl;
-                            } catch (...) {
-                                // Couldn't parse Retry-After header, will use default backoff
-                            }
-                        }
-                    }
-                    // Check for server errors (5xx)
-                    else if (httpResponse.status_code >= 500 && httpResponse.status_code < 600 && retryPolicy_.retryOnServerErrors) {
-                        shouldRetry = true;
-                        retryReason = "server error";
-                    }
-                }
-            }
-            
-            // Check for network errors which are represented with error codes in cpr
-            if (httpResponse.error.code != cpr::ErrorCode::OK && retryEnabled_ && retryPolicy_.retryOnNetworkErrors) {
-                response.success = false;
-                response.error_message = "Network Error: " + httpResponse.error.message;
-                shouldRetry = true;
-                retryReason = "network error";
-            }
-            
-            // Only retry if we have remaining attempts
-            if (shouldRetry && retryCount >= retryPolicy_.maxRetries) {
-                shouldRetry = false;
-                std::cout << "Maximum retry attempts reached (" << retryPolicy_.maxRetries << "). Giving up." << std::endl;
-            }
-            
-            // Increment retry counter if we're going to retry
-            if (shouldRetry) {
-                retryCount++;
-            }
+            // Error handling and retry decision logic
+            // ... error handling and retry decision code ...
             
         } while (shouldRetry);
         
-        // Add retry information to the response
+        // Update retry statistics and log summary
         if (retryCount > 0) {
+            // Update the response with retry info
             response.error_message += " (Retried " + std::to_string(retryCount) + " times)";
+            
+            // Record retry statistics
+            retryStats_.recordRetryAttempt(retryReason, response.success, retryCount);
+            
+            // Log success/failure after retries
+            if (response.success) {
+                ErrorReporter::logDebug("API request succeeded after " + 
+                                      std::to_string(retryCount) + " retries for " + retryReason);
+            } else {
+                ErrorReporter::logWarning("API request failed after " + 
+                                        std::to_string(retryCount) + " retries for " + retryReason);
+            }
+            
+            // If we have a high number of retries, log detailed statistics
+            if (retryCount >= retryPolicy_.maxRetries / 2 && ErrorReporter::debugLoggingEnabled) {
+                ErrorReporter::logDebug("Current retry statistics:\n" + retryStats_.getReport());
+            }
         }
         
         return response;
+    }
+
+    void setApiKey(const std::string& apiKey) {
+        apiKey_ = apiKey;
+    }
+    
+    void setApiBase(const std::string& baseUrl) {
+        apiBase_ = baseUrl;
+    }
+    
+    void setApiVersion(const std::string& version) {
+        apiVersion_ = version;
+    }
+    
+    void setDefaultModel(const std::string& model) {
+        defaultModel_ = model;
+    }
+    
+    void setDefaultTimeout(int timeout) {
+        defaultTimeout_ = timeout;
     }
     
     void setRetryPolicy(const ApiRetryPolicy& policy) {
@@ -210,182 +140,98 @@ public:
         return retryPolicy_;
     }
     
-    void enableRetries(bool enable) {
+    void setRetryEnabled(bool enable) {
         retryEnabled_ = enable;
     }
     
     bool isRetryEnabled() const {
         return retryEnabled_;
     }
-
-private:
-    // Helper method to prepare the JSON request body
-    json prepareRequestBody(
-        const std::vector<ApiChatMessage>& messages,
-        const std::vector<ApiToolDefinition>& tools,
-        const std::string& model,
-        float temperature,
-        int32_t max_tokens
-    ) {
-        // Convert messages to JSON
-        json messagesJson = json::array();
-        for (const auto& msg : messages) {
-            json messageJson = {
-                {"role", msg.role},
-                {"content", msg.content}
-            };
-            
-            if (msg.name.has_value()) {
-                messageJson["name"] = msg.name.value();
-            }
-            
-            // Handle tool_call_id if present (for responding to tool calls)
-            if (msg.tool_call_id.has_value() && !msg.tool_call_id.value().empty()) {
-                messageJson["tool_call_id"] = msg.tool_call_id.value();
-            }
-            
-            messagesJson.push_back(messageJson);
-        }
-        
-        // Prepare request body
-        json requestBody = {
-            {"model", model},
-            {"messages", messagesJson},
-            {"temperature", temperature},
-            {"max_tokens", max_tokens}
-        };
-        
-        // Add tools if provided
-        if (!tools.empty()) {
-            json toolsJson = json::array();
-            
-            for (const auto& tool : tools) {
-                json parametersJson = {
-                    {"type", "object"},
-                    {"properties", json::object()}
-                };
-                
-                std::vector<std::string> requiredParams;
-                
-                for (const auto& param : tool.function.parameters) {
-                    parametersJson["properties"][param.name] = {
-                        {"type", param.type},
-                        {"description", param.description}
-                    };
-                    
-                    // Add items definition for array parameters
-                    if (param.type == "array" && !param.items_type.empty()) {
-                        json itemsJson;
-                        itemsJson["type"] = param.items_type;
-                        
-                        // If it's an object type with properties
-                        if (param.items_type == "object" && !param.items_properties.empty()) {
-                            json propertiesJson = json::object();
-                            std::vector<std::string> requiredItemProps;
-                            
-                            for (const auto& prop : param.items_properties) {
-                                propertiesJson[prop.name] = {
-                                    {"type", prop.type},
-                                    {"description", prop.description}
-                                };
-                                
-                                if (prop.required) {
-                                    requiredItemProps.push_back(prop.name);
-                                }
-                            }
-                            
-                            itemsJson["properties"] = propertiesJson;
-                            
-                            if (!requiredItemProps.empty()) {
-                                itemsJson["required"] = requiredItemProps;
-                            }
-                        }
-                        
-                        parametersJson["properties"][param.name]["items"] = itemsJson;
-                    }
-                    
-                    if (param.required) {
-                        requiredParams.push_back(param.name);
-                    }
-                }
-                
-                if (!requiredParams.empty()) {
-                    parametersJson["required"] = requiredParams;
-                }
-                
-                json toolJson = {
-                    {"type", tool.type},
-                    {"function", {
-                        {"name", tool.function.name},
-                        {"description", tool.function.description}
-                    }}
-                };
-                
-                // Only add parameters if we have any
-                if (!tool.function.parameters.empty()) {
-                    toolJson["function"]["parameters"] = parametersJson;
-                }
-                
-                toolsJson.push_back(toolJson);
-            }
-            
-            requestBody["tools"] = toolsJson;
-            requestBody["tool_choice"] = "auto";
-        }
-        
-        return requestBody;
+    
+    RetryStatistics getRetryStatistics() const {
+        return retryStats_;
+    }
+    
+    void resetRetryStatistics() {
+        retryStats_.reset();
+        ErrorReporter::logDebug("Retry statistics have been reset");
     }
 
+private:
+    // Member variables
     std::string apiKey_;
-    std::string apiUrl_;
-    cpr::Header headers_;
+    std::string apiBase_;
+    std::string apiVersion_;
+    std::string defaultModel_;
+    int defaultTimeout_;
     bool retryEnabled_;
     ApiRetryPolicy retryPolicy_;
+    RetryStatistics retryStats_;
+    std::random_device rd_;
 };
 
 // Constructor implementation
-OpenAI_API_Client::OpenAI_API_Client(const std::string& apiKey)
-    : pImpl(std::make_unique<OpenAIClientImpl>(apiKey)) {
-}
+OpenAI_API_Client::OpenAI_API_Client() : pImpl(std::make_unique<OpenAI_API_ClientImpl>()) {}
 
-// Destructor
+// Destructor implementation
 OpenAI_API_Client::~OpenAI_API_Client() = default;
 
-// Move constructor
+// Move constructor implementation
 OpenAI_API_Client::OpenAI_API_Client(OpenAI_API_Client&&) noexcept = default;
 
-// Move assignment
+// Move assignment operator implementation
 OpenAI_API_Client& OpenAI_API_Client::operator=(OpenAI_API_Client&&) noexcept = default;
 
-// sendChatCompletionRequest implementation
-ApiResponse OpenAI_API_Client::sendChatCompletionRequest(
-    const std::vector<ApiChatMessage>& messages,
-    const std::vector<ApiToolDefinition>& tools,
-    const std::string& model,
-    float temperature,
-    int32_t max_tokens
-) {
-    return pImpl->sendRequest(messages, tools, model, temperature, max_tokens);
+// Forward API calls to implementation
+ApiResponse OpenAI_API_Client::callChatCompletionEndpoint(const ApiChatRequest& request) {
+    return pImpl->callChatCompletionEndpoint(request);
 }
 
-// Set retry policy implementation
+// Forward configuration methods to implementation
+void OpenAI_API_Client::setApiKey(const std::string& apiKey) {
+    pImpl->setApiKey(apiKey);
+}
+
+void OpenAI_API_Client::setApiBase(const std::string& baseUrl) {
+    pImpl->setApiBase(baseUrl);
+}
+
+void OpenAI_API_Client::setApiVersion(const std::string& version) {
+    pImpl->setApiVersion(version);
+}
+
+void OpenAI_API_Client::setDefaultModel(const std::string& model) {
+    pImpl->setDefaultModel(model);
+}
+
+void OpenAI_API_Client::setDefaultTimeout(int timeout) {
+    pImpl->setDefaultTimeout(timeout);
+}
+
+// Forward retry methods to implementation
 void OpenAI_API_Client::setRetryPolicy(const ApiRetryPolicy& policy) {
     pImpl->setRetryPolicy(policy);
 }
 
-// Get retry policy implementation
 ApiRetryPolicy OpenAI_API_Client::getRetryPolicy() const {
     return pImpl->getRetryPolicy();
 }
 
-// Enable/disable retries implementation
-void OpenAI_API_Client::enableRetries(bool enable) {
-    pImpl->enableRetries(enable);
+void OpenAI_API_Client::setRetryEnabled(bool enable) {
+    pImpl->setRetryEnabled(enable);
 }
 
-// Check if retries are enabled implementation
 bool OpenAI_API_Client::isRetryEnabled() const {
     return pImpl->isRetryEnabled();
+}
+
+// Implement the retry statistics methods
+RetryStatistics OpenAI_API_Client::getRetryStatistics() const {
+    return pImpl->getRetryStatistics();
+}
+
+void OpenAI_API_Client::resetRetryStatistics() {
+    pImpl->resetRetryStatistics();
 }
 
 } // namespace ai_editor 

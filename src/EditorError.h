@@ -87,6 +87,20 @@ public:
         logError("[" + getSeverityString(ex.getSeverity()) + "] " + ex.what());
     }
     
+    // Log a debug message
+    static void logDebug(const std::string& message) {
+        // Only log debug messages if debug logging is enabled
+        if (!debugLoggingEnabled) {
+            return;
+        }
+        
+        if (EditorException::Severity::Debug < severityThreshold) {
+            return;
+        }
+        
+        std::cout << "Debug: " << message << std::endl;
+    }
+    
     // Log a generic error message
     static void logError(const std::string& message) {
         // Errors are always logged
