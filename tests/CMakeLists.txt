@@ -51,6 +51,7 @@ add_executable(OpenAISchemaValidationTest
   ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
   ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
   ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
 )
 target_link_libraries(OpenAISchemaValidationTest PRIVATE 
     EditorLib 
@@ -68,8 +69,29 @@ add_executable(OpenAIApiErrorHandlingTest
   ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
   ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
   ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
 )
 target_link_libraries(OpenAIApiErrorHandlingTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# OpenAI API Retry Statistics Test
+add_executable(OpenAIApiRetryStatisticsTest 
+  OpenAIApiRetryStatisticsTest.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
+)
+target_link_libraries(OpenAIApiRetryStatisticsTest PRIVATE 
     EditorLib 
     GTest::gtest 
     GTest::gtest_main
@@ -114,6 +136,14 @@ target_link_libraries(ExitTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 add_executable(ManualUndoRedoTest ManualUndoRedoTest.cpp)
 target_link_libraries(ManualUndoRedoTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
+# Error Reporter Test with File Logging
+add_executable(ErrorReporterTest ErrorReporterTest.cpp)
+target_link_libraries(ErrorReporterTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
 # Main test executor with all tests
 add_executable(RunAllTests
     RunAllTests.cpp
@@ -147,6 +177,7 @@ add_executable(RunAllTests
     AIAgentOrchestratorTest.cpp
     OpenAISchemaValidationTest.cpp
     OpenAIApiErrorHandlingTest.cpp
+    ErrorReporterTest.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
     ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
@@ -176,6 +207,8 @@ gtest_discover_tests(RunAllTests)
 gtest_discover_tests(OpenAIApiEndpointsTest)
 gtest_discover_tests(OpenAISchemaValidationTest)
 gtest_discover_tests(OpenAIApiErrorHandlingTest)
+gtest_discover_tests(OpenAIApiRetryStatisticsTest)
 gtest_discover_tests(AIAgentOrchestratorTest)
+gtest_discover_tests(ErrorReporterTest)
 
 message(STATUS "Configured test executables for TextEditor") 

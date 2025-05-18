@@ -2,8 +2,11 @@
 #define MOCK_OPENAI_API_CLIENT_H
 
 #include "IOpenAI_API_Client.h"
+#include "OpenAI_API_Client_types.h"
 #include <queue>
 #include <string>
+#include <functional>
+#include <chrono>
 
 namespace ai_editor {
 
@@ -17,9 +20,37 @@ namespace ai_editor {
 class MockOpenAI_API_Client : public IOpenAI_API_Client {
 public:
     /**
+     * @brief Enum for simulating different failure types
+     */
+    enum class FailureType {
+        None,            // No failure (success)
+        Network,         // Network connectivity issues
+        Authentication,  // Authentication errors (401, 403)
+        RateLimit,       // Rate limiting (429)
+        ServerError,     // Server errors (5xx)
+        InvalidRequest,  // Client errors (4xx)
+        Timeout,         // Request timeout
+        SchemaValidation // Schema validation error
+    };
+    
+    /**
+     * @brief Structure to define a failure scenario
+     */
+    struct FailureScenario {
+        FailureType type;
+        std::string message;
+        
+        FailureScenario(FailureType t, const std::string& msg) : type(t), message(msg) {}
+    };
+    
+    /**
      * @brief Constructor
      */
-    MockOpenAI_API_Client() : retry_enabled_(true), retry_policy_() {}
+    MockOpenAI_API_Client() : 
+        successResponse_(true),
+        retryEnabled_(true),
+        retryPolicy_(),
+        retryStats_() {}
     
     /**
      * @brief Mock implementation of sendChatCompletionRequest
@@ -40,29 +71,7 @@ public:
         const std::string& model = "gpt-4o",
         float temperature = 0.7f,
         int32_t max_tokens = 2000
-    ) override {
-        // Store the request parameters for test inspection
-        last_sent_messages_ = messages;
-        last_sent_tools_ = tools;
-        last_sent_model_ = model;
-        last_sent_temperature_ = temperature;
-        last_sent_max_tokens_ = max_tokens;
-        
-        // Return the next response from the queue, or a default error response if empty
-        if (response_queue_.empty()) {
-            return {
-                false,
-                "",
-                "MockOpenAI_API_Client: No pre-configured response in queue",
-                "",
-                {}
-            };
-        }
-        
-        ApiResponse response = response_queue_.front();
-        response_queue_.pop();
-        return response;
-    }
+    ) override;
     
     /**
      * @brief Add a response to the queue to be returned by the next call
@@ -106,7 +115,7 @@ public:
      * @param policy The retry policy configuration to use
      */
     void setRetryPolicy(const ApiRetryPolicy& policy) override {
-        retry_policy_ = policy;
+        retryPolicy_ = policy;
         last_set_retry_policy_ = policy; // Store for test inspection
     }
     
@@ -116,7 +125,7 @@ public:
      * @return The current retry policy configuration
      */
     ApiRetryPolicy getRetryPolicy() const override {
-        return retry_policy_;
+        return retryPolicy_;
     }
     
     /**
@@ -125,7 +134,7 @@ public:
      * @param enable Whether to enable automatic retries
      */
     void enableRetries(bool enable) override {
-        retry_enabled_ = enable;
+        retryEnabled_ = enable;
         last_retry_enabled_value_ = enable; // Store for test inspection
     }
     
@@ -135,7 +144,76 @@ public:
      * @return True if automatic retries are enabled, false otherwise
      */
     bool isRetryEnabled() const override {
-        return retry_enabled_;
+        return retryEnabled_;
+    }
+    
+    /**
+     * @brief Set the response content to return
+     */
+    void setResponseContent(const std::string& content) {
+        responseContent_ = content;
+        successResponse_ = true;
+    }
+    
+    /**
+     * @brief Set an error response to return
+     */
+    void setErrorResponse(const std::string& errorMessage, int statusCode = 500) {
+        errorMessage_ = errorMessage;
+        errorStatusCode_ = statusCode;
+        successResponse_ = false;
+    }
+    
+    /**
+     * @brief Set a custom response handler function
+     */
+    void setResponseHandler(std::function<ApiResponse(const std::vector<ApiChatMessage>&)> handler) {
+        responseHandler_ = handler;
+    }
+    
+    /**
+     * @brief Set tool call responses
+     */
+    void setToolCallResponses(const std::vector<ApiToolCall>& toolCalls) {
+        toolCalls_ = toolCalls;
+        successResponse_ = true;
+    }
+    
+    /**
+     * @brief Implementation of callChatCompletionEndpoint - deprecated, use sendChatCompletionRequest
+     */
+    ApiResponse callChatCompletionEndpoint(const std::vector<ApiChatMessage>& messages) {
+        // For backward compatibility
+        return sendChatCompletionRequest(messages);
+    }
+    
+    // Retry statistics methods
+    RetryStatistics::Stats getRetryStatistics() const override {
+        return retryStats_.getStats();
+    }
+    
+    void resetRetryStatistics() override {
+        retryStats_.reset();
+    }
+    
+    // Methods to simulate retry scenarios for testing
+    void simulateRetries(int count, const std::string& reason, bool success) {
+        simulateRetries_ = true;
+        simulatedRetryCount_ = count;
+        simulatedRetryReason_ = reason;
+        simulatedRetrySuccess_ = success;
+        retryCount_ = 0;  // Track the current retry attempt number
+        
+        // Record the retry statistics immediately for testing purposes
+        // This way, they're recorded even if retries aren't actually triggered
+        if (retryEnabled_) {
+            // Simply call recordRetryAttempt which will update all the necessary stats
+            retryStats_.recordRetryAttempt(reason, success, count);
+        }
+    }
+    
+    void stopSimulatingRetries() {
+        simulateRetries_ = false;
     }
     
     // Stored request parameters for test inspection
@@ -149,13 +227,31 @@ public:
     ApiRetryPolicy last_set_retry_policy_;
     bool last_retry_enabled_value_ = true;
     
+    // Sequence of failures to simulate for testing retry behavior
+    std::vector<FailureScenario> failureSequence;
+    
+    // Retry simulation fields
+    bool simulateRetries_ = false;
+    int retryCount_ = 0;  // Track the current retry attempt number
+    int simulatedRetryCount_ = 0;
+    std::string simulatedRetryReason_ = "test";
+    bool simulatedRetrySuccess_ = true;
+    
+    std::string responseContent_;
+    std::string errorMessage_;
+    int errorStatusCode_ = 0;
+    bool successResponse_;
+    std::vector<ApiToolCall> toolCalls_;
+    std::function<ApiResponse(const std::vector<ApiChatMessage>&)> responseHandler_;
+    
 private:
     // Queue of responses to return
     std::queue<ApiResponse> response_queue_;
     
     // Retry-related members
-    bool retry_enabled_;
-    ApiRetryPolicy retry_policy_;
+    bool retryEnabled_;
+    ApiRetryPolicy retryPolicy_;
+    RetryStatistics retryStats_;
 };
 
 } // namespace ai_editor
