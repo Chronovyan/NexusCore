@@ -178,8 +178,4 @@ TEST_F(OpenAIApiErrorHandlingTest, HandleJsonParsingErrors) {
     EXPECT_THAT(invalidJsonError.error_message, ::testing::HasSubstr("Invalid JSON"));
 }
 
-// Main function
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-} 
+// End of OpenAIApiErrorHandlingTest tests 
