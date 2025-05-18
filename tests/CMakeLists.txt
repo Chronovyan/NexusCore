@@ -190,6 +190,9 @@ add_executable(RunAllTests
     ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.h
 )
 
+# Define the RUN_ALL_TESTS_INCLUDE macro for the RunAllTests target to avoid duplicate main functions
+target_compile_definitions(RunAllTests PRIVATE RUN_ALL_TESTS_INCLUDE)
+
 # Add GMock to RunAllTests
 target_link_libraries(RunAllTests PRIVATE 
     EditorLib 

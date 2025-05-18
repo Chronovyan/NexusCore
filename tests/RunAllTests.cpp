@@ -1,3 +1,4 @@
+#define RUN_ALL_TESTS_INCLUDE
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "MockUtils.h"
