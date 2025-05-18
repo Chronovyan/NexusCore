@@ -43,6 +43,41 @@ target_link_libraries(OpenAIApiEndpointsTest PRIVATE
     nlohmann_json::nlohmann_json
 )
 
+# OpenAI Schema Validation Test
+add_executable(OpenAISchemaValidationTest 
+  OpenAISchemaValidationTest.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+)
+target_link_libraries(OpenAISchemaValidationTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# OpenAI API Error Handling Test
+add_executable(OpenAIApiErrorHandlingTest 
+  OpenAIApiErrorHandlingTest.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+)
+target_link_libraries(OpenAIApiErrorHandlingTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
 # AI Agent Orchestrator tests
 add_executable(AIAgentOrchestratorTest AIAgentOrchestratorTest.cpp)
 target_link_libraries(AIAgentOrchestratorTest PRIVATE 
@@ -96,6 +131,8 @@ add_executable(RunAllTests
     TextBufferTest.cpp
     EditorApiExtensionsTest.cpp
     AIAgentOrchestratorTest.cpp
+    OpenAISchemaValidationTest.cpp
+    OpenAIApiErrorHandlingTest.cpp
 )
 
 # Add GMock to RunAllTests
@@ -112,5 +149,7 @@ target_link_libraries(RunAllTests PRIVATE
 include(GoogleTest)
 gtest_discover_tests(RunAllTests)
 gtest_discover_tests(OpenAIApiEndpointsTest)
+gtest_discover_tests(OpenAISchemaValidationTest)
+gtest_discover_tests(OpenAIApiErrorHandlingTest)
 
 message(STATUS "Configured test executables for TextEditor") 
