@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "../src/EditorError.h"
+#include "../src/SyntaxHighlightingManager.h"
 #include <fstream>
 #include <thread>
 #include <cstdio>
@@ -49,7 +50,12 @@ void cleanupLogFiles(const std::string& pattern = "test_*.log") {
 
 class ErrorReporterTest : public ::testing::Test {
 protected:
+    bool originalDisableLogging;
+    
     void SetUp() override {
+        // Save original logging setting
+        originalDisableLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+        
         // Reset error reporter before each test
         ErrorReporter::clearLogDestinations();
         ErrorReporter::initializeDefaultLogging();
@@ -67,6 +73,9 @@ protected:
         // Reset error reporter after each test
         ErrorReporter::clearLogDestinations();
         ErrorReporter::initializeDefaultLogging();
+        
+        // Restore original logging setting
+        DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableLogging;
         
         // Clean up test log files
         cleanupLogFiles();
@@ -87,6 +96,18 @@ TEST_F(ErrorReporterTest, ConsoleLoggingDoesNotCrash) {
 
 // Test that file logging works
 TEST_F(ErrorReporterTest, FileLoggingWritesToFile) {
+    // Save original settings so we can restore them
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable debug logging for this test
+    ErrorReporter::debugLoggingEnabled = true;
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug);
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    
     // Set up file logging
     std::string logFile = "logs/test_file_logging.log";
     ErrorReporter::enableFileLogging(logFile, false); // Don't append
@@ -102,14 +123,34 @@ TEST_F(ErrorReporterTest, FileLoggingWritesToFile) {
     // Read the log file
     std::string logContent = readLogFile(logFile);
     
+    // Output log content to help debug
+    std::cout << "Log file contents (" << logFile << "):" << std::endl;
+    std::cout << "---" << std::endl;
+    std::cout << logContent << std::endl;
+    std::cout << "---" << std::endl;
+    
     // Check that log file contains our messages
     EXPECT_TRUE(logContent.find("Debug message to file") != std::string::npos);
     EXPECT_TRUE(logContent.find("Warning message to file") != std::string::npos);
     EXPECT_TRUE(logContent.find("Error message to file") != std::string::npos);
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Test that multiple destinations receive logs
 TEST_F(ErrorReporterTest, MultiDestinationLogging) {
+    // Save original settings so we can restore them
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable required logging for this test
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    
     // Set up multiple file destinations
     std::string logFile1 = "logs/test_multi_dest1.log";
     std::string logFile2 = "logs/test_multi_dest2.log";
@@ -130,10 +171,24 @@ TEST_F(ErrorReporterTest, MultiDestinationLogging) {
     // Check that both log files contain our message
     EXPECT_TRUE(logContent1.find("Error message to multiple destinations") != std::string::npos);
     EXPECT_TRUE(logContent2.find("Error message to multiple destinations") != std::string::npos);
+    
+    // Restore original settings
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Test that severity filters work
 TEST_F(ErrorReporterTest, SeverityFilters) {
+    // Save original settings so we can restore them
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable required logging for this test
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    
     // Set up file logging
     std::string logFile = "logs/test_severity_filters.log";
     ErrorReporter::enableFileLogging(logFile, false);
@@ -152,14 +207,34 @@ TEST_F(ErrorReporterTest, SeverityFilters) {
     // Read the log file
     std::string logContent = readLogFile(logFile);
     
+    // Output log content to help debug
+    std::cout << "Log file contents (" << logFile << "):" << std::endl;
+    std::cout << "---" << std::endl;
+    std::cout << logContent << std::endl;
+    std::cout << "---" << std::endl;
+    
     // Check that only appropriate messages are present
     EXPECT_TRUE(logContent.find("Debug message should be filtered") == std::string::npos);
     EXPECT_TRUE(logContent.find("Warning message should be logged") != std::string::npos);
     EXPECT_TRUE(logContent.find("Error message should be logged") != std::string::npos);
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Test logging exceptions
 TEST_F(ErrorReporterTest, ExceptionLogging) {
+    // Save original settings so we can restore them
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable required logging for this test
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    
     // Set up file logging
     std::string logFile = "logs/test_exception_logging.log";
     ErrorReporter::enableFileLogging(logFile, false);
@@ -197,6 +272,10 @@ TEST_F(ErrorReporterTest, ExceptionLogging) {
     EXPECT_TRUE(logContent.find("TextBuffer: Test buffer exception") != std::string::npos);
     EXPECT_TRUE(logContent.find("Command: Test command exception") != std::string::npos);
     EXPECT_TRUE(logContent.find("Unknown exception in test context") != std::string::npos);
+    
+    // Restore original settings
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Test retry logging
@@ -257,6 +336,14 @@ TEST_F(ErrorReporterTest, RetryLogging) {
 }
 
 TEST_F(ErrorReporterTest, RetryStatsReset) {
+    // Save original settings so we can restore them
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable required logging for this test
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    
     // First add some retry data
     std::string operationId = generateRandomId();
     std::string operationType = "API_Call";
@@ -270,6 +357,16 @@ TEST_F(ErrorReporterTest, RetryStatsReset) {
             "Error" + std::to_string(i),
             std::chrono::milliseconds(100 * i)
         );
+        
+        // Also log retry results to actually record the events in the global stats
+        ErrorReporter::logRetryResult(
+            operationId,
+            i % 2 == 0, // Alternate success/failure
+            "Test result " + std::to_string(i)
+        );
+        
+        // Use a new operation ID for each iteration to avoid overwriting the pending retry
+        operationId = generateRandomId();
     }
     
     // Verify stats were recorded
@@ -286,6 +383,10 @@ TEST_F(ErrorReporterTest, RetryStatsReset) {
     EXPECT_EQ(stats.totalRetryDelay.count(), 0);
     EXPECT_TRUE(stats.retriesByReason.empty());
     EXPECT_TRUE(stats.retryEvents.empty());
+    
+    // Restore original settings
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Test log rotation (disabled by default due to file timestamps)
