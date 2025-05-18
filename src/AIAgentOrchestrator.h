@@ -84,6 +84,66 @@ public:
      */
     OrchestratorState getCurrentState() const { return orchestratorState_; }
 
+    /**
+     * @brief [TEST ONLY] Set the orchestrator state directly
+     * 
+     * This method is intended to be used only by tests to initialize the orchestrator
+     * to a specific state without going through the entire conversation workflow.
+     * 
+     * @param state The state to set
+     */
+    void test_setOrchestratorState(OrchestratorState state) { orchestratorState_ = state; }
+
+    /**
+     * @brief [TEST ONLY] Set the last plan JSON directly
+     * 
+     * This method is intended to be used only by tests to initialize the orchestrator
+     * with a specific plan without going through the conversation workflow.
+     * 
+     * @param planJson The plan JSON to set
+     */
+    void test_setLastPlanJson(const nlohmann::json& planJson) { lastPlanJson_ = planJson; }
+
+    /**
+     * @brief [TEST ONLY] Set the next planned file to generate
+     * 
+     * This method is intended to be used only by tests to initialize the orchestrator
+     * with a specific next file without going through the conversation workflow.
+     * 
+     * @param filename The filename to set
+     */
+    void test_setNextPlannedFile(const std::string& filename) { nextPlannedFileToGenerate_ = filename; }
+
+    /**
+     * @brief [TEST ONLY] Add a file to the list of generated files
+     * 
+     * This method is intended to be used only by tests to mark files as already generated.
+     * 
+     * @param filename The filename to add to the generated files list
+     */
+    void test_addGeneratedFile(const std::string& filename) { generatedFiles_.push_back(filename); }
+
+    /**
+     * @brief Request the generation of the next file from the AI
+     * 
+     * @param previousToolCallId The ID of the previous tool call
+     * @param previousToolName The name of the previous tool call
+     * @param successResult Whether the previous file was generated successfully
+     * @param filename The name of the file that was generated or attempted
+     * @param errorMessage Error message if the file generation failed
+     */
+    void requestNextFileOrCompilation(const std::string& previousToolCallId, const std::string& previousToolName, 
+                                      bool successResult, const std::string& filename, 
+                                      const std::string& errorMessage = "");
+
+    /**
+     * @brief Process a write_file_content tool call from the AI
+     * 
+     * @param toolCall The write_file_content tool call
+     * @return bool True if the tool call was processed successfully
+     */
+    bool processWriteFileContentToolCall(const ApiToolCall& toolCall);
+
 private:
     /**
      * @brief Process a propose_plan tool call from the AI
@@ -110,33 +170,12 @@ private:
     bool processProvideAbstractPreviewToolCall(const ApiToolCall& toolCall);
     
     /**
-     * @brief Process a write_file_content tool call from the AI
-     * 
-     * @param toolCall The write_file_content tool call
-     * @return bool True if the tool call was processed successfully
-     */
-    bool processWriteFileContentToolCall(const ApiToolCall& toolCall);
-    
-    /**
      * @brief Determine the next file to generate based on the plan
      * 
      * @return std::string The name of the next file to generate, or empty string if all files are generated
      */
     std::string determineNextFileToGenerate() const;
     
-    /**
-     * @brief Request the generation of the next file from the AI
-     * 
-     * @param previousToolCallId The ID of the previous tool call
-     * @param previousToolName The name of the previous tool call
-     * @param successResult Whether the previous file was generated successfully
-     * @param filename The name of the file that was generated or attempted
-     * @param errorMessage Error message if the file generation failed
-     */
-    void requestNextFileOrCompilation(const std::string& previousToolCallId, const std::string& previousToolName, 
-                                      bool successResult, const std::string& filename, 
-                                      const std::string& errorMessage = "");
-
     // Reference to the OpenAI API client interface
     IOpenAI_API_Client& apiClient_;
     
