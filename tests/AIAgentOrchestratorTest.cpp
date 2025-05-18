@@ -476,4 +476,105 @@ TEST_F(AIAgentOrchestratorTest, HandleFileWriteError) {
         }
     }
     EXPECT_TRUE(foundFailedToolResult) << "A failed tool result message should have been sent to the API";
+}
+
+// Test case for resetting the orchestrator state from ERROR_STATE to IDLE
+TEST_F(AIAgentOrchestratorTest, ResetOrchestratorState) {
+    // Set up orchestrator in ERROR_STATE with some conversation history and other data
+    orchestrator->test_setOrchestratorState(AIAgentOrchestrator::OrchestratorState::ERROR_STATE);
+    
+    // Add a test generated file to track in the orchestrator
+    orchestrator->test_addGeneratedFile("test_file.cpp");
+    
+    // Set a test plan
+    nlohmann::json testPlan = {
+        {"project_name", "TestProject"},
+        {"files", nlohmann::json::array({
+            {{"filename", "test_file.cpp"}, {"description", "A test file"}},
+            {{"filename", "another_file.h"}, {"description", "Another test file"}}
+        })}
+    };
+    orchestrator->test_setLastPlanJson(testPlan);
+    orchestrator->test_setNextPlannedFile("another_file.h");
+    
+    // Add some messages to the UI model
+    uiModel.AddSystemMessage("An error occurred!");
+    uiModel.currentGlobalStatus = "Error from AI.";
+    
+    // Reset the orchestrator state
+    orchestrator->resetOrchestratorState();
+    
+    // Verify orchestrator was reset to IDLE
+    EXPECT_EQ(orchestrator->getCurrentState(), AIAgentOrchestrator::OrchestratorState::IDLE) 
+        << "Orchestrator should be reset to IDLE state";
+    
+    // Verify UI model was updated
+    EXPECT_EQ(uiModel.currentGlobalStatus, "Orchestrator reset - Ready for new task") 
+        << "Global status should be updated to indicate reset";
+    
+    // Verify the most recent system message
+    EXPECT_EQ(uiModel.chatHistory.back().text, "Error state cleared. You can start a new coding task.") 
+        << "System should display message about error state being cleared";
+    
+    // Test that it works from other error states too
+    // Force orchestrator back to ERROR_STATE
+    orchestrator->test_setOrchestratorState(AIAgentOrchestrator::OrchestratorState::ERROR_STATE);
+    // Reset again
+    orchestrator->resetOrchestratorState();
+    // Verify reset worked
+    EXPECT_EQ(orchestrator->getCurrentState(), AIAgentOrchestrator::OrchestratorState::IDLE) 
+        << "Orchestrator should be reset to IDLE state after second reset";
+}
+
+// Test case for automatic recovery from ERROR_STATE when submitting a new prompt
+TEST_F(AIAgentOrchestratorTest, AutomaticRecoveryFromErrorState) {
+    // Set up orchestrator in ERROR_STATE
+    orchestrator->test_setOrchestratorState(AIAgentOrchestrator::OrchestratorState::ERROR_STATE);
+    uiModel.currentGlobalStatus = "Error from AI.";
+    
+    // Set up mock response for the new prompt
+    ApiResponse planResponse;
+    planResponse.success = true;
+    
+    ApiToolCall planToolCall;
+    planToolCall.id = "plan_tool_call_123";
+    planToolCall.function.name = "propose_plan";
+    
+    nlohmann::json planArgs = {
+        {"project_name", "RecoveryTest"},
+        {"language", "C++"},
+        {"description", "A test project for recovery"},
+        {"files", nlohmann::json::array({
+            {{"filename", "main.cpp"}, {"description", "Main file"}}
+        })},
+        {"steps", nlohmann::json::array({
+            {{"step_number", 1}, {"description", "Create main.cpp"}}
+        })}
+    };
+    
+    planToolCall.function.arguments = planArgs.dump();
+    planResponse.tool_calls.push_back(planToolCall);
+    
+    // Prime the mock API client with the response
+    mockApiClient.primeResponse(planResponse);
+    
+    // Submit a new prompt which should trigger recovery
+    orchestrator->handleSubmitUserPrompt("Create a simple program that prints Hello World");
+    
+    // Verify recovery messages were shown
+    bool recoveryMessageFound = false;
+    for (const auto& msg : uiModel.chatHistory) {
+        if (msg.senderType == ChatMessage::Sender::SYSTEM && 
+            msg.text == "Recovering from previous error state before processing new prompt.") {
+            recoveryMessageFound = true;
+            break;
+        }
+    }
+    
+    EXPECT_TRUE(recoveryMessageFound) 
+        << "System should display message about recovering from error state";
+    
+    // Verify orchestrator state after recovery and processing
+    EXPECT_EQ(orchestrator->getCurrentState(), AIAgentOrchestrator::OrchestratorState::AWAITING_USER_FEEDBACK_ON_PLAN) 
+        << "Orchestrator should transition to AWAITING_USER_FEEDBACK_ON_PLAN after recovery and processing";
 } 
