@@ -264,10 +264,4 @@ TEST_F(OpenAISchemaValidationTest, OrchestratorConfiguresToolsWithItemsDefinitio
     EXPECT_EQ(filesParam.items_properties[1].name, "description");
     EXPECT_EQ(filesParam.items_properties[1].type, "string");
     EXPECT_TRUE(filesParam.items_properties[1].required);
-}
-
-// Main function
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 } 
