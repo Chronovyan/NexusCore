@@ -55,6 +55,34 @@ public:
         int32_t max_tokens = 2000
     ) override;
     
+    /**
+     * @brief Set the retry policy for API requests
+     * 
+     * @param policy The retry policy configuration to use
+     */
+    void setRetryPolicy(const ApiRetryPolicy& policy) override;
+    
+    /**
+     * @brief Get the current retry policy
+     * 
+     * @return The current retry policy configuration
+     */
+    ApiRetryPolicy getRetryPolicy() const override;
+    
+    /**
+     * @brief Enable or disable automatic retries
+     * 
+     * @param enable Whether to enable automatic retries
+     */
+    void enableRetries(bool enable) override;
+    
+    /**
+     * @brief Check if automatic retries are enabled
+     * 
+     * @return True if automatic retries are enabled, false otherwise
+     */
+    bool isRetryEnabled() const override;
+    
 private:
     // Implementation details hidden for PIMPL pattern
     std::unique_ptr<OpenAIClientImpl> pImpl;
