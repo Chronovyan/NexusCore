@@ -124,6 +124,15 @@ public:
     void test_addGeneratedFile(const std::string& filename) { generatedFiles_.push_back(filename); }
 
     /**
+     * @brief Reset the orchestrator state to IDLE
+     * 
+     * This method allows recovery from ERROR_STATE by resetting the orchestrator to its
+     * initial state, clearing conversation history and other session data, and updating
+     * the UI model to reflect the reset state.
+     */
+    void resetOrchestratorState();
+
+    /**
      * @brief Request the generation of the next file from the AI
      * 
      * @param previousToolCallId The ID of the previous tool call

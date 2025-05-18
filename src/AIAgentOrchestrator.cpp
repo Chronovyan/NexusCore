@@ -17,6 +17,12 @@ AIAgentOrchestrator::AIAgentOrchestrator(IOpenAI_API_Client& apiClient, UIModel&
 
 void AIAgentOrchestrator::handleSubmitUserPrompt(const std::string& userInput)
 {
+    // If we're in ERROR_STATE, reset the orchestrator first
+    if (orchestratorState_ == OrchestratorState::ERROR_STATE) {
+        uiModel_.AddSystemMessage("Recovering from previous error state before processing new prompt.");
+        resetOrchestratorState();
+    }
+    
     // Update the UI model with the user's message
     uiModel_.AddUserMessage(userInput);
     
@@ -217,6 +223,26 @@ void AIAgentOrchestrator::handleSubmitUserPrompt(const std::string& userInput)
 
 void AIAgentOrchestrator::handleSubmitUserFeedback(const std::string& userFeedbackText)
 {
+    // Check if we're in ERROR_STATE and the user has entered a special recovery command
+    if (orchestratorState_ == OrchestratorState::ERROR_STATE) {
+        // Check for special recovery commands
+        if (userFeedbackText == "reset" || 
+            userFeedbackText == "restart" || 
+            userFeedbackText == "start over" ||
+            userFeedbackText == "recover") {
+            
+            uiModel_.AddUserMessage(userFeedbackText);
+            uiModel_.AddSystemMessage("Resetting orchestrator due to user recovery command.");
+            resetOrchestratorState();
+            return;
+        } else {
+            // If in ERROR_STATE but no recovery command, inform the user
+            uiModel_.AddUserMessage(userFeedbackText);
+            uiModel_.AddSystemMessage("The system is in an error state. You can type 'reset', 'restart', or 'recover' to reset and start over, or submit a new prompt to automatically reset and begin a new task.");
+            return;
+        }
+    }
+    
     // Ensure we're in an appropriate state
     if (orchestratorState_ != OrchestratorState::AWAITING_USER_FEEDBACK_ON_PLAN && 
         orchestratorState_ != OrchestratorState::AWAITING_USER_CLARIFICATION_BEFORE_PLAN &&
@@ -422,6 +448,26 @@ void AIAgentOrchestrator::handleSubmitUserFeedback(const std::string& userFeedba
 
 void AIAgentOrchestrator::handleSubmitUserApprovalOfPreview(const std::string& userApprovalText)
 {
+    // Check if we're in ERROR_STATE and the user has entered a special recovery command
+    if (orchestratorState_ == OrchestratorState::ERROR_STATE) {
+        // Check for special recovery commands
+        if (userApprovalText == "reset" || 
+            userApprovalText == "restart" || 
+            userApprovalText == "start over" ||
+            userApprovalText == "recover") {
+            
+            uiModel_.AddUserMessage(userApprovalText);
+            uiModel_.AddSystemMessage("Resetting orchestrator due to user recovery command.");
+            resetOrchestratorState();
+            return;
+        } else {
+            // If in ERROR_STATE but no recovery command, inform the user
+            uiModel_.AddUserMessage(userApprovalText);
+            uiModel_.AddSystemMessage("The system is in an error state. You can type 'reset', 'restart', or 'recover' to reset and start over, or submit a new prompt to automatically reset and begin a new task.");
+            return;
+        }
+    }
+    
     // Ensure we're in the correct state
     if (orchestratorState_ != OrchestratorState::AWAITING_USER_APPROVAL_OF_PREVIEW) {
         uiModel_.AddSystemMessage("Error: Cannot process approval in the current state.");
@@ -603,7 +649,6 @@ void AIAgentOrchestrator::handleSubmitUserApprovalOfPreview(const std::string& u
             }
         }
         
-        // Keep track of the conversation for future interactions
         // Add the most recent messages to the conversation history
         conversationHistory_ = messages;
     } else {
@@ -617,10 +662,8 @@ void AIAgentOrchestrator::handleSubmitUserApprovalOfPreview(const std::string& u
         orchestratorState_ = OrchestratorState::ERROR_STATE;
     }
     
-    // Reset the AI processing flag if needed
-    if (orchestratorState_ != OrchestratorState::GENERATING_CODE_FILES) {
-        uiModel_.aiIsProcessing = false;
-    }
+    // Reset the AI processing flag
+    uiModel_.aiIsProcessing = false;
 }
 
 bool AIAgentOrchestrator::processProposePlanToolCall(const ApiToolCall& toolCall)
@@ -858,12 +901,19 @@ bool AIAgentOrchestrator::processWriteFileContentToolCall(const ApiToolCall& too
             // Update the global status
             uiModel_.currentGlobalStatus = "Error saving file " + filename;
             
+            // Set the orchestrator state to ERROR_STATE
+            orchestratorState_ = OrchestratorState::ERROR_STATE;
+            
             return false;
         }
     }
     catch (const std::exception& e) {
         std::cerr << "Error processing write_file_content tool call: " << e.what() << std::endl;
         uiModel_.AddSystemMessage("Error parsing file content: " + std::string(e.what()));
+        
+        // Set the orchestrator state to ERROR_STATE
+        orchestratorState_ = OrchestratorState::ERROR_STATE;
+        
         return false;
     }
 }
@@ -1149,6 +1199,49 @@ void AIAgentOrchestrator::requestNextFileOrCompilation(
         // Reset the AI processing flag
         uiModel_.aiIsProcessing = false;
     }
+}
+
+void AIAgentOrchestrator::resetOrchestratorState()
+{
+    // Reset the orchestrator state to IDLE
+    orchestratorState_ = OrchestratorState::IDLE;
+    
+    // Clear conversation history
+    conversationHistory_.clear();
+    
+    // Reset tool call tracking
+    lastToolCallId_ = "";
+    lastToolName_ = "";
+    
+    // Reset session data
+    lastPlanJson_ = nlohmann::json();
+    lastClarificationJson_ = nlohmann::json();
+    nextPlannedFileToGenerate_ = "";
+    generatedFiles_.clear();
+    
+    // Update UI model
+    uiModel_.currentGlobalStatus = "Orchestrator reset - Ready for new task";
+    uiModel_.aiIsProcessing = false;
+    
+    // Add a system message to inform the user
+    uiModel_.AddSystemMessage("Error state cleared. You can start a new coding task.");
+    
+    // Reset project files to initial state if desired
+    // Note: This is optional - you might want to keep existing files
+    // Uncomment if you want to clear the project files list
+    /*
+    uiModel_.projectFiles.clear();
+    uiModel_.AddProjectFile("main.cpp", ProjectFile::Status::PLANNED, "Main entry point for the application");
+    uiModel_.AddProjectFile("CMakeLists.txt", ProjectFile::Status::PLANNED, "Build configuration file");
+    */
+    
+    // Alternatively, reset all file statuses to PLANNED
+    for (auto& file : uiModel_.projectFiles) {
+        file.status = ProjectFile::StatusToString(ProjectFile::Status::PLANNED);
+    }
+    
+    // Log the reset for debugging
+    std::cout << "AIAgentOrchestrator reset to IDLE state" << std::endl;
 }
 
 } // namespace ai_editor 
