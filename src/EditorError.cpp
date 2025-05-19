@@ -7,13 +7,25 @@
 #endif
 
 // Define static members of ErrorReporter
-bool ErrorReporter::debugLoggingEnabled = false;
+bool ErrorReporter::debugLoggingEnabled = false; // Disable debug logging by default for performance
 bool ErrorReporter::suppressAllWarnings = false;
-EditorException::Severity ErrorReporter::severityThreshold = EditorException::Severity::Warning;
+EditorException::Severity ErrorReporter::severityThreshold = EditorException::Severity::Debug; // Lower threshold for tests
 std::vector<std::unique_ptr<LogDestination>> ErrorReporter::destinations_;
 std::mutex ErrorReporter::destinationsMutex_;
 std::map<std::string, RetryEvent> ErrorReporter::pendingRetries_;
 std::mutex ErrorReporter::retryMutex_;
+
+// Define asynchronous logging static members
+std::queue<QueuedLogMessage> ErrorReporter::logQueue_;
+std::mutex ErrorReporter::queueMutex_;
+std::condition_variable ErrorReporter::queueCondition_;
+std::thread ErrorReporter::workerThread_;
+std::atomic<bool> ErrorReporter::shutdownWorker_(false);
+bool ErrorReporter::asyncLoggingEnabled_ = false;
+bool ErrorReporter::workerThreadRunning_ = false;
+
+// Reference to the global test flag
+extern bool DISABLE_ALL_LOGGING_FOR_TESTS;
 
 //------ ConsoleLogDestination Implementation ------
 
@@ -35,6 +47,8 @@ void ConsoleLogDestination::flush() {
 
 FileLogDestination::FileLogDestination(const Config& config) 
     : config_(config), currentSize_(0) {
+    std::cout << "FileLogDestination constructor: " << config.filePath << std::endl;
+    
     // Create the directory if it doesn't exist
     try {
         std::filesystem::path logPath(config_.filePath);
@@ -42,6 +56,7 @@ FileLogDestination::FileLogDestination(const Config& config)
         
         if (!logDir.empty() && !std::filesystem::exists(logDir)) {
             std::filesystem::create_directories(logDir);
+            std::cout << "Created log directory: " << logDir.string() << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "Error creating log directory: " << e.what() << std::endl;
@@ -63,33 +78,49 @@ FileLogDestination::~FileLogDestination() {
 }
 
 void FileLogDestination::write(EditorException::Severity severity, const std::string& message) {
-    std::lock_guard<std::mutex> lock(fileMutex_);
-    
-    // Check if we need to rotate before writing
-    checkRotation();
-    
-    // If file isn't open, try to open it
-    if (!logFile_.is_open()) {
-        openFile();
-        if (!logFile_.is_open()) {
-            return; // Couldn't open file
-        }
+    // Only produce debug output when explicitly enabled
+    if (ErrorReporter::debugLoggingEnabled) {
+        std::cout << "FileLogDestination::write called: " << message << std::endl;
     }
     
-    // Format: [YYYY-MM-DD HH:MM:SS] [SEVERITY] Message
-    std::string timestampedMessage = "[" + getTimestamp() + "] " + message;
+    // Format the message with timestamp
+    std::string timestamp = getTimestamp();
+    std::string formattedMessage = "[" + timestamp + "] " + message;
     
-    // Write to file
-    logFile_ << timestampedMessage << std::endl;
+    std::lock_guard<std::mutex> lock(fileMutex_);
     
-    // Update current size
-    currentSize_ += timestampedMessage.size() + 1; // +1 for newline
+    try {
+        // Check if we need to rotate before writing
+        checkRotation();
+        
+        // If file isn't open, try to open it
+        if (!logFile_.is_open()) {
+            openFile();
+            if (!logFile_.is_open()) {
+                std::cerr << "Failed to open log file in write operation." << std::endl;
+                return; // Couldn't open file
+            }
+        }
+        
+        // Write to file
+        logFile_ << formattedMessage << std::endl;
+        
+        // Update current size with new message
+        currentSize_ += formattedMessage.size() + 1; // +1 for newline
+        
+        if (ErrorReporter::debugLoggingEnabled) {
+            std::cout << "Written to file: " << formattedMessage << " (Size: " << currentSize_ << ")" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error writing to log file: " << e.what() << std::endl;
+    }
 }
 
 void FileLogDestination::flush() {
     std::lock_guard<std::mutex> lock(fileMutex_);
     if (logFile_.is_open()) {
         logFile_.flush();
+        std::cout << "FileLogDestination::flush called" << std::endl;
     }
 }
 
@@ -118,6 +149,7 @@ void FileLogDestination::checkRotation() {
     
     // Perform rotation if needed
     if (needRotation) {
+        std::cout << "Rotation needed, rotating log file..." << std::endl;
         rotateFile();
     }
 }
@@ -153,6 +185,7 @@ void FileLogDestination::rotateFile() {
         
         // Rename current log file to timestamped version
         if (std::filesystem::exists(config_.filePath)) {
+            std::cout << "Renaming " << config_.filePath << " to " << rotatedName << std::endl;
             std::filesystem::rename(config_.filePath, rotatedName);
         }
         
@@ -175,6 +208,7 @@ void FileLogDestination::rotateFile() {
                 
                 // Delete oldest files beyond our limit
                 for (size_t i = 0; i < logFiles.size() - (config_.maxFileCount - 1); ++i) {
+                    std::cout << "Removing old log file: " << logFiles[i].string() << std::endl;
                     std::filesystem::remove(logFiles[i]);
                 }
             }
@@ -195,17 +229,24 @@ void FileLogDestination::openFile() {
         mode |= std::ios::app;
     }
     
+    std::cout << "Opening log file: " << config_.filePath << " (append: " << config_.appendMode << ")" << std::endl;
+    
     logFile_.open(config_.filePath, mode);
     
     if (logFile_.is_open()) {
+        std::cout << "Log file opened successfully" << std::endl;
         if (!config_.appendMode) {
             // For non-append mode, write header
-            logFile_ << "[" << getTimestamp() << "] === Log Started ===" << std::endl;
-            currentSize_ += 50; // Approximate size of header
+            std::string header = "[" + getTimestamp() + "] === Log Started ===";
+            logFile_ << header << std::endl;
+            logFile_.flush();
+            currentSize_ = header.size() + 1; // +1 for newline
+            std::cout << "Wrote header: " << header << std::endl;
         } else if (config_.appendMode) {
             // Get current size for append mode
             logFile_.seekp(0, std::ios::end);
             currentSize_ = static_cast<size_t>(logFile_.tellp());
+            std::cout << "Opened in append mode, current size: " << currentSize_ << std::endl;
         }
     } else {
         std::cerr << "FileLogDestination::openFile - Failed to open log file!" << std::endl;
@@ -302,11 +343,13 @@ std::string FileLogDestination::getDetailedTimestamp() {
 
 void ErrorReporter::addLogDestination(std::unique_ptr<LogDestination> destination) {
     std::lock_guard<std::mutex> lock(destinationsMutex_);
+    std::cout << "Adding log destination" << std::endl;
     destinations_.push_back(std::move(destination));
 }
 
 void ErrorReporter::clearLogDestinations() {
     std::lock_guard<std::mutex> lock(destinationsMutex_);
+    std::cout << "Clearing log destinations" << std::endl;
     destinations_.clear();
 }
 
@@ -317,6 +360,7 @@ void ErrorReporter::initializeDefaultLogging() {
     destinations_.clear();
     
     // Add console destination
+    std::cout << "Adding default console destination" << std::endl;
     destinations_.push_back(std::make_unique<ConsoleLogDestination>());
 }
 
@@ -325,9 +369,8 @@ void ErrorReporter::enableFileLogging(
     bool append,
     FileLogDestination::RotationType rotationType,
     size_t maxSizeBytes,
-    int maxFileCount) {
-    
-    // Create file log configuration
+    int maxFileCount
+) {
     FileLogDestination::Config config;
     config.filePath = filePath;
     config.appendMode = append;
@@ -335,11 +378,227 @@ void ErrorReporter::enableFileLogging(
     config.maxSizeBytes = maxSizeBytes;
     config.maxFileCount = maxFileCount;
     
-    // Add file destination
-    addLogDestination(std::make_unique<FileLogDestination>(config));
+    auto fileDestination = std::make_unique<FileLogDestination>(config);
+    addLogDestination(std::move(fileDestination));
 }
 
+void ErrorReporter::enableAsyncLogging(bool enable) {
+    if (enable == asyncLoggingEnabled_) {
+        return; // Already in the requested state
+    }
+    
+    if (enable) {
+        // Initialize the worker thread first, then set the flag
+        initializeAsyncLogging();
+        asyncLoggingEnabled_ = true;
+    } else {
+        // Disable async logging - first set flag, then shutdown worker
+        asyncLoggingEnabled_ = false;
+        shutdownAsyncLogging();
+    }
+}
+
+void ErrorReporter::initializeAsyncLogging() {
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    
+    // Don't start thread if already running
+    if (workerThreadRunning_) {
+        return;
+    }
+    
+    // Reset shutdown flag
+    shutdownWorker_ = false;
+    
+    try {
+        // Start worker thread
+        workerThread_ = std::thread(workerThreadFunction);
+        workerThreadRunning_ = true;
+    }
+    catch (const std::exception& e) {
+        // Fall back to synchronous logging
+        workerThreadRunning_ = false;
+        asyncLoggingEnabled_ = false;
+    }
+}
+
+void ErrorReporter::shutdownAsyncLogging() {
+    // Signal worker thread to stop
+    shutdownWorker_ = true;
+    
+    // First, check if the worker thread is running
+    bool isRunning = false;
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        isRunning = workerThreadRunning_;
+        if (!isRunning) {
+            return; // Thread not running
+        }
+    }
+    
+    // Wake up worker thread
+    queueCondition_.notify_one();
+    
+    // Wait for worker thread to complete
+    if (workerThread_.joinable()) {
+        workerThread_.join();
+    }
+    
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        workerThreadRunning_ = false;
+    }
+    
+    // Process any remaining messages directly
+    processRemainingMessages();
+}
+
+void ErrorReporter::workerThreadFunction() {
+    // Fast path for processing messages
+    std::vector<QueuedLogMessage> batch;
+    batch.reserve(100); // Pre-reserve space for larger batch processing
+    
+    while (true) {
+        {
+            std::unique_lock<std::mutex> lock(queueMutex_);
+            
+            // If queue is empty, wait for work or shutdown signal
+            if (logQueue_.empty()) {
+                queueCondition_.wait_for(lock, std::chrono::milliseconds(20), [&]() {
+                    return !logQueue_.empty() || shutdownWorker_;
+                });
+            }
+            
+            if (shutdownWorker_ && logQueue_.empty()) {
+                break;  // Exit loop if shutdown and queue is empty
+            }
+            
+            // Quickly extract all messages from the queue under lock
+            // This minimizes lock contention
+            if (!logQueue_.empty()) {
+                while (!logQueue_.empty() && batch.size() < 100) {
+                    batch.push_back(std::move(logQueue_.front()));
+                    logQueue_.pop();
+                }
+            }
+        }  // Release lock before processing
+        
+        // Process batch of messages outside the lock
+        if (!batch.empty()) {
+            // Lock once for the batch
+            std::lock_guard<std::mutex> destLock(destinationsMutex_);
+            
+            for (const auto& message : batch) {
+                // Write to all destinations (without flushing each time)
+                for (auto& destination : destinations_) {
+                    destination->write(message.severity, message.formattedMessage);
+                }
+            }
+            
+            // Flush once after processing the batch
+            for (auto& destination : destinations_) {
+                destination->flush();
+            }
+            
+            batch.clear();
+        }
+    }
+}
+
+void ErrorReporter::processRemainingMessages() {
+    std::queue<QueuedLogMessage> remainingMessages;
+    
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        remainingMessages.swap(logQueue_);  // Efficiently get all messages
+    }
+    
+    if (debugLoggingEnabled) {
+        std::cout << "Processing remaining messages..." << std::endl;
+    }
+    
+    int count = 0;
+    
+    // Quick check to avoid locking if there are no messages
+    if (!remainingMessages.empty()) {
+        std::lock_guard<std::mutex> destLock(destinationsMutex_);
+        
+        while (!remainingMessages.empty()) {
+            auto& msg = remainingMessages.front();
+            
+            if (debugLoggingEnabled) {
+                std::cout << "Processing remaining message: " << msg.formattedMessage << std::endl;
+            }
+            
+            // Process the message directly
+            for (auto& destination : destinations_) {
+                destination->write(msg.severity, msg.formattedMessage);
+            }
+            
+            remainingMessages.pop();
+            count++;
+        }
+        
+        // Flush once after processing all messages
+        for (auto& destination : destinations_) {
+            destination->flush();
+        }
+    }
+    
+    if (debugLoggingEnabled) {
+        if (count > 0) {
+            std::cout << "Processed " << count << " remaining messages." << std::endl;
+        } else {
+            std::cout << "No remaining messages to process." << std::endl;
+        }
+    }
+}
+
+void ErrorReporter::enqueueMessage(EditorException::Severity severity, const std::string& message) {
+    // Fast path - avoid locking if async logging not enabled
+    if (!asyncLoggingEnabled_) {
+        // Fall back to synchronous logging if async not enabled
+        std::lock_guard<std::mutex> lock(destinationsMutex_);
+        for (auto& destination : destinations_) {
+            destination->write(severity, message);
+            destination->flush();
+        }
+        return;
+    }
+    
+    // Fast path - avoid locking if worker thread not running
+    if (!workerThreadRunning_) {
+        // Fall back to synchronous logging if worker thread not running
+        std::lock_guard<std::mutex> lock(destinationsMutex_);
+        for (auto& destination : destinations_) {
+            destination->write(severity, message);
+            destination->flush();
+        }
+        return;
+    }
+    
+    // Add message to queue with minimal locking
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        
+        // Use emplace for efficiency (avoids a copy of the message)
+        logQueue_.emplace(severity, message);
+    }
+    
+    // Only notify worker if this is the first message or if there are many messages
+    // This reduces context switching overhead
+    static thread_local int localCounter = 0;
+    if (++localCounter % 20 == 0) {
+        queueCondition_.notify_one();
+    }
+}
+
+// Regular log methods implementation
 void ErrorReporter::logException(const EditorException& ex) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     // Skip based on severity filters
     if (suppressAllWarnings && ex.getSeverity() <= EditorException::Severity::Warning) {
         return;
@@ -354,24 +613,44 @@ void ErrorReporter::logException(const EditorException& ex) {
 }
 
 void ErrorReporter::logDebug(const std::string& message) {
-    // Skip debug messages if disabled
-    if (!debugLoggingEnabled) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
         return;
     }
     
+    // If debug messages are below the threshold, don't log them
     if (EditorException::Severity::Debug < severityThreshold) {
         return;
     }
     
-    writeToDestinations(EditorException::Severity::Debug, "Debug: " + message);
+    // Format as: [timestamp] Debug: message
+    // For consistency with exception formatting
+    std::string formattedMessage = "[" + getDetailedTimestamp() + "] Debug: " + message;
+    
+    // Use either async or sync logging based on current settings
+    if (asyncLoggingEnabled_ && workerThreadRunning_) {
+        enqueueMessage(EditorException::Severity::Debug, formattedMessage);
+    } else {
+        writeToDestinations(EditorException::Severity::Debug, formattedMessage);
+    }
 }
 
 void ErrorReporter::logError(const std::string& message) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     // Errors are always logged (no filtering)
     writeToDestinations(EditorException::Severity::Error, "Error: " + message);
 }
 
 void ErrorReporter::logWarning(const std::string& message) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     // Skip warnings if suppressed
     if (suppressAllWarnings) {
         return;
@@ -392,6 +671,11 @@ void ErrorReporter::logWarning(const std::string& message) {
 }
 
 void ErrorReporter::logUnknownException(const std::string& context) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     logError("Unknown exception in " + context);
 }
 
@@ -400,23 +684,83 @@ void ErrorReporter::setSeverityThreshold(EditorException::Severity threshold) {
 }
 
 void ErrorReporter::flushLogs() {
-    std::lock_guard<std::mutex> lock(destinationsMutex_);
-    for (auto& destination : destinations_) {
-        destination->flush();
+    if (asyncLoggingEnabled_ && workerThreadRunning_) {
+        if (debugLoggingEnabled) {
+            std::cout << "Flushing async queue..." << std::endl;
+        }
+        
+        // First notify worker thread to process any queued messages
+        queueCondition_.notify_one();
+        
+        // Small delay to allow the worker thread to process messages
+        // Increased slightly to ensure processing completes
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        
+        // Process any remaining messages directly
+        processRemainingMessages();
+    }
+    
+    // Lock and flush all destinations
+    {
+        std::lock_guard<std::mutex> lock(destinationsMutex_);
+        if (debugLoggingEnabled) {
+            std::cout << "Flushing " << destinations_.size() << " destinations" << std::endl;
+        }
+        
+        for (auto& destination : destinations_) {
+            destination->flush();
+        }
     }
 }
 
 void ErrorReporter::writeToDestinations(EditorException::Severity severity, const std::string& message) {
-    std::lock_guard<std::mutex> lock(destinationsMutex_);
-    
-    // If we have no destinations, create default console destination
-    if (destinations_.empty()) {
-        destinations_.push_back(std::make_unique<ConsoleLogDestination>());
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
     }
     
-    // Write to all destinations
+    // Skip messages below the severity threshold
+    if (severity < severityThreshold) {
+        return;
+    }
+    
+    // Skip warning messages if suppressed
+    if (suppressAllWarnings && severity == EditorException::Severity::Warning) {
+        return;
+    }
+    
+    // If async logging is enabled and worker thread is running, queue the message
+    if (asyncLoggingEnabled_ && workerThreadRunning_) {
+        // Fast path for async logging - directly enqueue without function call overhead
+        {
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            logQueue_.emplace(severity, message);
+        }
+        
+        // Notify worker only occasionally to reduce overhead
+        static thread_local int notifyCounter = 0;
+        if (++notifyCounter % 20 == 0) {
+            queueCondition_.notify_one();
+        }
+        
+        return;
+    }
+    
+    // Empty destinations check - avoid locking
+    if (destinations_.empty()) {
+        return;
+    }
+    
+    // Optimized synchronous logging path
+    std::lock_guard<std::mutex> lock(destinationsMutex_);
+    
+    // Write and flush in a single pass
     for (auto& destination : destinations_) {
         destination->write(severity, message);
+    }
+    
+    for (auto& destination : destinations_) {
+        destination->flush();
     }
 }
 
@@ -437,6 +781,11 @@ void ErrorReporter::logRetryAttempt(
     const std::string& reason,
     std::chrono::milliseconds delayMs
 ) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     // Create a new retry event
     RetryEvent event(operationId, operationType, attempt, reason, delayMs);
     
@@ -461,6 +810,11 @@ void ErrorReporter::logRetryResult(
     bool success,
     const std::string& details
 ) {
+    // Check global test flag first
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
+    }
+    
     RetryEvent event;
     
     // Retrieve and remove the pending retry
@@ -505,4 +859,22 @@ OperationStatsData ErrorReporter::getRetryStats(const std::string& operationType
 void ErrorReporter::resetRetryStats() {
     RetryStats::getInstance().reset();
     logDebug("Retry statistics have been reset");
+}
+
+// Add implementation for getDetailedTimestamp method in ErrorReporter
+std::string ErrorReporter::getDetailedTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    
+    std::stringstream ss;
+    tm tm_now;
+    
+#ifdef _WIN32
+    localtime_s(&tm_now, &time_t_now);
+#else
+    localtime_r(&time_t_now, &tm_now);
+#endif
+    
+    ss << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
 } 
