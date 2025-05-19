@@ -1,6 +1,7 @@
 #include "EditorError.h"
 #include <iomanip>
 #include <sstream>
+#include <limits>
 
 #ifdef _WIN32
 #include <direct.h>  // For _getcwd on Windows
@@ -19,10 +20,17 @@ std::mutex ErrorReporter::retryMutex_;
 std::queue<QueuedLogMessage> ErrorReporter::logQueue_;
 std::mutex ErrorReporter::queueMutex_;
 std::condition_variable ErrorReporter::queueCondition_;
+std::condition_variable ErrorReporter::queueNotFullCondition_;
 std::thread ErrorReporter::workerThread_;
 std::atomic<bool> ErrorReporter::shutdownWorker_(false);
 bool ErrorReporter::asyncLoggingEnabled_ = false;
 bool ErrorReporter::workerThreadRunning_ = false;
+
+// Define bounded queue configuration and metrics
+size_t ErrorReporter::maxQueueSize_ = std::numeric_limits<size_t>::max(); // Default to unbounded queue
+QueueOverflowPolicy ErrorReporter::queueOverflowPolicy_ = QueueOverflowPolicy::DropOldest;
+std::atomic<size_t> ErrorReporter::queueOverflowCount_(0);
+std::atomic<size_t> ErrorReporter::queueHighWaterMark_(0);
 
 // Reference to the global test flag
 extern bool DISABLE_ALL_LOGGING_FOR_TESTS;
@@ -472,6 +480,10 @@ void ErrorReporter::workerThreadFunction() {
                 break;  // Exit loop if shutdown and queue is empty
             }
             
+            // Get current queue size to determine if we need to signal later
+            size_t originalQueueSize = logQueue_.size();
+            bool queueWasFull = originalQueueSize >= maxQueueSize_;
+            
             // Quickly extract all messages from the queue under lock
             // This minimizes lock contention
             if (!logQueue_.empty()) {
@@ -479,6 +491,14 @@ void ErrorReporter::workerThreadFunction() {
                     batch.push_back(std::move(logQueue_.front()));
                     logQueue_.pop();
                 }
+            }
+            
+            // If queue was full but now has space, notify waiting producers
+            // Only relevant for BlockProducer policy
+            if (queueWasFull && queueOverflowPolicy_ == QueueOverflowPolicy::BlockProducer && 
+                logQueue_.size() < maxQueueSize_) {
+                // Signal that there's now space in the queue
+                queueNotFullCondition_.notify_all();
             }
         }  // Release lock before processing
         
@@ -576,19 +596,102 @@ void ErrorReporter::enqueueMessage(EditorException::Severity severity, const std
         return;
     }
     
-    // Add message to queue with minimal locking
+    // Add message to queue with bounded queue handling
+    bool messageQueued = false;
+    
     {
-        std::lock_guard<std::mutex> lock(queueMutex_);
+        std::unique_lock<std::mutex> lock(queueMutex_);
         
-        // Use emplace for efficiency (avoids a copy of the message)
-        logQueue_.emplace(severity, message);
+        // Update high water mark if queue size is larger than previous max
+        size_t currentSize = logQueue_.size();
+        size_t currentHighWaterMark = queueHighWaterMark_.load();
+        if (currentSize > currentHighWaterMark) {
+            queueHighWaterMark_.store(currentSize);
+        }
+        
+        // Check if queue is at max capacity
+        if (currentSize >= maxQueueSize_) {
+            // Handle according to policy
+            switch (queueOverflowPolicy_) {
+                case QueueOverflowPolicy::DropOldest:
+                    // Remove oldest message to make room
+                    if (debugLoggingEnabled) {
+                        std::cout << "Queue overflow (DropOldest): Dropping oldest message" << std::endl;
+                    }
+                    logQueue_.pop();
+                    queueOverflowCount_++;
+                    
+                    // Now add the new message
+                    logQueue_.emplace(severity, message);
+                    messageQueued = true;
+                    break;
+                    
+                case QueueOverflowPolicy::DropNewest:
+                    // Just drop the new message
+                    if (debugLoggingEnabled) {
+                        std::cout << "Queue overflow (DropNewest): Dropping new message" << std::endl;
+                    }
+                    queueOverflowCount_++;
+                    messageQueued = false;
+                    break;
+                    
+                case QueueOverflowPolicy::BlockProducer:
+                    // Wait until queue has space
+                    if (debugLoggingEnabled) {
+                        std::cout << "Queue full: Blocking producer until space available" << std::endl;
+                    }
+                    
+                    // Wait for space with a timeout to prevent potential deadlocks
+                    while (logQueue_.size() >= maxQueueSize_ && !shutdownWorker_) {
+                        queueNotFullCondition_.wait_for(lock, 
+                                              std::chrono::milliseconds(100), 
+                                              [&]() { 
+                                                  return logQueue_.size() < maxQueueSize_ || shutdownWorker_; 
+                                              });
+                    }
+                    
+                    // Check if we're shutting down; if so, don't queue the message
+                    if (shutdownWorker_) {
+                        messageQueued = false;
+                    } else {
+                        // Now add the message since there's space
+                        logQueue_.emplace(severity, message);
+                        messageQueued = true;
+                    }
+                    break;
+                    
+                case QueueOverflowPolicy::WarnOnly:
+                    // Log a warning (but not through the queue to avoid recursion)
+                    if (logQueue_.size() % 1000 == 0) { // Only log periodically
+                        std::cerr << "WARNING: Async log queue exceeding configured maximum size: " 
+                                 << logQueue_.size() << "/" << maxQueueSize_ << std::endl;
+                    }
+                    // Add the message anyway (allow unbounded growth)
+                    logQueue_.emplace(severity, message);
+                    messageQueued = true;
+                    break;
+                    
+                default:
+                    // Unknown policy, default to unbounded behavior
+                    logQueue_.emplace(severity, message);
+                    messageQueued = true;
+                    break;
+            }
+        } else {
+            // Queue not full, add message normally
+            logQueue_.emplace(severity, message);
+            messageQueued = true;
+        }
     }
     
-    // Only notify worker if this is the first message or if there are many messages
-    // This reduces context switching overhead
-    static thread_local int localCounter = 0;
-    if (++localCounter % 20 == 0) {
-        queueCondition_.notify_one();
+    // Notify worker thread if message was queued
+    if (messageQueued) {
+        // Only notify worker if this is the first message or if there are many messages
+        // This reduces context switching overhead
+        static thread_local int localCounter = 0;
+        if (++localCounter % 20 == 0) {
+            queueCondition_.notify_one();
+        }
     }
 }
 
@@ -877,4 +980,39 @@ std::string ErrorReporter::getDetailedTimestamp() {
     
     ss << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S");
     return ss.str();
+}
+
+void ErrorReporter::configureAsyncQueue(size_t maxQueueSize, QueueOverflowPolicy overflowPolicy) {
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    
+    // Log the configuration change
+    if (debugLoggingEnabled) {
+        std::string policyStr;
+        switch (overflowPolicy) {
+            case QueueOverflowPolicy::DropOldest: policyStr = "DropOldest"; break;
+            case QueueOverflowPolicy::DropNewest: policyStr = "DropNewest"; break;
+            case QueueOverflowPolicy::BlockProducer: policyStr = "BlockProducer"; break;
+            case QueueOverflowPolicy::WarnOnly: policyStr = "WarnOnly"; break;
+            default: policyStr = "Unknown";
+        }
+        
+        std::cout << "Configuring async queue: maxSize=" << maxQueueSize 
+                  << ", policy=" << policyStr << std::endl;
+    }
+    
+    maxQueueSize_ = maxQueueSize;
+    queueOverflowPolicy_ = overflowPolicy;
+    queueOverflowCount_ = 0;  // Reset overflow counter
+    queueHighWaterMark_ = logQueue_.size();  // Initialize to current size
+}
+
+AsyncQueueStats ErrorReporter::getAsyncQueueStats() {
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    return {
+        logQueue_.size(),            // currentQueueSize
+        maxQueueSize_,               // maxQueueSizeConfigured
+        queueHighWaterMark_.load(),  // highWaterMark
+        queueOverflowCount_.load(),  // overflowCount
+        queueOverflowPolicy_         // policy
+    };
 } 

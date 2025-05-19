@@ -86,6 +86,29 @@ public:
 };
 
 /**
+ * @enum QueueOverflowPolicy
+ * @brief Defines strategies for handling queue overflow in asynchronous logging
+ */
+enum class QueueOverflowPolicy {
+    DropOldest,    // Remove oldest message when queue is full (FIFO overflow)
+    DropNewest,    // Reject new messages when queue is full (preserve history)
+    BlockProducer, // Block calling thread until space is available (back pressure)
+    WarnOnly       // Log warnings but allow queue to grow beyond limit
+};
+
+/**
+ * @struct AsyncQueueStats
+ * @brief Contains statistics about the asynchronous logging queue
+ */
+struct AsyncQueueStats {
+    size_t currentQueueSize;       // Current number of messages in queue
+    size_t maxQueueSizeConfigured; // Maximum queue size configured
+    size_t highWaterMark;          // Maximum queue size ever reached
+    size_t overflowCount;          // Number of messages dropped or rejected due to overflow
+    QueueOverflowPolicy policy;    // Current overflow policy in use
+};
+
+/**
  * @class LogDestination
  * @brief Abstract interface for log output destinations
  * 
@@ -394,6 +417,24 @@ public:
      */
     static std::string getDetailedTimestamp();
 
+    /**
+     * @brief Configure the asynchronous logging queue behavior
+     * 
+     * @param maxQueueSize Maximum number of messages allowed in the queue
+     * @param overflowPolicy How to handle queue overflow situations
+     */
+    static void configureAsyncQueue(
+        size_t maxQueueSize,
+        QueueOverflowPolicy overflowPolicy = QueueOverflowPolicy::DropOldest
+    );
+    
+    /**
+     * @brief Get current statistics about the asynchronous logging queue
+     * 
+     * @return AsyncQueueStats containing queue metrics and configuration
+     */
+    static AsyncQueueStats getAsyncQueueStats();
+
 private:
     // Collection of log destinations
     static std::vector<std::unique_ptr<LogDestination>> destinations_;
@@ -407,10 +448,17 @@ private:
     static std::queue<QueuedLogMessage> logQueue_;
     static std::mutex queueMutex_;
     static std::condition_variable queueCondition_;
+    static std::condition_variable queueNotFullCondition_; // New: signals when queue has space
     static std::thread workerThread_;
     static std::atomic<bool> shutdownWorker_;
     static bool asyncLoggingEnabled_;
     static bool workerThreadRunning_;
+    
+    // Queue configuration and metrics
+    static size_t maxQueueSize_;
+    static QueueOverflowPolicy queueOverflowPolicy_;
+    static std::atomic<size_t> queueOverflowCount_;
+    static std::atomic<size_t> queueHighWaterMark_;
     
     /**
      * @brief Worker thread function for async logging
