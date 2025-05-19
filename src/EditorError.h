@@ -88,24 +88,31 @@ public:
 /**
  * @enum QueueOverflowPolicy
  * @brief Defines strategies for handling queue overflow in asynchronous logging
+ * 
+ * When the logging queue reaches its configured maximum size, this policy determines
+ * how new log messages are handled. The choice of policy involves tradeoffs between
+ * performance, memory usage, and message preservation.
  */
 enum class QueueOverflowPolicy {
-    DropOldest,    // Remove oldest message when queue is full (FIFO overflow)
-    DropNewest,    // Reject new messages when queue is full (preserve history)
-    BlockProducer, // Block calling thread until space is available (back pressure)
-    WarnOnly       // Log warnings but allow queue to grow beyond limit
+    DropOldest,    ///< Remove oldest message when queue is full (FIFO overflow), preserves newest messages
+    DropNewest,    ///< Reject new messages when queue is full, preserves oldest messages (historical record)
+    BlockProducer, ///< Block calling thread until space is available, ensuring all messages are logged
+    WarnOnly       ///< Log warnings but allow queue to grow beyond limit (may use more memory)
 };
 
 /**
  * @struct AsyncQueueStats
  * @brief Contains statistics about the asynchronous logging queue
+ * 
+ * These statistics provide visibility into the performance and behavior of the async logging
+ * system, allowing monitoring of queue pressure, overflow events, and configuration.
  */
 struct AsyncQueueStats {
-    size_t currentQueueSize;       // Current number of messages in queue
-    size_t maxQueueSizeConfigured; // Maximum queue size configured
-    size_t highWaterMark;          // Maximum queue size ever reached
-    size_t overflowCount;          // Number of messages dropped or rejected due to overflow
-    QueueOverflowPolicy policy;    // Current overflow policy in use
+    size_t currentQueueSize;       ///< Current number of messages in queue
+    size_t maxQueueSizeConfigured; ///< Maximum queue size configured (0 = unbounded)
+    size_t highWaterMark;          ///< Maximum queue size ever reached (peak memory usage)
+    size_t overflowCount;          ///< Number of messages dropped or rejected due to overflow
+    QueueOverflowPolicy policy;    ///< Current overflow policy in use
 };
 
 /**
@@ -290,7 +297,11 @@ public:
      * @brief Enable or disable asynchronous logging
      * 
      * When enabled, log messages are queued and processed in a background thread,
-     * improving performance by not blocking the calling thread.
+     * improving performance by not blocking the calling thread. This is especially
+     * useful in performance-sensitive code paths where logging should not introduce
+     * latency.
+     * 
+     * Thread Safety: This method is thread-safe and can be called from any thread.
      * 
      * @param enable True to enable async logging, false to disable
      */
@@ -420,8 +431,20 @@ public:
     /**
      * @brief Configure the asynchronous logging queue behavior
      * 
-     * @param maxQueueSize Maximum number of messages allowed in the queue
+     * Sets the maximum size of the asynchronous logging queue and the policy to follow
+     * when the queue fills up. By default, older messages are dropped when the queue is full.
+     * 
+     * To configure unbounded queue growth (the default behavior), use a maxQueueSize of 0 with
+     * the WarnOnly policy.
+     * 
+     * Thread Safety: This method is thread-safe and can be called from any thread. Changes
+     * take effect for subsequent log messages.
+     * 
+     * @param maxQueueSize Maximum number of messages allowed in the queue (0 = unbounded)
      * @param overflowPolicy How to handle queue overflow situations
+     * 
+     * @note The BlockProducer policy may cause calling threads to block if the queue is full,
+     *       which could impact application performance if the logging consumer cannot keep up.
      */
     static void configureAsyncQueue(
         size_t maxQueueSize,
@@ -431,7 +454,16 @@ public:
     /**
      * @brief Get current statistics about the asynchronous logging queue
      * 
+     * Provides information about the current state of the asynchronous logging queue,
+     * including its current size, high water mark, overflow count, and configuration.
+     * This is useful for monitoring and diagnosing logging performance issues.
+     * 
+     * Thread Safety: This method is thread-safe and can be called from any thread.
+     * 
      * @return AsyncQueueStats containing queue metrics and configuration
+     * 
+     * @note These statistics are maintained even when async logging is disabled, but
+     *       the currentQueueSize will typically be 0 in that case.
      */
     static AsyncQueueStats getAsyncQueueStats();
 
@@ -464,6 +496,10 @@ private:
      * @brief Worker thread function for async logging
      * 
      * This function runs in a separate thread and processes queued log messages.
+     * It waits for new messages using a condition variable and processes them
+     * in batches for efficiency.
+     * 
+     * The worker thread exits when shutdownWorker_ is set to true and the queue is empty.
      */
     static void workerThreadFunction();
     
@@ -476,6 +512,11 @@ private:
     
     /**
      * @brief Enqueue a message for async processing
+     * 
+     * Adds a message to the async queue for later processing by the worker thread.
+     * The behavior when the queue is full depends on the configured QueueOverflowPolicy.
+     * 
+     * Thread Safety: This method is thread-safe and can be called from any thread.
      * 
      * @param severity The severity level of the message
      * @param message The message to log
