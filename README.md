@@ -1,89 +1,83 @@
 # AI-First TextEditor
 
-A modern text editor with integrated AI capabilities to help develop software projects.
+A modern code editor with deep AI integration as a core principle.
 
-## Features
+## About
 
-- **AI-Powered Development**: Generate code, get suggestions, and automate routine tasks
-- **Modern ImGui Interface**: Clean and intuitive user interface
-- **OpenAI Integration**: Connect to OpenAI's API to leverage advanced AI models
-- **Project Management**: Manage files and structure with AI assistance
+The AI-First TextEditor is designed from the ground up with AI capabilities integrated as first-class citizens, not merely add-ons. The editor leverages powerful language models to assist with code generation, refactoring, understanding, and more.
 
-## Requirements
+## Key Features
+
+- Fast, responsive text editing with syntax highlighting
+- Deep AI integration with the OpenAI API
+- Asynchronous logging system for high performance
+- Command-based architecture with undo/redo support
+- Modern C++ (17) codebase with robust testing
+
+## Getting Started
+
+### Prerequisites
 
 - C++17 compatible compiler (MSVC, GCC, Clang)
-- CMake 3.10+
-- Git
-- OpenAI API key
+- CMake 3.15+
+- OpenAI API key (for AI features)
 
-## Building from Source
+### Building from Source
 
-### Windows (Visual Studio)
-```powershell
-# Clone the repository
-git clone https://github.com/your-org/AI-First-TextEditor.git
-cd AI-First-TextEditor
-
-# Create build directory and generate Visual Studio solution
-mkdir build_vs
-cd build_vs
-cmake -G "Visual Studio 17 2022" -A x64 ..
-
-# Build using CMake
-cmake --build . --config Release
-```
-
-### Linux/macOS
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/AI-First-TextEditor.git
+git clone https://github.com/yourusername/AI-First-TextEditor.git
 cd AI-First-TextEditor
 
-# Create build directory and generate Makefiles
-mkdir build
-cd build
+# Initialize submodules
+git submodule update --init --recursive
+
+# Configure with CMake
+mkdir build && cd build
 cmake ..
 
 # Build
-make -j$(nproc)
-```
+cmake --build .
 
-## Environment Setup
-Create a `.env` file in the executable directory:
-```
-OPENAI_API_KEY=your_api_key_here
-OPENAI_ORGANIZATION=your_org_id_here  # Optional
-```
-
-You can also copy and edit the provided `env.template` file.
-
-## Usage
-
-1. Launch the application
-2. Configure your OpenAI API key in Settings if not using .env
-3. Start creating your project with AI assistance
-
-## Directory Structure
-
-- `src/`: Source code for the editor
-- `tests/`: Unit and integration tests
-- `external/`: External dependencies
-- `docs/`: Documentation
-- `build_vs/`: Visual Studio build directory
-- `build/`: Default build directory
-
-## Testing
-
-Run all tests:
-```bash
-cd build_vs
-.\tests\RunAllTests.exe
+# Run the editor
+./src/TextEditor
 ```
 
 ## Documentation
 
-Additional documentation is available in the [docs/](docs/) directory.
+We've organized our documentation to make it easy to find what you need:
+
+### Project Overview
+
+- [Project Introduction](docs/project/README.md) - Overview of the project goals and structure
+- [Development Roadmap](docs/project/ROADMAP.md) - Our phased development plan
+- [Implementation Progress](docs/project/PROGRESS.md) - Current status and achievements
+
+### Developer Documentation
+
+- [Architecture Overview](docs/development/ARCHITECTURE.md) - System design and component interactions
+- [Codebase Structure](docs/development/CODEBASE_STRUCTURE.md) - Directory organization and key files
+- [Contributing Guide](docs/development/CONTRIBUTING.md) - How to contribute to the project
+
+### Feature Documentation
+
+- [AI Integration](docs/features/ai_integration.md) - OpenAI API integration details
+- [Async Logging](docs/features/async_logging.md) - Asynchronous logging system
+
+### Testing Documentation
+
+- [Test Plan](docs/testing/TEST_PLAN.md) - Test strategy and methodology
+- [Test Implementation](docs/testing/IMPLEMENTATION.md) - Test coverage details
+- [Stress Tests](docs/testing/stress_tests/file_logging.md) - File logging stress testing
+
+## Current Status
+
+The project is currently in **Phase 2: Comprehensive Testing & Validation**. We're focused on ensuring code quality and reliability through extensive testing before moving on to architectural refinements in Phase 3.
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](docs/development/CONTRIBUTING.md) for more information on how to get involved.
 
 ## License
 
-[MIT License](LICENSE) 
+This project is licensed under the MIT License - see the LICENSE file for details. 
