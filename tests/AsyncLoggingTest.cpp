@@ -10,6 +10,7 @@
 #include <sstream>
 #include <map>
 #include <mutex>
+#include <set>
 
 // Test fixture for AsyncLogging tests
 class AsyncLoggingTest : public ::testing::Test {
@@ -216,30 +217,42 @@ TEST_F(AsyncLoggingTest, PerformanceComparison) {
 // Test high volume logging with smaller message counts
 TEST_F(AsyncLoggingTest, HighVolumeLogging) {
     const std::string logPath = "logs/async_test_high_volume.log";
-    const int messageCount = 200; // Reduced from 5000
-    const size_t messageSize = 50; // Reduced from 500 bytes
+    const int messageCount = 1000; // Increased from 200 to better simulate high volume
+    const size_t messageSize = 200; // Increased from 50 to better simulate high volume
     
     // Setup logging
     ErrorReporter::clearLogDestinations();
     ErrorReporter::enableFileLogging(logPath, false, 
                                      FileLogDestination::RotationType::Size,
-                                     1 * 1024 * 1024); // 1MB
+                                     10 * 1024 * 1024); // 10MB to ensure no rotation during test
     ErrorReporter::enableAsyncLogging(true);
     
     // Log a high volume of messages
+    auto startTime = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < messageCount; ++i) {
         std::string message = generateRandomMessage(messageSize) + " #" + std::to_string(i);
         ErrorReporter::logDebug(message);
+        
+        // Add occasional small pauses to simulate more realistic logging patterns
+        if (i % 100 == 0 && i > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     
-    // Wait for async logging to complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::cout << "High volume logging time for " << messageCount << " messages: " 
+              << duration.count() << " ms" << std::endl;
+    
+    // Wait for async logging to complete - scaled based on message count
+    std::this_thread::sleep_for(std::chrono::milliseconds(500 + messageCount / 2));
+    
+    // Ensure all logs are flushed
     ErrorReporter::flushLogs();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
-    // Disable async logging
+    // Disable async logging and wait for final cleanup
     ErrorReporter::enableAsyncLogging(false);
-    
-    // Small additional delay for cleanup
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
     // Verify log file exists and has content
@@ -247,15 +260,23 @@ TEST_F(AsyncLoggingTest, HighVolumeLogging) {
     size_t fileSize = getFileSize(logPath);
     std::cout << "High volume log file size: " << fileSize << " bytes" << std::endl;
     
+    // Calculate expected file size (approximately)
+    size_t estimatedLogSize = (messageSize + 50) * messageCount; // 50 bytes for timestamp, severity, etc.
+    std::cout << "Estimated log size: " << estimatedLogSize << " bytes" << std::endl;
+    
     // Count the number of lines in the log file
     size_t lineCount = countLines(logPath);
     std::cout << "High volume log line count: " << lineCount << std::endl;
     
-    // Dump file contents for debugging
-    dumpFileContents(logPath);
+    // Precise assertion - verify exact expected line count (header + messages)
+    size_t expectedLineCount = messageCount + 1; // 1 for header line
+    EXPECT_EQ(lineCount, expectedLineCount) 
+        << "Expected " << expectedLineCount << " lines, found " << lineCount;
     
-    // Less strict assertion - just verify we've got a reasonable number of lines
-    EXPECT_GT(lineCount, 1); // At least header + some messages
+    // If line count doesn't match expected, dump file contents for debugging
+    if (lineCount != expectedLineCount) {
+        dumpFileContents(logPath);
+    }
 }
 
 // Test proper message handling during shutdown
@@ -491,5 +512,137 @@ TEST_F(AsyncLoggingTest, ConcurrentLoggingFromMultipleThreads) {
                 std::cout << allLines[i] << std::endl;
             }
         }
+    }
+}
+
+// Test queue growth and memory usage under high load - simplified version
+TEST_F(AsyncLoggingTest, QueueGrowthAndMemoryUsage) {
+    // Test parameters - significantly reduced for test stability
+    const int numProducerThreads = 2;
+    const int messagesPerThread = 100;
+    const int messageSize = 100;
+    
+    // Create log file path
+    const std::string logPath = "logs/async_test_queue_growth.log";
+    
+    // Setup standard file logging (no artificial delay)
+    ErrorReporter::clearLogDestinations();
+    ErrorReporter::enableFileLogging(logPath, false);
+    
+    // Track metrics
+    std::atomic<size_t> queuedCount{0};
+    
+    try {
+        // Start with async logging disabled
+        ErrorReporter::enableAsyncLogging(false);
+        
+        // Timepoints for metrics
+        std::chrono::time_point<std::chrono::high_resolution_clock> startTime, endTime;
+        
+        // Launch producer threads
+        std::cout << "Setting up " << numProducerThreads << " producer threads..." << std::endl;
+        
+        std::vector<std::thread> producers;
+        std::atomic<bool> startProduction{false};
+        std::atomic<int> threadsReady{0};
+        
+        for (int t = 0; t < numProducerThreads; ++t) {
+            producers.emplace_back([&, t]() {
+                try {
+                    // Signal thread is ready
+                    threadsReady++;
+                    
+                    // Wait for start signal
+                    while (!startProduction.load()) {
+                        std::this_thread::yield();
+                    }
+                    
+                    for (int i = 0; i < messagesPerThread; ++i) {
+                        try {
+                            // Generate a message with thread ID and message number
+                            std::string randomContent = generateRandomMessage(messageSize);
+                            std::string message = "Thread " + std::to_string(t) + 
+                                                 " Message " + std::to_string(i) + 
+                                                 ": " + randomContent;
+                            
+                            // Log the message
+                            ErrorReporter::logDebug(message);
+                            
+                            // Increment queued count
+                            queuedCount++;
+                            
+                            // Diagnostic output for larger intervals
+                            if (i % 20 == 0) {
+                                std::cout << "Thread " << t << " produced " << i << " messages" << std::endl;
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            std::cerr << "Exception in producer thread " << t << " at message " << i 
+                                      << ": " << e.what() << std::endl;
+                        }
+                    }
+                    
+                    std::cout << "Thread " << t << " completed." << std::endl;
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Exception in producer thread " << t << ": " << e.what() << std::endl;
+                }
+            });
+        }
+        
+        // Wait for all threads to be ready
+        while (threadsReady.load() < numProducerThreads) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        
+        // Enable async logging before starting production
+        std::cout << "Enabling async logging and starting production..." << std::endl;
+        ErrorReporter::enableAsyncLogging(true);
+        
+        // Start timing and begin production
+        startTime = std::chrono::high_resolution_clock::now();
+        startProduction.store(true);
+        
+        // Wait for all producer threads to complete
+        for (auto& thread : producers) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+        
+        endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime - startTime).count();
+        
+        std::cout << "All producers finished in " << duration << "ms" << std::endl;
+        std::cout << "Total messages queued: " << queuedCount.load() << std::endl;
+        
+        // Wait for queue to process
+        std::cout << "Flushing logs and waiting for async processing..." << std::endl;
+        ErrorReporter::flushLogs();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        ErrorReporter::flushLogs();
+        
+        // Disable async logging
+        std::cout << "Disabling async logging..." << std::endl;
+        ErrorReporter::enableAsyncLogging(false);
+        
+        // Count lines in log file
+        std::cout << "Checking log file contents..." << std::endl;
+        size_t lineCount = countLines(logPath);
+        std::cout << "Log line count: " << lineCount << std::endl;
+        
+        // Verify all messages were logged
+        EXPECT_EQ(lineCount, queuedCount.load() + 1)  // +1 for header line
+            << "Expected " << (queuedCount.load() + 1) << " lines in log file, found " << lineCount;
+        
+        if (lineCount < 10) {
+            // If very few lines, dump the file for diagnostics
+            dumpFileContents(logPath);
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "TEST EXCEPTION: " << e.what() << std::endl;
+        FAIL() << "Exception in test: " << e.what();
     }
 } 
