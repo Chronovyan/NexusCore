@@ -6,6 +6,9 @@
 #include <cstdio>
 #include <filesystem>
 #include <random>
+#include <chrono>
+#include <atomic>
+#include <future>
 
 // Helper function to read a log file
 std::string readLogFile(const std::string& filePath) {
@@ -70,6 +73,9 @@ protected:
     }
     
     void TearDown() override {
+        // Shutdown async logging if it was enabled
+        ErrorReporter::shutdownAsyncLogging();
+        
         // Reset error reporter after each test
         ErrorReporter::clearLogDestinations();
         ErrorReporter::initializeDefaultLogging();
@@ -280,6 +286,18 @@ TEST_F(ErrorReporterTest, ExceptionLogging) {
 
 // Test retry logging
 TEST_F(ErrorReporterTest, RetryLogging) {
+    // Save original settings so we can restore them
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    
+    // Enable required logging for this test
+    DISABLE_ALL_LOGGING_FOR_TESTS = false; // Critical: Ensure logging is enabled
+    ErrorReporter::suppressAllWarnings = false; // Critical: Allow warnings
+    ErrorReporter::debugLoggingEnabled = true; // Enable debug logging
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug); // Set lowest threshold
+    
     // Set up file logging
     std::string logFile = "logs/test_retry_logging.log";
     ErrorReporter::enableFileLogging(logFile, false);
@@ -333,6 +351,12 @@ TEST_F(ErrorReporterTest, RetryLogging) {
     EXPECT_TRUE(logContent.find("Retry attempt #2") != std::string::npos);
     EXPECT_TRUE(logContent.find("ServerError") != std::string::npos);
     EXPECT_TRUE(logContent.find("Server still unavailable") != std::string::npos);
+    
+    // Restore original settings
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
 }
 
 TEST_F(ErrorReporterTest, RetryStatsReset) {
@@ -428,6 +452,260 @@ TEST_F(ErrorReporterTest, DISABLED_LogRotation) {
     }
     
     EXPECT_TRUE(foundRotatedFile);
+}
+
+// Test that asynchronous logging doesn't block the caller
+TEST_F(ErrorReporterTest, AsyncLoggingNonBlocking) {
+    // Save original settings
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable logging for this test
+    ErrorReporter::debugLoggingEnabled = false;
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug);
+    DISABLE_ALL_LOGGING_FOR_TESTS = false;
+    ErrorReporter::suppressAllWarnings = false;
+    
+    // Set up file logging with a file that we'll deliberately make slow to write to
+    std::string logFile = "logs/test_async_nonblocking.log";
+    ErrorReporter::enableFileLogging(logFile, false);
+    
+    // First measure time with synchronous logging
+    auto syncStart = std::chrono::high_resolution_clock::now();
+    
+    // Log a significant number of messages synchronously
+    const int messageCount = 1000;
+    for (int i = 0; i < messageCount; i++) {
+        ErrorReporter::logDebug("Synchronous log message number " + std::to_string(i));
+    }
+    
+    auto syncEnd = std::chrono::high_resolution_clock::now();
+    auto syncDuration = std::chrono::duration_cast<std::chrono::milliseconds>(syncEnd - syncStart).count();
+    
+    // Now enable async logging
+    ErrorReporter::enableAsyncLogging(true);
+    
+    // Measure time with asynchronous logging
+    auto asyncStart = std::chrono::high_resolution_clock::now();
+    
+    // Log the same number of messages asynchronously
+    for (int i = 0; i < messageCount; i++) {
+        ErrorReporter::logDebug("Asynchronous log message number " + std::to_string(i));
+    }
+    
+    auto asyncEnd = std::chrono::high_resolution_clock::now();
+    auto asyncDuration = std::chrono::duration_cast<std::chrono::milliseconds>(asyncEnd - asyncStart).count();
+    
+    // Shutdown async logging and wait for queue to drain
+    ErrorReporter::shutdownAsyncLogging();
+    
+    // Output performance stats
+    std::cout << "Synchronous logging time: " << syncDuration << "ms" << std::endl;
+    std::cout << "Asynchronous logging time: " << asyncDuration << "ms" << std::endl;
+    
+    // Async logging should be significantly faster since it doesn't block on I/O
+    // Note: This is a performance test so the exact speedup can vary, but there should be
+    // a clear difference if async logging is working correctly
+    EXPECT_LT(asyncDuration, syncDuration);
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
+}
+
+// Test that messages logged asynchronously are eventually written
+TEST_F(ErrorReporterTest, AsyncMessagesEventuallyWritten) {
+    // Save original settings
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable logging for this test
+    ErrorReporter::debugLoggingEnabled = false;
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug);
+    DISABLE_ALL_LOGGING_FOR_TESTS = false;
+    ErrorReporter::suppressAllWarnings = false;
+    
+    // Set up file logging
+    std::string logFile = "logs/test_async_eventual_write.log";
+    ErrorReporter::enableFileLogging(logFile, false);
+    
+    // Enable async logging
+    ErrorReporter::enableAsyncLogging(true);
+    
+    // Generate unique message that we can search for
+    std::string uniqueMessage = "Unique asynchronous message " + generateRandomId();
+    
+    // Log the message
+    ErrorReporter::logDebug(uniqueMessage);
+    
+    // Wait a short time for the worker thread to process the message
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Read the log file
+    std::string logContent = readLogFile(logFile);
+    
+    // Check if the message has been written
+    bool messageFound = logContent.find(uniqueMessage) != std::string::npos;
+    
+    // If not found yet, try flushing and reading again
+    if (!messageFound) {
+        ErrorReporter::flushLogs();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        logContent = readLogFile(logFile);
+        messageFound = logContent.find(uniqueMessage) != std::string::npos;
+    }
+    
+    // Finally, ensure it's written by shutting down async logging
+    if (!messageFound) {
+        ErrorReporter::shutdownAsyncLogging();
+        logContent = readLogFile(logFile);
+        messageFound = logContent.find(uniqueMessage) != std::string::npos;
+    }
+    
+    // The message should have been written by now
+    EXPECT_TRUE(messageFound);
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
+}
+
+// Test that concurrent logging from multiple threads works correctly
+TEST_F(ErrorReporterTest, AsyncLoggingConcurrent) {
+    // Save original settings
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable logging for this test
+    ErrorReporter::debugLoggingEnabled = false;
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug);
+    DISABLE_ALL_LOGGING_FOR_TESTS = false;
+    ErrorReporter::suppressAllWarnings = false;
+    
+    // Set up file logging
+    std::string logFile = "logs/test_async_concurrent.log";
+    ErrorReporter::enableFileLogging(logFile, false);
+    
+    // Enable async logging
+    ErrorReporter::enableAsyncLogging(true);
+    
+    // Generate unique prefixes for each thread
+    std::vector<std::string> threadPrefixes;
+    const int threadCount = 5;
+    for (int i = 0; i < threadCount; i++) {
+        threadPrefixes.push_back("Thread-" + std::to_string(i) + "-" + generateRandomId() + ": ");
+    }
+    
+    // Use atomic flag for thread synchronization
+    std::atomic<bool> startFlag(false);
+    
+    // Create multiple threads that will all log simultaneously
+    std::vector<std::future<void>> futures;
+    for (int i = 0; i < threadCount; i++) {
+        futures.push_back(std::async(std::launch::async, [i, &threadPrefixes, &startFlag]() {
+            // Wait for the start signal
+            while (!startFlag.load(std::memory_order_relaxed)) {
+                std::this_thread::yield();
+            }
+            
+            // Log messages from this thread
+            const int messagesPerThread = 100;
+            for (int j = 0; j < messagesPerThread; j++) {
+                ErrorReporter::logDebug(threadPrefixes[i] + "Message " + std::to_string(j));
+            }
+        }));
+    }
+    
+    // Start all threads at once
+    startFlag.store(true, std::memory_order_relaxed);
+    
+    // Wait for all threads to complete
+    for (auto& future : futures) {
+        future.wait();
+    }
+    
+    // Shutdown async logging and wait for queue to drain
+    ErrorReporter::shutdownAsyncLogging();
+    
+    // Read the log file
+    std::string logContent = readLogFile(logFile);
+    
+    // Verify that messages from all threads are present
+    for (int i = 0; i < threadCount; i++) {
+        // Check first and last message from each thread
+        std::string firstMessage = threadPrefixes[i] + "Message 0";
+        std::string lastMessage = threadPrefixes[i] + "Message 99";
+        
+        EXPECT_TRUE(logContent.find(firstMessage) != std::string::npos) 
+            << "First message from thread " << i << " not found";
+        EXPECT_TRUE(logContent.find(lastMessage) != std::string::npos)
+            << "Last message from thread " << i << " not found";
+    }
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
+}
+
+// Test that shutdown processes remaining messages
+TEST_F(ErrorReporterTest, AsyncShutdownProcessesRemainingMessages) {
+    // Save original settings
+    bool originalDebugLoggingEnabled = ErrorReporter::debugLoggingEnabled;
+    EditorException::Severity originalSeverityThreshold = ErrorReporter::severityThreshold;
+    bool originalDisableAllLogging = DISABLE_ALL_LOGGING_FOR_TESTS;
+    bool originalSuppressAllWarnings = ErrorReporter::suppressAllWarnings;
+    
+    // Enable logging for this test
+    ErrorReporter::debugLoggingEnabled = false;
+    ErrorReporter::setSeverityThreshold(EditorException::Severity::Debug);
+    DISABLE_ALL_LOGGING_FOR_TESTS = false;
+    ErrorReporter::suppressAllWarnings = false;
+    
+    // Set up file logging
+    std::string logFile = "logs/test_async_shutdown.log";
+    ErrorReporter::enableFileLogging(logFile, false);
+    
+    // Enable async logging
+    ErrorReporter::enableAsyncLogging(true);
+    
+    // Generate a large number of messages to ensure some are still in the queue
+    const int messageCount = 10000;
+    std::string finalMessage = "FINAL_MESSAGE_" + generateRandomId();
+    
+    for (int i = 0; i < messageCount; i++) {
+        ErrorReporter::logDebug("Message " + std::to_string(i));
+    }
+    
+    // Add one final distinctive message that we can search for
+    ErrorReporter::logDebug(finalMessage);
+    
+    // Immediately shutdown without waiting
+    ErrorReporter::shutdownAsyncLogging();
+    
+    // Read the log file
+    std::string logContent = readLogFile(logFile);
+    
+    // Check that our final message was processed during shutdown
+    EXPECT_TRUE(logContent.find(finalMessage) != std::string::npos)
+        << "Final message not found, shutdown did not process all messages";
+    
+    // Restore original settings
+    ErrorReporter::debugLoggingEnabled = originalDebugLoggingEnabled;
+    ErrorReporter::setSeverityThreshold(originalSeverityThreshold);
+    DISABLE_ALL_LOGGING_FOR_TESTS = originalDisableAllLogging;
+    ErrorReporter::suppressAllWarnings = originalSuppressAllWarnings;
 }
 
 // Only include the main function when this file is compiled as a standalone test
