@@ -66,7 +66,7 @@ TEST_F(OpenAIApiRetryStatisticsTest, RetryStatisticsCapture) {
     EXPECT_TRUE(response3.success);
     
     // Get retry statistics
-    RetryStatistics::Stats stats = mockClient.getRetryStatistics();
+    const RetryStatistics& stats = mockClient.getRetryStatistics();
     
     // Verify statistics
     EXPECT_EQ(3, stats.totalRequestsWithRetries);
@@ -74,8 +74,7 @@ TEST_F(OpenAIApiRetryStatisticsTest, RetryStatisticsCapture) {
     EXPECT_EQ(2, stats.successfulRetriedRequests); // Case 1 and 3
     EXPECT_EQ(1, stats.failedAfterRetries); // Case 2
     
-    // Get report for debugging - skip this part as Stats doesn't have a report member
-    // and we don't have direct access to the RetryStatistics object to call getReport()
+    // Get report for debugging
     std::cout << "Retry Statistics Report - Stats collected:" << std::endl;
     std::cout << "  Total requests with retries: " << stats.totalRequestsWithRetries << std::endl;
     std::cout << "  Total retry attempts: " << stats.totalRetryAttempts << std::endl;
@@ -89,7 +88,7 @@ TEST_F(OpenAIApiRetryStatisticsTest, RetryStatisticsCapture) {
     
     // Test reset functionality
     mockClient.resetRetryStatistics();
-    RetryStatistics::Stats resetStats = mockClient.getRetryStatistics();
+    const RetryStatistics& resetStats = mockClient.getRetryStatistics();
     EXPECT_EQ(0, resetStats.totalRequestsWithRetries);
     EXPECT_EQ(0, resetStats.totalRetryAttempts);
     EXPECT_EQ(0, resetStats.successfulRetriedRequests);
@@ -110,7 +109,7 @@ TEST_F(OpenAIApiRetryStatisticsTest, DisabledRetriesNoStatistics) {
     ApiResponse response = mockClient.callChatCompletionEndpoint(request);
     
     // Get statistics - should be zero since retries are disabled
-    RetryStatistics::Stats stats = mockClient.getRetryStatistics();
+    const RetryStatistics& stats = mockClient.getRetryStatistics();
     EXPECT_EQ(0, stats.totalRequestsWithRetries);
     EXPECT_EQ(0, stats.totalRetryAttempts);
 }

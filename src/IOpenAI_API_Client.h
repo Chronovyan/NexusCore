@@ -207,7 +207,7 @@ public:
      * 
      * @return The current retry statistics
      */
-    virtual RetryStatistics getRetryStatistics() const = 0;
+    virtual const RetryStatistics& getRetryStatistics() const = 0;
     
     /**
      * @brief Reset retry statistics

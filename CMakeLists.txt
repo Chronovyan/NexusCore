@@ -134,6 +134,7 @@ add_executable(OpenAIClientTest
     src/IOpenAI_API_Client.h
     src/OpenAI_API_Client_types.h
     src/EditorError.cpp
+    src/EditorErrorGlobals.cpp
     src/MockOpenAI_API_Client.cpp
     src/MockOpenAI_API_Client.h
 )

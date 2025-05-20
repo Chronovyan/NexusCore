@@ -188,8 +188,8 @@ public:
     }
     
     // Retry statistics methods
-    RetryStatistics::Stats getRetryStatistics() const override {
-        return retryStats_.getStats();
+    const RetryStatistics& getRetryStatistics() const override {
+        return retryStats_;
     }
     
     void resetRetryStatistics() override {
