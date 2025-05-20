@@ -100,6 +100,22 @@ target_link_libraries(OpenAIApiRetryStatisticsTest PRIVATE
     nlohmann_json::nlohmann_json
 )
 
+# OpenAI API Extended Mock Tests
+add_executable(OpenAIApiExtendedMockTests 
+  OpenAIApiExtendedMockTests.cpp
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
+  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
+  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
+)
+target_link_libraries(OpenAIApiExtendedMockTests PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+    nlohmann_json::nlohmann_json
+)
+
 # AI Agent Orchestrator tests
 add_executable(AIAgentOrchestratorTest 
     AIAgentOrchestratorTest.cpp
@@ -177,6 +193,7 @@ add_executable(RunAllTests
     AIAgentOrchestratorTest.cpp
     OpenAISchemaValidationTest.cpp
     OpenAIApiErrorHandlingTest.cpp
+    OpenAIApiExtendedMockTests.cpp
     ErrorReporterTest.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
@@ -211,6 +228,7 @@ gtest_discover_tests(OpenAIApiEndpointsTest)
 gtest_discover_tests(OpenAISchemaValidationTest)
 gtest_discover_tests(OpenAIApiErrorHandlingTest)
 gtest_discover_tests(OpenAIApiRetryStatisticsTest)
+gtest_discover_tests(OpenAIApiExtendedMockTests)
 gtest_discover_tests(AIAgentOrchestratorTest)
 gtest_discover_tests(ErrorReporterTest)
 

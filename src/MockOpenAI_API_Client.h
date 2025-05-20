@@ -7,6 +7,7 @@
 #include <string>
 #include <functional>
 #include <chrono>
+#include <map>
 
 namespace ai_editor {
 
@@ -50,7 +51,12 @@ public:
         successResponse_(true),
         retryEnabled_(true),
         retryPolicy_(),
-        retryStats_() {}
+        retryStats_(),
+        modelListSuccessResponse_(true),
+        modelListErrorStatusCode_(500),
+        modelInfoSuccessResponse_(true),
+        embeddingSuccessResponse_(true),
+        embeddingErrorStatusCode_(500) {}
     
     /**
      * @brief Mock implementation of sendChatCompletionRequest
@@ -72,6 +78,99 @@ public:
         float temperature = 0.7f,
         int32_t max_tokens = 2000
     ) override;
+    
+    /**
+     * @brief List available models
+     * 
+     * @return ApiModelListResponse containing model information or error
+     */
+    ApiModelListResponse listModels() override {
+        // Store that this method was called
+        listModels_called_ = true;
+        
+        // If we have a model list response in the queue, return it
+        if (!model_list_response_queue_.empty()) {
+            ApiModelListResponse response = model_list_response_queue_.front();
+            model_list_response_queue_.pop();
+            return response;
+        }
+        
+        // Otherwise, return default or pre-configured response
+        if (modelListSuccessResponse_) {
+            return successModelListResponse_;
+        } else {
+            ApiModelListResponse errorResponse;
+            errorResponse.success = false;
+            errorResponse.error_message = modelListErrorMessage_;
+            errorResponse.raw_json_response = "{\"error\":{\"message\":\"" + modelListErrorMessage_ + 
+                                            "\",\"code\":" + std::to_string(modelListErrorStatusCode_) + "}}";
+            return errorResponse;
+        }
+    }
+    
+    /**
+     * @brief Retrieve details for a specific model
+     * 
+     * @param model_id The ID of the model to retrieve
+     * @return ApiModelInfo containing model information or error
+     */
+    ApiModelInfo retrieveModel(const std::string& model_id) override {
+        // Store that this method was called with this model_id
+        retrieveModel_called_ = true;
+        last_retrieved_model_id_ = model_id;
+        
+        // If we have a specific response for this model_id, return it
+        if (model_responses_.find(model_id) != model_responses_.end()) {
+            return model_responses_[model_id];
+        }
+        
+        // Otherwise return the default response
+        if (modelInfoSuccessResponse_) {
+            ApiModelInfo model;
+            model.id = model_id;
+            model.object = "model";
+            model.created = "1234567890";
+            model.owned_by = "organization-owner";
+            return model;
+        } else {
+            // In a real implementation, we would throw an exception or return an error object
+            // For this mock, we'll return an empty model with an id that indicates an error
+            ApiModelInfo errorModel;
+            errorModel.id = "error:" + modelInfoErrorMessage_;
+            return errorModel;
+        }
+    }
+    
+    /**
+     * @brief Create embeddings for the provided input
+     * 
+     * @param request The embedding request parameters
+     * @return ApiEmbeddingResponse containing the embeddings or error
+     */
+    ApiEmbeddingResponse createEmbedding(const ApiEmbeddingRequest& request) override {
+        // Store that this method was called with these parameters
+        createEmbedding_called_ = true;
+        last_embedding_request_ = request;
+        
+        // If we have an embedding response in the queue, return it
+        if (!embedding_response_queue_.empty()) {
+            ApiEmbeddingResponse response = embedding_response_queue_.front();
+            embedding_response_queue_.pop();
+            return response;
+        }
+        
+        // Otherwise, return default or pre-configured response
+        if (embeddingSuccessResponse_) {
+            return successEmbeddingResponse_;
+        } else {
+            ApiEmbeddingResponse errorResponse;
+            errorResponse.success = false;
+            errorResponse.error_message = embeddingErrorMessage_;
+            errorResponse.raw_json_response = "{\"error\":{\"message\":\"" + embeddingErrorMessage_ + 
+                                            "\",\"code\":" + std::to_string(embeddingErrorStatusCode_) + "}}";
+            return errorResponse;
+        }
+    }
     
     /**
      * @brief Add a response to the queue to be returned by the next call
@@ -216,6 +315,128 @@ public:
         simulateRetries_ = false;
     }
     
+    // Model listing helper methods
+    
+    /**
+     * @brief Add a model list response to the queue
+     */
+    void primeModelListResponse(const ApiModelListResponse& response) {
+        model_list_response_queue_.push(response);
+    }
+    
+    /**
+     * @brief Set a successful model list response
+     */
+    void setSuccessModelListResponse(const std::vector<ApiModelInfo>& models) {
+        successModelListResponse_.success = true;
+        successModelListResponse_.models = models;
+        successModelListResponse_.error_message = "";
+        // Create a basic JSON representation
+        std::string json = "{\"object\":\"list\",\"data\":[";
+        for (size_t i = 0; i < models.size(); ++i) {
+            if (i > 0) json += ",";
+            json += "{\"id\":\"" + models[i].id + "\",\"object\":\"model\"}";
+        }
+        json += "]}";
+        successModelListResponse_.raw_json_response = json;
+        modelListSuccessResponse_ = true;
+    }
+    
+    /**
+     * @brief Set an error model list response
+     */
+    void setErrorModelListResponse(const std::string& errorMessage, int statusCode = 500) {
+        modelListErrorMessage_ = errorMessage;
+        modelListErrorStatusCode_ = statusCode;
+        modelListSuccessResponse_ = false;
+    }
+    
+    // Model info helper methods
+    
+    /**
+     * @brief Configure response for a specific model ID
+     */
+    void setModelResponse(const std::string& model_id, const ApiModelInfo& model) {
+        model_responses_[model_id] = model;
+    }
+    
+    /**
+     * @brief Set default success or error response for model info
+     */
+    void setModelInfoSuccessResponse(bool success) {
+        modelInfoSuccessResponse_ = success;
+    }
+    
+    /**
+     * @brief Set error message for model info failures
+     */
+    void setModelInfoErrorMessage(const std::string& message) {
+        modelInfoErrorMessage_ = message;
+    }
+    
+    // Embedding helper methods
+    
+    /**
+     * @brief Add an embedding response to the queue
+     */
+    void primeEmbeddingResponse(const ApiEmbeddingResponse& response) {
+        embedding_response_queue_.push(response);
+    }
+    
+    /**
+     * @brief Set a successful embedding response
+     */
+    void setSuccessEmbeddingResponse(const std::vector<std::vector<float>>& embeddings, 
+                                    const std::string& model = "text-embedding-ada-002") {
+        successEmbeddingResponse_.success = true;
+        successEmbeddingResponse_.model = model;
+        successEmbeddingResponse_.object = "list";
+        successEmbeddingResponse_.error_message = "";
+        
+        // Create data objects for each embedding
+        successEmbeddingResponse_.data.clear();
+        for (size_t i = 0; i < embeddings.size(); ++i) {
+            ApiEmbeddingData data;
+            data.embedding = embeddings[i];
+            data.index = static_cast<int>(i);
+            data.object = "embedding";
+            successEmbeddingResponse_.data.push_back(data);
+        }
+        
+        // Set usage stats
+        successEmbeddingResponse_.usage_prompt_tokens = 8;
+        successEmbeddingResponse_.usage_total_tokens = 8;
+        
+        // Create a simplified JSON representation
+        std::string json = "{\"object\":\"list\",\"data\":[";
+        for (size_t i = 0; i < embeddings.size(); ++i) {
+            if (i > 0) json += ",";
+            json += "{\"object\":\"embedding\",\"index\":" + std::to_string(i) + ",\"embedding\":[";
+            // Add first few embedding values for brevity
+            for (size_t j = 0; j < std::min(size_t(3), embeddings[i].size()); ++j) {
+                if (j > 0) json += ",";
+                json += std::to_string(embeddings[i][j]);
+            }
+            if (embeddings[i].size() > 3) {
+                json += ",...";
+            }
+            json += "]}";
+        }
+        json += "],\"model\":\"" + model + "\",\"usage\":{\"prompt_tokens\":8,\"total_tokens\":8}}";
+        successEmbeddingResponse_.raw_json_response = json;
+        
+        embeddingSuccessResponse_ = true;
+    }
+    
+    /**
+     * @brief Set an error embedding response
+     */
+    void setErrorEmbeddingResponse(const std::string& errorMessage, int statusCode = 500) {
+        embeddingErrorMessage_ = errorMessage;
+        embeddingErrorStatusCode_ = statusCode;
+        embeddingSuccessResponse_ = false;
+    }
+    
     // Stored request parameters for test inspection
     std::vector<ApiChatMessage> last_sent_messages_;
     std::vector<ApiToolDefinition> last_sent_tools_;
@@ -244,6 +465,15 @@ public:
     std::vector<ApiToolCall> toolCalls_;
     std::function<ApiResponse(const std::vector<ApiChatMessage>&)> responseHandler_;
     
+    // Variables to track which new methods were called
+    bool listModels_called_ = false;
+    bool retrieveModel_called_ = false;
+    bool createEmbedding_called_ = false;
+    
+    // Variables to store parameters of last calls
+    std::string last_retrieved_model_id_;
+    ApiEmbeddingRequest last_embedding_request_;
+    
 private:
     // Queue of responses to return
     std::queue<ApiResponse> response_queue_;
@@ -252,6 +482,24 @@ private:
     bool retryEnabled_;
     ApiRetryPolicy retryPolicy_;
     RetryStatistics retryStats_;
+    
+    // New private members for additional endpoints
+    std::queue<ApiModelListResponse> model_list_response_queue_;
+    std::queue<ApiEmbeddingResponse> embedding_response_queue_;
+    
+    bool modelListSuccessResponse_;
+    std::string modelListErrorMessage_;
+    int modelListErrorStatusCode_;
+    ApiModelListResponse successModelListResponse_;
+    
+    bool modelInfoSuccessResponse_;
+    std::string modelInfoErrorMessage_;
+    std::map<std::string, ApiModelInfo> model_responses_;
+    
+    bool embeddingSuccessResponse_;
+    std::string embeddingErrorMessage_;
+    int embeddingErrorStatusCode_;
+    ApiEmbeddingResponse successEmbeddingResponse_;
 };
 
 } // namespace ai_editor

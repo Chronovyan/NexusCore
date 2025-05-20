@@ -175,6 +175,29 @@ public:
     ) = 0;
     
     /**
+     * @brief List available models from the OpenAI API
+     * 
+     * @return ApiModelListResponse containing the list of available models or error
+     */
+    virtual ApiModelListResponse listModels() = 0;
+    
+    /**
+     * @brief Retrieve details for a specific model from the OpenAI API
+     * 
+     * @param model_id The ID of the model to retrieve
+     * @return ApiModelInfo containing model information or error
+     */
+    virtual ApiModelInfo retrieveModel(const std::string& model_id) = 0;
+    
+    /**
+     * @brief Create embeddings for the provided input using the OpenAI API
+     * 
+     * @param request The embedding request parameters
+     * @return ApiEmbeddingResponse containing the embeddings or error
+     */
+    virtual ApiEmbeddingResponse createEmbedding(const ApiEmbeddingRequest& request) = 0;
+    
+    /**
      * @brief Set the retry policy for API requests
      * 
      * @param policy The retry policy configuration to use
