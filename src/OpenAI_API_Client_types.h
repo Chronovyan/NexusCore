@@ -92,6 +92,51 @@ struct ApiResponse {
     std::vector<ApiToolCall> tool_calls;  // Any tool calls from the response
 };
 
+// Represents information about an OpenAI model
+struct ApiModelInfo {
+    std::string id;
+    std::string object;
+    std::string created;
+    std::string owned_by;
+    std::vector<std::string> permissions;
+    std::string root;
+    std::string parent;
+};
+
+// Represents a response from the list models endpoint
+struct ApiModelListResponse {
+    bool success;
+    std::string error_message;
+    std::vector<ApiModelInfo> models;
+    std::string raw_json_response;
+};
+
+// Represents a request to create embeddings
+struct ApiEmbeddingRequest {
+    std::string input;
+    std::string model;
+    std::string user;  // Optional user identifier
+};
+
+// Represents a single embedding data point
+struct ApiEmbeddingData {
+    std::vector<float> embedding;
+    int index;
+    std::string object;
+};
+
+// Represents a response from the create embeddings endpoint
+struct ApiEmbeddingResponse {
+    bool success;
+    std::string error_message;
+    std::string raw_json_response;
+    std::string model;
+    std::string object;
+    std::vector<ApiEmbeddingData> data;
+    int usage_prompt_tokens;
+    int usage_total_tokens;
+};
+
 } // namespace ai_editor
 
 #endif // OPENAI_API_CLIENT_TYPES_H 
