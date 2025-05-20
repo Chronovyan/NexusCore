@@ -1,5 +1,13 @@
 # Build directories
 /build*/
+/build_msvc/
+/out/
+/Debug/
+/Release/
+/x64/
+/x86/
+
+# Clean directories
 /clean_*/
 /bin/
 /obj/
@@ -66,3 +74,12 @@ Thumbs.db
 large_generated_file.txt
 *.log 
 .env
+
+# Generated files
+install_manifest.txt
+
+# Visual Studio CMake settings
+CMakeSettings.json
+
+# Testing
+Testing/

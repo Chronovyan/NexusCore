@@ -85,7 +85,7 @@ public:
     bool isRetryEnabled() const override;
     
     // Retry statistics methods
-    RetryStatistics getRetryStatistics() const override;
+    const RetryStatistics& getRetryStatistics() const override;
     void resetRetryStatistics() override;
     
     // Generate headers and signature

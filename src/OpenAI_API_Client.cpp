@@ -15,10 +15,10 @@ using json = nlohmann::json;
 namespace ai_editor {
 
 // Implementation class
-class OpenAI_API_ClientImpl {
+class OpenAIClientImpl {
 public:
-    OpenAI_API_ClientImpl() :
-        apiKey_(""),
+    OpenAIClientImpl(const std::string& apiKey) :
+        apiKey_(apiKey),
         apiBase_("https://api.openai.com"),
         apiVersion_("v1"),
         defaultModel_("gpt-3.5-turbo"),
@@ -27,7 +27,13 @@ public:
         retryPolicy_(), // Default retry policy
         retryStats_() {} // Initialize retry statistics
 
-    ApiResponse callChatCompletionEndpoint(const ApiChatRequest& request) {
+    ApiResponse sendChatCompletionRequest(
+        const std::vector<ApiChatMessage>& messages,
+        const std::vector<ApiToolDefinition>& tools,
+        const std::string& model,
+        float temperature,
+        int32_t max_tokens
+    ) {
         // Prepare the JSON request body outside the retry loop
         json requestJson;
         
@@ -148,7 +154,7 @@ public:
         return retryEnabled_;
     }
     
-    RetryStatistics getRetryStatistics() const {
+    const RetryStatistics& getRetryStatistics() const {
         return retryStats_;
     }
     
@@ -171,7 +177,7 @@ private:
 };
 
 // Constructor implementation
-OpenAI_API_Client::OpenAI_API_Client() : pImpl(std::make_unique<OpenAI_API_ClientImpl>()) {}
+OpenAI_API_Client::OpenAI_API_Client(const std::string& apiKey) : pImpl(std::make_unique<OpenAIClientImpl>(apiKey)) {}
 
 // Destructor implementation
 OpenAI_API_Client::~OpenAI_API_Client() = default;
@@ -182,30 +188,15 @@ OpenAI_API_Client::OpenAI_API_Client(OpenAI_API_Client&&) noexcept = default;
 // Move assignment operator implementation
 OpenAI_API_Client& OpenAI_API_Client::operator=(OpenAI_API_Client&&) noexcept = default;
 
-// Forward API calls to implementation
-ApiResponse OpenAI_API_Client::callChatCompletionEndpoint(const ApiChatRequest& request) {
-    return pImpl->callChatCompletionEndpoint(request);
-}
-
-// Forward configuration methods to implementation
-void OpenAI_API_Client::setApiKey(const std::string& apiKey) {
-    pImpl->setApiKey(apiKey);
-}
-
-void OpenAI_API_Client::setApiBase(const std::string& baseUrl) {
-    pImpl->setApiBase(baseUrl);
-}
-
-void OpenAI_API_Client::setApiVersion(const std::string& version) {
-    pImpl->setApiVersion(version);
-}
-
-void OpenAI_API_Client::setDefaultModel(const std::string& model) {
-    pImpl->setDefaultModel(model);
-}
-
-void OpenAI_API_Client::setDefaultTimeout(int timeout) {
-    pImpl->setDefaultTimeout(timeout);
+// Implementation of sendChatCompletionRequest
+ApiResponse OpenAI_API_Client::sendChatCompletionRequest(
+    const std::vector<ApiChatMessage>& messages,
+    const std::vector<ApiToolDefinition>& tools,
+    const std::string& model,
+    float temperature,
+    int32_t max_tokens
+) {
+    return pImpl->sendChatCompletionRequest(messages, tools, model, temperature, max_tokens);
 }
 
 // Forward retry methods to implementation
@@ -217,7 +208,7 @@ ApiRetryPolicy OpenAI_API_Client::getRetryPolicy() const {
     return pImpl->getRetryPolicy();
 }
 
-void OpenAI_API_Client::setRetryEnabled(bool enable) {
+void OpenAI_API_Client::enableRetries(bool enable) {
     pImpl->setRetryEnabled(enable);
 }
 
@@ -226,12 +217,37 @@ bool OpenAI_API_Client::isRetryEnabled() const {
 }
 
 // Implement the retry statistics methods
-RetryStatistics OpenAI_API_Client::getRetryStatistics() const {
+const RetryStatistics& OpenAI_API_Client::getRetryStatistics() const {
     return pImpl->getRetryStatistics();
 }
 
 void OpenAI_API_Client::resetRetryStatistics() {
     pImpl->resetRetryStatistics();
+}
+
+// Utility method for backward compatibility
+nlohmann::json OpenAI_API_Client::generateChatRequestBodyWithSystemAndUserMessage(
+    const std::string& systemMessage,
+    const std::string& userPrompt,
+    const std::string& model
+) {
+    json request;
+    request["model"] = model;
+    request["messages"] = json::array();
+    
+    if (!systemMessage.empty()) {
+        request["messages"].push_back({
+            {"role", "system"},
+            {"content", systemMessage}
+        });
+    }
+    
+    request["messages"].push_back({
+        {"role", "user"},
+        {"content", userPrompt}
+    });
+    
+    return request;
 }
 
 } // namespace ai_editor 
