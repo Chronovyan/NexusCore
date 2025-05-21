@@ -41,6 +41,18 @@ Thank you for your interest in contributing to the AI-First TextEditor project! 
    ctest
    ```
 
+6. **Install Git Hooks**
+   
+   We use git hooks to enforce code quality. Install the pre-commit hook to automatically run tests before each commit:
+   
+   ```bash
+   # For Linux/macOS users
+   ./hooks/install-hooks.sh
+   
+   # For Windows users
+   powershell -ExecutionPolicy Bypass -File hooks/install-hooks.ps1
+   ```
+
 ## Development Workflow
 
 ### Branching Strategy
@@ -84,7 +96,7 @@ We use a modified Git Flow approach:
 
 1. Ensure your code follows the coding standards
 2. Update documentation if necessary
-3. Make sure all tests pass
+3. **Make sure all tests pass** – this is enforced by CI and is mandatory
 4. Request review from at least one maintainer
 5. Address review comments and update your PR
 6. Once approved, your PR will be merged
@@ -151,6 +163,38 @@ void insertLine(size_t index, const std::string& text);
 - Include edge cases in your tests
 - Test public interfaces thoroughly
 
+### Mandatory Testing Requirements
+
+- **All code must pass tests before being committed**
+- The pre-commit hook will automatically verify this
+- CI will run tests on each push and pull request
+- Pull requests with failing tests will not be merged
+- Critical tests must pass for any code change
+
+### Critical Tests
+
+Critical tests are a subset of tests that:
+- Run quickly (under 5 seconds total is ideal)
+- Test core functionality only
+- Have minimal external dependencies
+- Are run by the pre-commit hook before each commit
+
+To mark a test as critical, use one of these approaches:
+```cpp
+// Using the CRITICAL macro (preferred)
+#include "critical_tests.h"
+TEST_F(MyFixture, CRITICAL(MyTest)) { 
+    // Test code here 
+}
+
+// Using the _Critical suffix directly
+TEST_F(MyFixture, MyTest_Critical) { 
+    // Test code here 
+}
+```
+
+See `tests/sample_critical_test.cpp` for examples.
+
 ### Test Organization
 
 - Group tests by component
@@ -174,6 +218,22 @@ TEST_F(TextBufferTest, InsertLineInsertsTextAtCorrectPosition) {
     EXPECT_EQ(buffer.getLineCount(), 2);
 }
 ```
+
+### Continuous Integration
+
+All code changes are automatically tested through our CI pipeline:
+
+1. **GitHub Actions**: Runs on every push and pull request
+2. **Platforms**: Tests on multiple platforms (Windows, Linux)
+3. **Test Suite**: Runs the full test suite including unit and integration tests
+4. **Reporting**: Generates test reports accessible through GitHub
+
+The CI process is defined in `.github/workflows/smoke-test.yml` and includes:
+- Building the project
+- Running all tests
+- Reporting test results
+
+PRs cannot be merged unless all CI checks pass.
 
 ## License
 

@@ -27,6 +27,29 @@ public:
         retryPolicy_(), // Default retry policy
         retryStats_() {} // Initialize retry statistics
 
+    // List available models from OpenAI API
+    ApiModelListResponse listModels() {
+        ApiModelListResponse response;
+        response.success = false;
+        response.error_message = "Method not fully implemented yet";
+        return response;
+    }
+    
+    // Retrieve details for a specific model
+    ApiModelInfo retrieveModel(const std::string& model_id) {
+        ApiModelInfo modelInfo;
+        modelInfo.id = "error:not_implemented";
+        return modelInfo;
+    }
+    
+    // Create embeddings for the provided input
+    ApiEmbeddingResponse createEmbedding(const ApiEmbeddingRequest& request) {
+        ApiEmbeddingResponse response;
+        response.success = false;
+        response.error_message = "Embedding functionality not fully implemented yet";
+        return response;
+    }
+
     ApiResponse sendChatCompletionRequest(
         const std::vector<ApiChatMessage>& messages,
         const std::vector<ApiToolDefinition>& tools,
@@ -34,86 +57,10 @@ public:
         float temperature,
         int32_t max_tokens
     ) {
-        // Prepare the JSON request body outside the retry loop
-        json requestJson;
-        
-        // ... populate requestJson with the request data ...
-        
-        // Initialize retry counters and flags
-        int retryCount = 0;
-        bool shouldRetry = false;
-        std::string retryReason;
+        // Create a simple response for now
         ApiResponse response;
-        
-        // For adding jitter to our retry backoff
-        std::mt19937 gen(rd_());
-        std::uniform_real_distribution<> jitterDist(-retryPolicy_.jitterFactor, retryPolicy_.jitterFactor);
-        
-        // Retry loop
-        do {
-            shouldRetry = false;
-            
-            // If this is a retry, apply backoff delay
-            if (retryCount > 0) {
-                // Calculate backoff with exponential factor and jitter
-                double backoffMultiplier = std::pow(retryPolicy_.backoffFactor, retryCount - 1);
-                auto baseBackoff = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    retryPolicy_.initialBackoff * backoffMultiplier);
-                
-                // Add jitter to prevent thundering herd problem
-                double jitter = 1.0 + jitterDist(gen);
-                auto backoffWithJitter = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::duration<double, std::milli>(baseBackoff.count() * jitter));
-                
-                // Cap at max backoff
-                auto finalBackoff = (backoffWithJitter > retryPolicy_.maxBackoff) ? retryPolicy_.maxBackoff : backoffWithJitter;
-                
-                // Log retry information with appropriate severity
-                std::string retryMsg = "Retry " + std::to_string(retryCount) + " for " + retryReason + 
-                                      ". Backing off for " + std::to_string(finalBackoff.count()) + "ms";
-                if (ErrorReporter::debugLoggingEnabled) {
-                    ErrorReporter::logDebug(retryMsg);
-                } else {
-                    ErrorReporter::logWarning(retryMsg);
-                }
-                
-                // Sleep for the calculated backoff period
-                std::this_thread::sleep_for(finalBackoff);
-            }
-            
-            // Make the actual API request
-            // ... API request code ...
-            
-            // Process the response
-            // ... response processing code ...
-            
-            // Error handling and retry decision logic
-            // ... error handling and retry decision code ...
-            
-        } while (shouldRetry);
-        
-        // Update retry statistics and log summary
-        if (retryCount > 0) {
-            // Update the response with retry info
-            response.error_message += " (Retried " + std::to_string(retryCount) + " times)";
-            
-            // Record retry statistics
-            retryStats_.recordRetryAttempt(retryReason, response.success, retryCount);
-            
-            // Log success/failure after retries
-            if (response.success) {
-                ErrorReporter::logDebug("API request succeeded after " + 
-                                      std::to_string(retryCount) + " retries for " + retryReason);
-            } else {
-                ErrorReporter::logWarning("API request failed after " + 
-                                        std::to_string(retryCount) + " retries for " + retryReason);
-            }
-            
-            // If we have a high number of retries, log detailed statistics
-            if (retryCount >= retryPolicy_.maxRetries / 2 && ErrorReporter::debugLoggingEnabled) {
-                ErrorReporter::logDebug("Current retry statistics:\n" + retryStats_.getReport());
-            }
-        }
+        response.success = false;
+        response.error_message = "Chat completion functionality not fully implemented yet";
         
         return response;
     }
@@ -214,6 +161,19 @@ void OpenAI_API_Client::enableRetries(bool enable) {
 
 bool OpenAI_API_Client::isRetryEnabled() const {
     return pImpl->isRetryEnabled();
+}
+
+// Implement the missing API methods
+ApiModelListResponse OpenAI_API_Client::listModels() {
+    return pImpl->listModels();
+}
+
+ApiModelInfo OpenAI_API_Client::retrieveModel(const std::string& model_id) {
+    return pImpl->retrieveModel(model_id);
+}
+
+ApiEmbeddingResponse OpenAI_API_Client::createEmbedding(const ApiEmbeddingRequest& request) {
+    return pImpl->createEmbedding(request);
 }
 
 // Implement the retry statistics methods
