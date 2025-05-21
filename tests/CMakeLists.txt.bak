@@ -100,22 +100,6 @@ target_link_libraries(OpenAIApiRetryStatisticsTest PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-# OpenAI API Extended Mock Tests
-add_executable(OpenAIApiExtendedMockTests 
-  OpenAIApiExtendedMockTests.cpp
-  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.cpp
-  ${CMAKE_SOURCE_DIR}/src/MockOpenAI_API_Client.h
-  ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
-  ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client_types.h
-)
-target_link_libraries(OpenAIApiExtendedMockTests PRIVATE 
-    EditorLib 
-    GTest::gtest 
-    GTest::gtest_main
-    GTest::gmock
-    nlohmann_json::nlohmann_json
-)
-
 # AI Agent Orchestrator tests
 add_executable(AIAgentOrchestratorTest 
     AIAgentOrchestratorTest.cpp
@@ -160,13 +144,31 @@ target_link_libraries(ErrorReporterTest PRIVATE
     GTest::gtest_main
 )
 
-# Add sample critical test
-add_executable(SampleCriticalTest sample_critical_test.cpp)
-target_link_libraries(SampleCriticalTest PRIVATE 
+# File Log Stress Test
+add_executable(FileLogStressTest FileLogStressTest.cpp)
+target_link_libraries(FileLogStressTest PRIVATE 
     EditorLib 
     GTest::gtest 
     GTest::gtest_main
 )
+
+# Async Logging Test
+add_executable(AsyncLoggingTest AsyncLoggingTest.cpp)
+target_link_libraries(AsyncLoggingTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+# Test utilities library
+add_library(TestUtilities
+    test_file_utilities.cpp
+)
+target_include_directories(TestUtilities PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Add test for test utilities
+add_executable(TestFileUtilitiesTest test_file_utilities_test.cpp)
+target_link_libraries(TestFileUtilitiesTest PRIVATE TestUtilities EditorLib GTest::gtest GTest::gtest_main)
 
 # Main test executor with all tests
 add_executable(RunAllTests
@@ -201,8 +203,8 @@ add_executable(RunAllTests
     AIAgentOrchestratorTest.cpp
     OpenAISchemaValidationTest.cpp
     OpenAIApiErrorHandlingTest.cpp
-    OpenAIApiExtendedMockTests.cpp
     ErrorReporterTest.cpp
+    AsyncLoggingTest.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
     ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
@@ -236,8 +238,21 @@ gtest_discover_tests(OpenAIApiEndpointsTest)
 gtest_discover_tests(OpenAISchemaValidationTest)
 gtest_discover_tests(OpenAIApiErrorHandlingTest)
 gtest_discover_tests(OpenAIApiRetryStatisticsTest)
-gtest_discover_tests(OpenAIApiExtendedMockTests)
 gtest_discover_tests(AIAgentOrchestratorTest)
 gtest_discover_tests(ErrorReporterTest)
+gtest_discover_tests(FileLogStressTest)
+gtest_discover_tests(AsyncLoggingTest)
+
+# Add support for the future large file performance tests
+add_executable(LargeFilePerformanceTest 
+    # Currently commented out as we haven't created this file yet
+    # large_file_performance_test.cpp
+    # Include the utilities directly for now
+    test_file_utilities.cpp
+)
+target_link_libraries(LargeFilePerformanceTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+
+# Add the test utilities test to CTest
+gtest_discover_tests(TestFileUtilitiesTest)
 
 message(STATUS "Configured test executables for TextEditor") 

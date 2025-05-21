@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Pre-commit hook that ensures tests pass before allowing commits
+# To install: cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+# Colors for output
+RED="\033[0;31m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+NC="\033[0m" # No Color
+
+echo "${YELLOW}Running pre-commit hook...${NC}"
+echo "${YELLOW}Building and testing project...${NC}"
+
+# Store the current directory
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+# Create build directory if it doesn't exist
+if [ ! -d "build" ]; then
+    mkdir -p build
+fi
+
+# Build project with CMake
+cd build || exit 1
+cmake .. || { echo "${RED}❌ CMake configuration failed. Fix build errors before committing.${NC}"; exit 1; }
+cmake --build . || { echo "${RED}❌ Build failed. Fix build errors before committing.${NC}"; exit 1; }
+
+# Run critical tests (a subset of tests that run quickly)
+echo "${YELLOW}Running critical tests...${NC}"
+if [ "$(uname)" = "Windows_NT" ]; then
+    # Windows
+    ./tests/Debug/RunAllTests.exe --gtest_filter=*_Critical* || { 
+        echo "${RED}❌ Critical tests failed. Please fix tests before committing.${NC}"
+        echo "${YELLOW}To bypass this check (NOT RECOMMENDED), use --no-verify option.${NC}"
+        exit 1
+    }
+else
+    # Linux/macOS
+    ./tests/RunAllTests --gtest_filter=*_Critical* || {
+        echo "${RED}❌ Critical tests failed. Please fix tests before committing.${NC}"
+        echo "${YELLOW}To bypass this check (NOT RECOMMENDED), use --no-verify option.${NC}"
+        exit 1
+    }
+fi
+
+echo "${GREEN}✅ Build and critical tests passed. Proceeding with commit.${NC}"
+exit 0 

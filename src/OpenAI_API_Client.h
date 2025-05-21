@@ -84,6 +84,29 @@ public:
      */
     bool isRetryEnabled() const override;
     
+    /**
+     * @brief List available models from the OpenAI API
+     * 
+     * @return ApiModelListResponse containing the list of available models or error
+     */
+    ApiModelListResponse listModels() override;
+    
+    /**
+     * @brief Retrieve details for a specific model from the OpenAI API
+     * 
+     * @param model_id The ID of the model to retrieve
+     * @return ApiModelInfo containing model information or error
+     */
+    ApiModelInfo retrieveModel(const std::string& model_id) override;
+    
+    /**
+     * @brief Create embeddings for the provided input using the OpenAI API
+     * 
+     * @param request The embedding request parameters
+     * @return ApiEmbeddingResponse containing the embeddings or error
+     */
+    ApiEmbeddingResponse createEmbedding(const ApiEmbeddingRequest& request) override;
+    
     // Retry statistics methods
     const RetryStatistics& getRetryStatistics() const override;
     void resetRetryStatistics() override;
