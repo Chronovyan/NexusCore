@@ -1,0 +1,18 @@
+#!/bin/sh
+
+if command -v pwsh >/dev/null 2>&1; then
+    # Use PowerShell Core if available (cross-platform)
+    pwsh -File "$(git rev-parse --show-toplevel)/hooks/advanced-pre-commit.ps1"
+    exit $?
+elif command -v powershell.exe >/dev/null 2>&1; then
+    # Use Windows PowerShell if available
+    powershell.exe -ExecutionPolicy Bypass -File "$(git rev-parse --show-toplevel)/hooks/advanced-pre-commit.ps1"
+    exit $?
+elif [ -x "$(git rev-parse --show-toplevel)/hooks/advanced-pre-commit.sh" ]; then
+    # Use Bash script for Unix-like systems
+    sh "$(git rev-parse --show-toplevel)/hooks/advanced-pre-commit.sh"
+    exit $?
+else
+    echo "No compatible pre-commit script found."
+    exit 1
+fi 
