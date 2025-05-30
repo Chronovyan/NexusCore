@@ -68,9 +68,14 @@ set(EDITOR_LIB_SOURCES
     src/Editor.cpp
     src/TextBuffer.cpp
     src/EditorCommands.cpp
+    src/ModernEditorCommands.cpp
     src/SyntaxHighlighter.cpp
     src/SyntaxHighlightingManager.cpp
     src/EditorError.cpp
+    # DI Framework files
+    src/di/Injector.cpp
+    src/di/ModuleManager.cpp
+    src/Application.cpp
     # Headers that are part of the library's interface or implementation details
     src/Editor.h
     src/TextBuffer.h
@@ -80,6 +85,19 @@ set(EDITOR_LIB_SOURCES
     src/SyntaxHighlighter.h
     src/SyntaxHighlightingManager.h
     src/EditorError.h
+    # DI Framework headers
+    src/interfaces/IEditor.hpp
+    src/interfaces/ITextBuffer.hpp
+    src/interfaces/ICommandManager.hpp
+    src/interfaces/ISyntaxHighlightingManager.hpp
+    src/interfaces/IApplication.hpp
+    src/di/Injector.hpp
+    src/di/ModuleManager.hpp
+    src/di/ApplicationModule.hpp
+    src/di/TextBufferFactory.hpp
+    src/di/CommandManagerFactory.hpp
+    src/di/EditorFactory.hpp
+    src/Application.h
 )
 
 add_library(EditorLib STATIC ${EDITOR_LIB_SOURCES})
@@ -140,6 +158,16 @@ add_executable(OpenAIClientTest
 )
 target_link_libraries(OpenAIClientTest PRIVATE cpr::cpr nlohmann_json::nlohmann_json)
 
+# --- DI Framework Test Executable ---
+add_executable(DIFrameworkTest
+    tests/DependencyInjectionTest.cpp
+)
+target_link_libraries(DIFrameworkTest PRIVATE 
+    EditorLib
+    GTest::gtest
+    GTest::gtest_main
+)
+
 # Link against pthreads if on a POSIX system
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
@@ -168,7 +196,9 @@ enable_testing()
 add_subdirectory(tests) 
 
 # Optional: Print a message
-message(STATUS "Configured TextEditor project with EditorLib, ImGui, and GoogleTest.")
+message(STATUS "Configured TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework.")
 
 # Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
-set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST) 
+set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
+# Add the DI Framework test to the test suite
+add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest) 

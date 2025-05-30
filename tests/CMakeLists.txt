@@ -26,6 +26,10 @@ target_link_libraries(TextBufferTest PRIVATE EditorLib GTest::gtest GTest::gtest
 add_executable(EditorApiExtensionsTest EditorApiExtensionsTest.cpp)
 target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
+# Dependency Injection Framework Test
+add_executable(DependencyInjectionTest DependencyInjectionTest.cpp)
+target_link_libraries(DependencyInjectionTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+
 # OpenAI API endpoints test
 add_executable(OpenAIApiEndpointsTest 
   OpenAIApiEndpointsTest.cpp
@@ -168,6 +172,60 @@ target_link_libraries(SampleCriticalTest PRIVATE
     GTest::gtest_main
 )
 
+# Large file performance tests
+add_executable(LargeFilePerformanceTest large_file_performance_test.cpp)
+target_link_libraries(LargeFilePerformanceTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+# Extreme large file performance tests (>10MB)
+add_executable(ExtremeLargeFileTest extreme_large_file_test.cpp test_file_utilities.cpp)
+target_link_libraries(ExtremeLargeFileTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+# Automated versions of manual tests
+add_executable(AutomatedUndoRedoTest AutomatedUndoRedoTest.cpp)
+target_link_libraries(AutomatedUndoRedoTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+add_executable(AutomatedSearchTest AutomatedSearchTest.cpp)
+target_link_libraries(AutomatedSearchTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+add_executable(AutomatedSyntaxHighlightingTest AutomatedSyntaxHighlightingTest.cpp)
+target_link_libraries(AutomatedSyntaxHighlightingTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+add_executable(AutomatedConcurrencyTest AutomatedConcurrencyTest.cpp)
+target_link_libraries(AutomatedConcurrencyTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+# Editor Dependency Injection Test
+add_executable(EditorDependencyInjectionTest EditorDependencyInjectionTest.cpp)
+target_link_libraries(EditorDependencyInjectionTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+    GTest::gmock
+)
+
 # Main test executor with all tests
 add_executable(RunAllTests
     RunAllTests.cpp
@@ -203,6 +261,12 @@ add_executable(RunAllTests
     OpenAIApiErrorHandlingTest.cpp
     OpenAIApiExtendedMockTests.cpp
     ErrorReporterTest.cpp
+    DependencyInjectionTest.cpp
+    AutomatedUndoRedoTest.cpp
+    AutomatedSearchTest.cpp
+    AutomatedSyntaxHighlightingTest.cpp
+    AutomatedConcurrencyTest.cpp
+    EditorDependencyInjectionTest.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.cpp
     ${CMAKE_SOURCE_DIR}/src/OpenAI_API_Client.h
     ${CMAKE_SOURCE_DIR}/src/IOpenAI_API_Client.h
@@ -239,5 +303,12 @@ gtest_discover_tests(OpenAIApiRetryStatisticsTest)
 gtest_discover_tests(OpenAIApiExtendedMockTests)
 gtest_discover_tests(AIAgentOrchestratorTest)
 gtest_discover_tests(ErrorReporterTest)
+gtest_discover_tests(LargeFilePerformanceTest)
+gtest_discover_tests(ExtremeLargeFileTest)
+gtest_discover_tests(AutomatedUndoRedoTest)
+gtest_discover_tests(AutomatedSearchTest)
+gtest_discover_tests(AutomatedSyntaxHighlightingTest)
+gtest_discover_tests(AutomatedConcurrencyTest)
+gtest_discover_tests(EditorDependencyInjectionTest)
 
 message(STATUS "Configured test executables for TextEditor") 
