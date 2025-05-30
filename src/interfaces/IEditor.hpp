@@ -16,8 +16,10 @@ struct SyntaxStyle;
 enum class SelectionUnit {
     Character,
     Word,
-    Line,
+    Expression,
+    Line, 
     Paragraph,
+    Block,
     Document
 };
 

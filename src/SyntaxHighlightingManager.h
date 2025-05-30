@@ -3,6 +3,7 @@
 #include "SyntaxHighlighter.h"
 #include "EditorError.h"
 #include "TextBuffer.h"
+#include "interfaces/ISyntaxHighlightingManager.hpp"
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
@@ -21,7 +22,7 @@ class SyntaxHighlighter;
 // Declaration of global flag to completely disable all logging - used ONLY during tests
 extern bool DISABLE_ALL_LOGGING_FOR_TESTS;
 
-class SyntaxHighlightingManager {
+class SyntaxHighlightingManager : public ISyntaxHighlightingManager {
 public:
     // Maximum time allowed for a highlighting operation (milliseconds)
     static constexpr size_t DEFAULT_HIGHLIGHTING_TIMEOUT_MS = 50;
@@ -117,53 +118,53 @@ public:
     };
     
     // Set the active highlighter
-    void setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter);
+    void setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter) override;
     
     // Get the current highlighter
-    std::shared_ptr<SyntaxHighlighter> getHighlighter() const;
+    std::shared_ptr<SyntaxHighlighter> getHighlighter() const override;
     
     // Enable or disable syntax highlighting
-    void setEnabled(bool enabled);
+    void setEnabled(bool enabled) override;
     
     // Check if syntax highlighting is enabled
-    bool isEnabled() const;
+    bool isEnabled() const override;
     
     // Set the buffer to highlight (still using non-owning pointer as buffer is owned elsewhere)
-    void setBuffer(const TextBuffer* buffer);
+    void setBuffer(const TextBuffer* buffer) override;
     
     // Get highlighting styles for a range of lines (const version - only returns cached styles)
-    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles(size_t startLine, size_t endLine) const;
+    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles(size_t startLine, size_t endLine) const override;
     
     // Get highlighting styles for a range of lines (non-const version - updates cache as needed)
-    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles(size_t startLine, size_t endLine);
+    std::vector<std::vector<SyntaxStyle>> getHighlightingStyles(size_t startLine, size_t endLine) override;
     
     // Invalidate the cache for a specific line
-    void invalidateLine(size_t line);
+    void invalidateLine(size_t line) override;
     
     // Invalidate all lines in a range
-    void invalidateLines(size_t startLine, size_t endLine);
+    void invalidateLines(size_t startLine, size_t endLine) override;
     
     // Invalidate the entire cache
-    void invalidateAllLines();
+    void invalidateAllLines() override;
     
     // Set the visible range (for prioritizing highlighting)
-    void setVisibleRange(size_t startLine, size_t endLine) const;
+    void setVisibleRange(size_t startLine, size_t endLine) const override;
     
     // Set the highlighting timeout in milliseconds
-    void setHighlightingTimeout(size_t timeoutMs);
+    void setHighlightingTimeout(size_t timeoutMs) override;
     
     // Get the current highlighting timeout in milliseconds
-    size_t getHighlightingTimeout() const;
+    size_t getHighlightingTimeout() const override;
     
     // Set the number of context lines to highlight around visible area
-    void setContextLines(size_t contextLines);
+    void setContextLines(size_t contextLines) override;
     
     // Get the number of context lines highlighted around visible area
-    size_t getContextLines() const;
+    size_t getContextLines() const override;
 
     // Highlight a single line and store in cache.
     // This is a public method that will acquire a unique_lock.
-    void highlightLine(size_t line);
+    void highlightLine(size_t line) override;
     
     // Get current cache size (for testing)
     size_t getCacheSize() const {
@@ -200,102 +201,90 @@ private:
     // Check if a line's highlighting is valid
     bool isLineValid(size_t line) const;
     
-    // Calculate the effective range to highlight (with context)
-    std::pair<size_t, size_t> calculateEffectiveRange(size_t startLine, size_t endLine) const;
+    // Check if a cached entry is too old (expired)
+    bool isCacheEntryExpired(const CacheEntry& entry) const;
     
-    // Clean up old cache entries to manage memory
-    void cleanupCache_nolock();
-    
-    // Check if a cache entry has expired
-    bool isEntryExpired_nolock(size_t line) const;
-    
-    // Evict least recently used entries to reach target size
+    // Perform cache cleanup, evicting old entries
     void evictLRUEntries_nolock(size_t targetSize);
     
-    // Check if a line was recently processed
+    // Check if a line was recently processed to avoid redundant work
     bool wasRecentlyProcessed(size_t line) const;
     
     // Mark a line as recently processed
     void markAsRecentlyProcessed(size_t line);
     
-    // Calculate optimal processing range based on access pattern
-    std::pair<size_t, size_t> calculateOptimalProcessingRange(size_t startLine, size_t endLine) const;
-    
-    // Logging helpers
+    // Log entry and exit of major functions with timings
     void logLockAcquisition(const char* method) const;
     void logLockRelease(const char* method, const std::chrono::steady_clock::time_point& start) const;
-    void logCacheMetrics(const char* method) const;
-
-private:
-    // Static flag to control debug logging
-    static std::atomic<bool> debugLoggingEnabled_;
-
-    const TextBuffer* getBuffer() const;
-    SyntaxHighlighter* getHighlighterPtr_nolock() const;
     
-    // The buffer to highlight - non-owning pointer
-    std::atomic<const TextBuffer*> buffer_{nullptr};
-    
-    // The active highlighter - using shared_ptr for proper ownership
-    std::shared_ptr<SyntaxHighlighter> highlighter_{nullptr};
-    
-    // Is syntax highlighting enabled - use atomic for thread safety
-    std::atomic<bool> enabled_{false};
-    
-    // Highlighted styles cache
-    std::vector<std::shared_ptr<CacheEntry>> cachedStyles_;
-    
-    // Set of lines that need to be rehighlighted
-    std::unordered_set<size_t> invalidatedLines_;
-    
-    // Last time each line was highlighted (for cache management)
-    std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineTimestamps_;
-    
-    // The current visible range
-    mutable std::atomic<size_t> visibleStartLine_{0};
-    mutable std::atomic<size_t> visibleEndLine_{0};
-    
-    // Highlighting timeout in milliseconds
-    std::atomic<size_t> highlightingTimeoutMs_{DEFAULT_HIGHLIGHTING_TIMEOUT_MS};
-    
-    // Number of context lines to highlight around visible area
-    std::atomic<size_t> contextLines_{DEFAULT_CONTEXT_LINES};
+    // Reduce log verbosity and only log significant changes in status
+    void logWithReduction(const char* format, ...) const;
     
     // Mutex for thread safety
     mutable std::recursive_mutex mutex_;
-
-    // Last time each line was accessed (for LRU eviction)
-    std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineAccessTimes_;
     
-    // Last cleanup time
-    std::chrono::steady_clock::time_point lastCleanupTime_;
-
-    // Cache performance tracking
-    std::atomic<size_t> cacheHits_{0};
-    std::atomic<size_t> cacheMisses_{0};
-    std::atomic<size_t> redundantProcessingCount_{0};
+    // The buffer to highlight - not owned by this class
+    const TextBuffer* buffer_ = nullptr;
     
-    // Track recently processed lines to avoid redundant work
-    std::unordered_map<size_t, std::chrono::steady_clock::time_point> recentlyProcessed_;
-
-    // Track last successfully processed range for optimizing sequential access
+    // The current highlighter
+    std::shared_ptr<SyntaxHighlighter> highlighter_;
+    
+    // Whether syntax highlighting is enabled
+    bool enabled_ = true;
+    
+    // Cache of highlighted lines (for const methods that can't update the cache)
+    mutable std::vector<std::unique_ptr<CacheEntry>> cachedStyles_;
+    
+    // Tracking of invalidated lines
+    mutable std::unordered_set<size_t> invalidatedLines_;
+    
+    // Timestamps and access tracking for cache entries
+    mutable std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineTimestamps_;
+    mutable std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineAccessTimes_;
+    
+    // Last cleanup time for cache maintenance
+    mutable std::chrono::steady_clock::time_point lastCleanupTime_ = std::chrono::steady_clock::now();
+    
+    // Visible range
+    mutable size_t visibleStartLine_ = 0;
+    mutable size_t visibleEndLine_ = 0;
+    
+    // Configuration
+    size_t highlightingTimeoutMs_ = DEFAULT_HIGHLIGHTING_TIMEOUT_MS;
+    size_t contextLines_ = DEFAULT_CONTEXT_LINES;
+    
+    // Recently processed lines (to avoid redundant work)
     struct LastProcessedRange {
         size_t startLine{0};
         size_t endLine{0};
-        bool valid{false};
+        std::chrono::steady_clock::time_point timestamp;
         
         void update(size_t start, size_t end) {
             startLine = start;
             endLine = end;
-            valid = true;
+            timestamp = std::chrono::steady_clock::now();
         }
         
         void invalidate() {
-            valid = false;
+            timestamp = std::chrono::steady_clock::time_point();
         }
         
         bool isSequentialWith(size_t line) const {
-            return valid && (line == endLine + 1);
+            return (line == endLine + 1) || (line + 1 == startLine);
         }
-    } lastProcessedRange_;
+    };
+    
+    mutable LastProcessedRange lastProcessedRange_;
+    
+    // Debug logging control
+    static bool debugLoggingEnabled_;
+
+    // Helper methods for internal implementation
+    std::pair<size_t, size_t> calculateEffectiveRange(size_t requestedStartLine, size_t requestedEndLine) const;
+    void cleanupCache_nolock() const;
+    bool isEntryExpired_nolock(const CacheEntry& entry) const;
+    void evictLRUEntries_nolock(size_t targetSize) const;
+    std::pair<size_t, size_t> calculateOptimalProcessingRange(size_t startLine, size_t endLine) const;
+    void logCacheMetrics() const;
+    void logVectorAccess(const char* operation, size_t index, size_t size) const;
 }; 

@@ -68,16 +68,16 @@ struct has_3arg_ctor<T, Arg1, Arg2, Arg3, std::void_t<decltype(T(std::declval<Ar
 // Specialization for 1-argument constructors
 // Here we need to handle all possible interface types, but for simplicity we'll
 // focus on common patterns
-template<typename T, typename Arg1>
-struct ConstructorArguments<T, 
-    std::enable_if_t<has_1arg_ctor<T, std::shared_ptr<Arg1>>::value>> {
+template<typename T, typename Arg>
+struct ConstructorArguments<T,
+    std::enable_if_t<has_1arg_ctor<T, std::shared_ptr<Arg>>::value>> {
     
-    using type = std::tuple<std::shared_ptr<Arg1>>;
+    using type = std::tuple<std::shared_ptr<Arg>>;
     static constexpr size_t count = 1;
 
     template<typename Injector>
     static auto resolveArgs(Injector& injector) {
-        return std::tuple<std::shared_ptr<Arg1>>(injector.template resolve<Arg1>());
+        return std::tuple<std::shared_ptr<Arg>>(injector.template resolve<Arg>());
     }
 };
 
@@ -85,7 +85,7 @@ struct ConstructorArguments<T,
 template<typename T, typename Arg1, typename Arg2>
 struct ConstructorArguments<T, 
     std::enable_if_t<has_2arg_ctor<T, std::shared_ptr<Arg1>, std::shared_ptr<Arg2>>::value>> {
-    
+
     using type = std::tuple<std::shared_ptr<Arg1>, std::shared_ptr<Arg2>>;
     static constexpr size_t count = 2;
 
@@ -100,9 +100,9 @@ struct ConstructorArguments<T,
 
 // Specialization for 3-argument constructors
 template<typename T, typename Arg1, typename Arg2, typename Arg3>
-struct ConstructorArguments<T, 
+struct ConstructorArguments<T,
     std::enable_if_t<has_3arg_ctor<T, std::shared_ptr<Arg1>, std::shared_ptr<Arg2>, std::shared_ptr<Arg3>>::value>> {
-    
+
     using type = std::tuple<std::shared_ptr<Arg1>, std::shared_ptr<Arg2>, std::shared_ptr<Arg3>>;
     static constexpr size_t count = 3;
 
