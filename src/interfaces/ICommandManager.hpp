@@ -1,23 +1,18 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
 // Forward declarations
-class Editor;
 class Command;
-
-/**
- * @brief Alias for a command smart pointer
- */
+class Editor;
 using CommandPtr = std::unique_ptr<Command>;
 
 /**
  * @interface ICommandManager
- * @brief Interface for command execution and management
+ * @brief Interface for command manager components
  * 
- * Defines the contract for components that handle command pattern execution
- * with undo/redo capabilities.
+ * This interface defines the contract for command manager implementations,
+ * providing methods for executing, undoing, and redoing commands.
  */
 class ICommandManager {
 public:
@@ -25,12 +20,12 @@ public:
      * @brief Virtual destructor for proper cleanup in derived classes
      */
     virtual ~ICommandManager() = default;
-
+    
     /**
      * @brief Execute a command and store it in the undo stack
      * 
      * @param command The command to execute
-     * @param editor Reference to the editor
+     * @param editor The editor context for the command
      */
     virtual void executeCommand(CommandPtr command, Editor& editor) = 0;
     
@@ -44,44 +39,44 @@ public:
     /**
      * @brief Undo the most recent command
      * 
-     * @param editor Reference to the editor
-     * @return bool True if a command was undone, false if no command to undo
+     * @param editor The editor context for the command
+     * @return True if a command was undone, false if no commands to undo
      */
     virtual bool undo(Editor& editor) = 0;
     
     /**
      * @brief Redo the most recently undone command
      * 
-     * @param editor Reference to the editor
-     * @return bool True if a command was redone, false if no command to redo
+     * @param editor The editor context for the command
+     * @return True if a command was redone, false if no commands to redo
      */
     virtual bool redo(Editor& editor) = 0;
     
     /**
      * @brief Check if there are commands available to undo
      * 
-     * @return bool True if there are commands to undo
+     * @return True if there are commands to undo
      */
     virtual bool canUndo() const = 0;
     
     /**
      * @brief Check if there are commands available to redo
      * 
-     * @return bool True if there are commands to redo
+     * @return True if there are commands to redo
      */
     virtual bool canRedo() const = 0;
     
     /**
      * @brief Get the number of commands in the undo stack
      * 
-     * @return size_t The undo stack size
+     * @return The size of the undo stack
      */
     virtual size_t undoStackSize() const = 0;
     
     /**
      * @brief Get the number of commands in the redo stack
      * 
-     * @return size_t The redo stack size
+     * @return The size of the redo stack
      */
     virtual size_t redoStackSize() const = 0;
     
