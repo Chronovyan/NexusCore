@@ -4,11 +4,22 @@
 #include <vector>
 #include <memory>
 #include "ITextBuffer.hpp"
+#include "../TextBuffer.h"
+#include "../SyntaxHighlighter.h"
+#include "ICommandManager.hpp"
 
 // Forward declarations
 class SyntaxHighlighter;
 struct SyntaxStyle;
-enum class SelectionUnit;
+
+// Selection unit for selection operations
+enum class SelectionUnit {
+    Character,
+    Word,
+    Line,
+    Paragraph,
+    Document
+};
 
 /**
  * @interface IEditor
@@ -315,6 +326,13 @@ public:
      * @brief Select all text in the buffer
      */
     virtual void selectAll() = 0;
+    
+    /**
+     * @brief Shrink the current selection according to the specified unit
+     * 
+     * @param targetUnit The unit to shrink by (e.g., Word, Line)
+     */
+    virtual void shrinkSelection(SelectionUnit targetUnit = SelectionUnit::Word) = 0;
     
     // Clipboard
     /**

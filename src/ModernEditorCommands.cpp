@@ -8,7 +8,7 @@ void DeleteLineCommand::execute(Editor& editor) {
         execute();
     } else {
         // Store the line before deleting
-        deletedLine_ = editor.getTextBuffer().getLine(lineIndex_);
+        deletedLine_ = editor.getBuffer().getLine(lineIndex_);
         
         // Delete the line
         editor.deleteLine(lineIndex_);
@@ -34,7 +34,7 @@ void ReplaceLineCommand::execute(Editor& editor) {
         execute();
     } else {
         // Store the original text before replacing
-        originalText_ = editor.getTextBuffer().getLine(lineIndex_);
+        originalText_ = editor.getBuffer().getLine(lineIndex_);
         
         // Replace the line
         editor.replaceLine(lineIndex_, newText_);
@@ -83,14 +83,14 @@ void LoadFileCommand::execute(Editor& editor) {
         execute();
     } else {
         // Store the original buffer state
-        ITextBuffer& buffer = editor.getTextBuffer();
+        ITextBuffer& buffer = editor.getBuffer();
         originalBufferContent_ = std::vector<std::string>();
         for (size_t i = 0; i < buffer.lineCount(); ++i) {
             originalBufferContent_.push_back(buffer.getLine(i));
         }
         
-        // Load the file
-        bool success = editor.loadFile(filePath_);
+        // Load the file - use openFile() from IEditor interface
+        bool success = editor.openFile(filePath_);
         wasExecuted_ = success;
     }
 }
@@ -101,7 +101,7 @@ void LoadFileCommand::undo(Editor& editor) {
         undo();
     } else if (wasExecuted_) {
         // Restore the original buffer state
-        ITextBuffer& buffer = editor.getTextBuffer();
+        ITextBuffer& buffer = editor.getBuffer();
         
         // Clear existing buffer
         while (buffer.lineCount() > 0) {
@@ -123,31 +123,17 @@ void SaveFileCommand::execute(Editor& editor) {
         // Use the direct interface if available
         execute();
     } else {
-        // Save the file
-        bool success = editor.saveFile(filePath_);
+        // Save the file using the appropriate interface method
+        bool success;
+        if (filePath_.empty()) {
+            success = editor.saveFile(); // Use current filename
+        } else {
+            success = editor.saveFileAs(filePath_); // Use specified filename
+        }
         wasExecuted_ = success;
     }
 }
 
 void SaveFileCommand::undo(Editor& editor) {
     // Saving a file doesn't change the buffer state, so undo is a no-op
-}
-
-// Implementation for BatchCommand
-void BatchCommand::execute(Editor& editor) {
-    // Execute each command in sequence
-    for (auto& command : commands_) {
-        command->execute(editor);
-    }
-    wasExecuted_ = true;
-}
-
-void BatchCommand::undo(Editor& editor) {
-    if (wasExecuted_) {
-        // Undo commands in reverse order
-        for (auto it = commands_.rbegin(); it != commands_.rend(); ++it) {
-            (*it)->undo(editor);
-        }
-        wasExecuted_ = false;
-    }
 } 

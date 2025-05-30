@@ -5,6 +5,7 @@
 #include <vector>         // For std::vector (used in some command's undo data)
 #include <iostream>       // For std::cerr (used in some commands for debug/error messages)
 #include <memory>         // For std::make_unique (though not directly in implementations here, good to be aware)
+#include "AppDebugLog.h"
 
 // Implementations for command classes defined in EditorCommands.h 
 
@@ -252,63 +253,28 @@ std::string AddLineCommand::getDescription() const {
 
 // --- DeleteLineCommand --- 
 void DeleteLineCommand::execute(Editor& editor) {
-    // Store original cursor position
-    originalCursorLine_ = editor.getCursorLine();
-    originalCursorCol_ = editor.getCursorCol();
-
-    TextBuffer& buffer = editor.getBuffer();
-    originalLineCount_ = buffer.lineCount(); // Store for undo logic
-
-    if (lineIndex_ >= buffer.lineCount()) {
-        wasDeleted_ = false; // Index out of bounds
-        return;
-    }
-
-    try {
-        deletedLine_ = buffer.getLine(lineIndex_); // Store for undo
-        buffer.deleteLine(lineIndex_); // This might change buffer.lineCount()
-        wasDeleted_ = true;
-    } catch (const std::exception& e) {
-        // Should be caught by lineIndex_ >= buffer.lineCount() check, but as a safeguard
-        wasDeleted_ = false;
-        std::cerr << "DeleteLineCommand::execute Error: " << e.what() << std::endl;
-        return;
-    }
-    
-    // Adjust cursor after deletion
-    if (buffer.isEmpty()) {
-        // If buffer became empty (e.g., deleted the only line which became "")
-        editor.setCursor(0, 0);
-    } else if (lineIndex_ >= buffer.lineCount()) {
-        // If we deleted the last line, move cursor to the new last line
-        editor.setCursor(buffer.lineCount() - 1, 0);
+    if (textBuffer_) {
+        // Use the direct interface if available
+        execute();
     } else {
-        // Otherwise, put cursor at the line that now occupies the position 
-        // of the deleted line (at column 0)
-        editor.setCursor(lineIndex_, 0);
+        // Store the line before deleting
+        deletedLine_ = editor.getBuffer().getLine(lineIndex_);
+        
+        // Delete the line
+        editor.deleteLine(lineIndex_);
+        wasDeleted_ = true;
     }
-    
-    editor.invalidateHighlightingCache();
 }
 
 void DeleteLineCommand::undo(Editor& editor) {
-    if (!wasDeleted_) {
-        return; // Nothing to undo or execute failed
+    if (textBuffer_) {
+        // Use the direct interface if available
+        undo();
+    } else if (wasDeleted_) {
+        // Re-insert the deleted line
+        editor.insertLine(lineIndex_, deletedLine_);
+        wasDeleted_ = false;
     }
-
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // If it was the only line and became empty, replace it
-    // This covers the case where deleting the only line results in buffer.getLine(0) == ""
-    if (originalLineCount_ == 1 && buffer.lineCount() == 1 && buffer.getLine(0).empty()) {
-        buffer.replaceLine(0, deletedLine_);
-    } else {
-        buffer.insertLine(lineIndex_, deletedLine_);
-    }
-    
-    // Restore original cursor position
-    editor.setCursor(originalCursorLine_, originalCursorCol_);
-    editor.invalidateHighlightingCache();
 }
 
 std::string DeleteLineCommand::getDescription() const {
@@ -317,39 +283,27 @@ std::string DeleteLineCommand::getDescription() const {
 
 // --- ReplaceLineCommand --- 
 void ReplaceLineCommand::execute(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
-    
-    if (lineIndex_ >= buffer.lineCount()) {
-        wasExecuted_ = false; // Index out of bounds
-        return;
-    }
-
-    try {
-        originalText_ = buffer.getLine(lineIndex_); // Store for undo
-        buffer.replaceLine(lineIndex_, newText_);
-        editor.setCursor(lineIndex_, 0); // Set cursor to start of replaced line
+    if (textBuffer_) {
+        // Use the direct interface if available
+        execute();
+    } else {
+        // Store the original text before replacing
+        originalText_ = editor.getBuffer().getLine(lineIndex_);
+        
+        // Replace the line
+        editor.replaceLine(lineIndex_, newText_);
         wasExecuted_ = true;
-        editor.invalidateHighlightingCache();
-    } catch (const std::exception& e) {
-        wasExecuted_ = false;
-        std::cerr << "ReplaceLineCommand::execute Error: " << e.what() << std::endl;
     }
 }
 
 void ReplaceLineCommand::undo(Editor& editor) {
-    if (!wasExecuted_) return;
-
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // Restore the original line, ensure index is still valid
-    if (lineIndex_ < buffer.lineCount()) {
-        buffer.replaceLine(lineIndex_, originalText_);
-        editor.setCursor(lineIndex_, 0); // Restore cursor
-        editor.invalidateHighlightingCache();
-    } else {
-        // This case might happen if other commands modified the buffer drastically after execute.
-        // Log or handle as an error? For now, do nothing if line doesn't exist to avoid crash.
-        std::cerr << "ReplaceLineCommand::undo: Line index " << lineIndex_ << " out of bounds during undo." << std::endl;
+    if (textBuffer_) {
+        // Use the direct interface if available
+        undo();
+    } else if (wasExecuted_) {
+        // Restore the original text
+        editor.replaceLine(lineIndex_, originalText_);
+        wasExecuted_ = false;
     }
 }
 
@@ -359,49 +313,24 @@ std::string ReplaceLineCommand::getDescription() const {
 
 // --- InsertLineCommand --- 
 void InsertLineCommand::execute(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // lineIndex_ can be == buffer.lineCount() to append a line
-    if (lineIndex_ <= buffer.lineCount()) {
-        buffer.insertLine(lineIndex_, text_);
-        editor.setCursor(lineIndex_, 0); // Set cursor to start of inserted line
-        wasExecuted_ = true;
-        editor.invalidateHighlightingCache();
+    if (textBuffer_) {
+        // Use the direct interface if available
+        execute();
     } else {
-        wasExecuted_ = false; // Index out of bounds for insertion
+        // Insert the line
+        editor.insertLine(lineIndex_, text_);
+        wasExecuted_ = true;
     }
 }
 
 void InsertLineCommand::undo(Editor& editor) {
-    if (!wasExecuted_) return;
-
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // Delete the inserted line, if it still exists at lineIndex_
-    if (lineIndex_ < buffer.lineCount()) {
-        // It is important to check if the line content is still what we inserted,
-        // but for a simple undo, we assume it is.
-        buffer.deleteLine(lineIndex_);
-        
-        // Adjust cursor position after deletion
-        if (buffer.isEmpty()){
-            editor.setCursor(0,0); // Editor might add a default line
-        } else if (lineIndex_ > 0 && (lineIndex_ -1) < buffer.lineCount()) {
-             // Move to end of previous line
-             editor.setCursor(lineIndex_ - 1, buffer.lineLength(lineIndex_ -1)); 
-        } else if (lineIndex_ == 0 && !buffer.isEmpty()) { // If deleted line 0 and buffer still has lines
-            editor.setCursor(0, 0); // Move to start of new line 0
-        } else { // Fallback / buffer might be empty or lineIndex_ was last line
-            if (!buffer.isEmpty()) {
-                editor.setCursor(buffer.lineCount() -1 , 0); // Last line
-            } else {
-                 editor.setCursor(0,0); // Empty buffer
-            }
-        }
-        editor.invalidateHighlightingCache();
-    } else {
-         // Line might have been deleted by other means, or index was too high initially
-         std::cerr << "InsertLineCommand::undo: Line index " << lineIndex_ << " out of bounds or line not found during undo." << std::endl;
+    if (textBuffer_) {
+        // Use the direct interface if available
+        undo();
+    } else if (wasExecuted_) {
+        // Delete the inserted line
+        editor.deleteLine(lineIndex_);
+        wasExecuted_ = false;
     }
 }
 

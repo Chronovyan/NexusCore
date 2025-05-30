@@ -348,11 +348,11 @@ protected:
     // Helper methods for initialization
     void initialize();
 
-    // New accessor for textBuffer_ using the interface
+    // Helper accessor for backwards compatibility
     ITextBuffer& getTextBuffer() { return *textBuffer_; }
-
-    // Old accessor for buffer_ (kept for backward compatibility)
-    TextBuffer& getBuffer();
+    
+    // Accessor for concrete TextBuffer (for backward compatibility)
+    TextBuffer& getTextBuffer() { return static_cast<TextBuffer&>(*textBuffer_); }
 };
 
 #endif // EDITOR_H 
