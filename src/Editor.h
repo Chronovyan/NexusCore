@@ -28,17 +28,6 @@ struct Position {
     }
 };
 
-// Selection unit enum to define semantic units for expansion/shrinking
-enum class SelectionUnit {
-    Character,
-    Word,
-    Expression,
-    Line, 
-    Paragraph,
-    Block,
-    Document
-};
-
 class Editor : public IEditor {
 public:
     // Constructor without dependencies - for backward compatibility
@@ -349,10 +338,15 @@ protected:
     void initialize();
 
     // Helper accessor for backwards compatibility
-    ITextBuffer& getTextBuffer() { return *textBuffer_; }
-    
-    // Accessor for concrete TextBuffer (for backward compatibility)
-    TextBuffer& getTextBuffer() { return static_cast<TextBuffer&>(*textBuffer_); }
+    TextBuffer& getTextBuffer() { 
+        // Try to cast the textBuffer_ to a TextBuffer
+        TextBuffer* concreteBuffer = dynamic_cast<TextBuffer*>(textBuffer_.get());
+        if (!concreteBuffer) {
+            // If the cast fails, log an error and throw an exception
+            throw std::runtime_error("getTextBuffer called on an Editor with a non-TextBuffer implementation");
+        }
+        return *concreteBuffer;
+    }
 };
 
 #endif // EDITOR_H 
