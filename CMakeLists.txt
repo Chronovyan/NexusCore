@@ -48,6 +48,19 @@ endif()
 # --- nlohmann/json for JSON parsing ---
 add_subdirectory(${JSON_DIR})
 
+# --- GoogleTest Configuration ---
+# Configure GoogleTest - always include it regardless of BUILD_TESTS
+set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
+set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
+# Depending on GTest version, these might also be useful:
+set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
+set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
+
+# Force GoogleTest to use the same runtime library as the rest of the project
+set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib")
+
+add_subdirectory(${GTEST_DIR})
+
 # Create ImGui library with GLFW and OpenGL3 backends
 set(IMGUI_SOURCES
   ${IMGUI_DIR}/imgui.cpp
@@ -177,8 +190,8 @@ add_executable(DIFrameworkTest
 )
 target_link_libraries(DIFrameworkTest PRIVATE 
     EditorLib
-    GTest::gtest
-    GTest::gtest_main
+    gtest
+    gtest_main
 )
 
 # --- DI Test Executable ---
@@ -213,29 +226,18 @@ option(BUILD_TESTS "Build the tests" OFF)
 # Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
 set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
 
-# Only build tests if the option is enabled
+# Only build additional tests if the option is enabled
 if(BUILD_TESTS)
-  # --- GoogleTest Integration ---
-  set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
-  set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
-  # Depending on GTest version, these might also be useful:
-  set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
-  set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
-
-  # Force GoogleTest to use the same runtime library as the rest of the project
-  set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib")
-
-  add_subdirectory(${GTEST_DIR})
-  
-  # --- Testing ---
+  # Enable testing
   enable_testing()
   # The add_subdirectory(tests) command will now find and process tests/CMakeLists.txt
   # which should define its own targets (e.g., runTests) and link them against GTest::gtest etc.
   add_subdirectory(tests) 
-  
-  # Add the DI Framework test to the test suite
-  add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest)
 endif()
+
+# Add the DI Framework test to the test suite regardless of BUILD_TESTS
+enable_testing()
+add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest)
 
 # The standalone DI test project is included conditionally
 if(NOT TARGET di)

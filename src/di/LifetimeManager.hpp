@@ -206,6 +206,41 @@ public:
     }
     
     /**
+     * @brief Specialization for getInstance<void> to handle void pointers properly
+     */
+    std::shared_ptr<void> getInstance(
+        std::function<std::shared_ptr<void>()> factory,
+        ServiceLifetime lifetime = ServiceLifetime::Transient
+    ) {
+        std::cout << "LifetimeManager::getInstance<void> called with lifetime: " 
+                  << (lifetime == ServiceLifetime::Singleton ? "Singleton" : 
+                      lifetime == ServiceLifetime::Scoped ? "Scoped" : "Transient")
+                  << ", this=" << this
+                  << std::endl;
+                  
+        // For void pointers, we need to handle things differently since we can't use templates
+        
+        switch (lifetime) {
+            case ServiceLifetime::Singleton:
+                return getSingletonInstanceVoid(factory);
+            case ServiceLifetime::Scoped:
+                return getScopedInstanceVoid(factory);
+            case ServiceLifetime::Transient:
+            default: {
+                // For transient instances, create a new instance each time
+                std::cout << "  Creating new transient instance (void)" << std::endl;
+                auto instance = factory();
+                std::cout << "  Created transient instance (void): " << instance.get() << std::endl;
+                
+                // Register for disposal if needed (void version)
+                registerForDisposalIfNeeded(instance);
+                
+                return instance;
+            }
+        }
+    }
+    
+    /**
      * @brief Register a disposable instance for cleanup
      * 
      * This method is used to register instances that need to be disposed
@@ -315,6 +350,9 @@ private:
     std::vector<std::shared_ptr<IDisposable>> disposables_;
     shared_mutex_t disposablesMutex_;
     
+    // Make LifetimeInjector a friend class so it can access private members
+    friend class LifetimeInjector;
+    
     /**
      * @brief Get a singleton instance of type T
      * 
@@ -330,20 +368,28 @@ private:
                   << "> called, this=" << this << std::endl;
         
         // First, try to find an existing instance with a shared lock
+        std::shared_ptr<T> instance;
+        bool instanceFound = false;
+        
         {
             shared_lock_t<shared_mutex_t> lock(singletonsMutex_);
             auto it = singletons_.find(typeIndex);
             if (it != singletons_.end()) {
                 try {
-                    auto instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                    instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                    instanceFound = true;
                     std::cout << "    Found existing singleton instance: " << instance.get() << std::endl;
-                    return instance;
                 }
                 catch (const std::bad_any_cast&) {
                     std::cout << "    Bad any cast for singleton instance" << std::endl;
                     // Continue with creation if cast fails
                 }
             }
+        }
+        
+        // If instance was found, return it immediately without taking exclusive lock
+        if (instanceFound) {
+            return instance;
         }
         
         // If not found, create with an exclusive lock
@@ -353,7 +399,7 @@ private:
         auto it = singletons_.find(typeIndex);
         if (it != singletons_.end()) {
             try {
-                auto instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                instance = std::any_cast<std::shared_ptr<T>>(it->second);
                 std::cout << "    Found existing singleton instance after lock upgrade: " 
                           << instance.get() << std::endl;
                 return instance;
@@ -366,7 +412,7 @@ private:
         
         // Create new instance
         std::cout << "    Creating new singleton instance" << std::endl;
-        auto instance = factory();
+        instance = factory();
         std::cout << "    Created new singleton instance: " << instance.get() << std::endl;
         
         // Register for disposal if needed
@@ -393,20 +439,28 @@ private:
                   << "> called, this=" << this << std::endl;
         
         // First, try to find an existing instance with a shared lock
+        std::shared_ptr<T> instance;
+        bool instanceFound = false;
+        
         {
             shared_lock_t<shared_mutex_t> lock(scopedInstancesMutex_);
             auto it = scopedInstances_.find(typeIndex);
             if (it != scopedInstances_.end()) {
                 try {
-                    auto instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                    instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                    instanceFound = true;
                     std::cout << "    Found existing scoped instance: " << instance.get() << std::endl;
-                    return instance;
                 }
                 catch (const std::bad_any_cast&) {
                     std::cout << "    Bad any cast for scoped instance" << std::endl;
                     // Continue with creation if cast fails
                 }
             }
+        }
+        
+        // If instance was found, return it immediately without taking exclusive lock
+        if (instanceFound) {
+            return instance;
         }
         
         // If not found, create with an exclusive lock
@@ -416,7 +470,7 @@ private:
         auto it = scopedInstances_.find(typeIndex);
         if (it != scopedInstances_.end()) {
             try {
-                auto instance = std::any_cast<std::shared_ptr<T>>(it->second);
+                instance = std::any_cast<std::shared_ptr<T>>(it->second);
                 std::cout << "    Found existing scoped instance after lock upgrade: " 
                           << instance.get() << std::endl;
                 return instance;
@@ -429,7 +483,7 @@ private:
         
         // Create new instance
         std::cout << "    Creating new scoped instance" << std::endl;
-        auto instance = factory();
+        instance = factory();
         std::cout << "    Created new scoped instance: " << instance.get() << std::endl;
         
         // Register for disposal if needed
@@ -453,6 +507,9 @@ private:
         // Note: We can't safely check if a void pointer is disposable without additional type information
         // So we'll assume it's not disposable unless we know for sure from the caller
         std::cout << "    Instance is not disposable, skipping registration" << std::endl;
+        
+        // We cannot use dynamic_pointer_cast on void pointers
+        // The caller must pass type information if they want to register for disposal
     }
     
     /**
@@ -466,13 +523,27 @@ private:
         std::cout << "  LifetimeManager::registerForDisposalIfNeeded called for instance: " 
                  << instance.get() << ", type: " << typeid(T).name() << std::endl;
                  
-       // Check if the instance is disposable
-       auto disposable = std::dynamic_pointer_cast<IDisposable>(instance);
-        if (disposable) {
-            std::cout << "    Instance is disposable, registering for disposal" << std::endl;
+        // First check if the type is disposable using std::is_base_of
+        // This avoids the need for dynamic_pointer_cast on non-disposable types
+        if constexpr (std::is_base_of<IDisposable, T>::value) {
+            std::cout << "    Type is known to implement IDisposable, registering for disposal" << std::endl;
+            auto disposable = std::static_pointer_cast<IDisposable>(instance);
             registerDisposable(disposable);
-        } else {
-            std::cout << "    Instance is not disposable, skipping registration" << std::endl;
+        } 
+        else {
+            // Only try dynamic_cast for polymorphic types
+            if constexpr (std::has_virtual_destructor<T>::value) {
+                // Check if the instance is disposable at runtime
+                auto disposable = std::dynamic_pointer_cast<IDisposable>(instance);
+                if (disposable) {
+                    std::cout << "    Instance is disposable, registering for disposal" << std::endl;
+                    registerDisposable(disposable);
+                } else {
+                    std::cout << "    Instance is not disposable, skipping registration" << std::endl;
+                }
+            } else {
+                std::cout << "    Type is not polymorphic, cannot be disposable, skipping registration" << std::endl;
+            }
         }
     }
     
@@ -500,6 +571,148 @@ private:
         // Clear the list
         disposables_.clear();
         std::cout << "  All instances disposed and list cleared" << std::endl;
+    }
+    
+    /**
+     * @brief Get a singleton instance for void pointers
+     */
+    std::shared_ptr<void> getSingletonInstanceVoid(std::function<std::shared_ptr<void>()> factory) {
+        // Generate a unique type index for this factory function
+        // Using the address of the factory function as part of the key
+        const void* factoryAddr = reinterpret_cast<const void*>(&factory);
+        std::string typeKey = "void_factory_" + std::to_string(reinterpret_cast<uintptr_t>(factoryAddr));
+        std::type_index typeIndex = std::type_index(typeid(void));
+        
+        std::cout << "  LifetimeManager::getSingletonInstanceVoid called, this=" << this 
+                  << ", factory addr: " << factoryAddr
+                  << std::endl;
+        
+        // First, try to find an existing instance with a shared lock
+        std::shared_ptr<void> instance;
+        bool instanceFound = false;
+        
+        {
+            shared_lock_t<shared_mutex_t> lock(singletonsMutex_);
+            auto it = singletons_.find(typeIndex);
+            if (it != singletons_.end()) {
+                try {
+                    instance = std::any_cast<std::shared_ptr<void>>(it->second);
+                    instanceFound = true;
+                    std::cout << "    Found existing singleton instance (void): " << instance.get() << std::endl;
+                }
+                catch (const std::bad_any_cast&) {
+                    std::cout << "    Bad any cast for singleton instance (void)" << std::endl;
+                    // Continue with creation if cast fails
+                }
+            }
+        }
+        
+        // If instance was found, return it immediately without taking exclusive lock
+        if (instanceFound) {
+            return instance;
+        }
+        
+        // If not found, create with an exclusive lock
+        unique_lock_t<shared_mutex_t> lock(singletonsMutex_);
+        
+        // Check again in case another thread created the instance while we were waiting
+        auto it = singletons_.find(typeIndex);
+        if (it != singletons_.end()) {
+            try {
+                instance = std::any_cast<std::shared_ptr<void>>(it->second);
+                std::cout << "    Found existing singleton instance after lock upgrade (void): " 
+                          << instance.get() << std::endl;
+                return instance;
+            }
+            catch (const std::bad_any_cast&) {
+                std::cout << "    Bad any cast for singleton instance after lock upgrade (void)" << std::endl;
+                // Continue with creation if cast fails
+            }
+        }
+        
+        // Create new instance
+        std::cout << "    Creating new singleton instance (void)" << std::endl;
+        instance = factory();
+        std::cout << "    Created new singleton instance (void): " << instance.get() << std::endl;
+        
+        // Register for disposal if needed
+        registerForDisposalIfNeeded(instance);
+        
+        // Store the instance
+        singletons_[typeIndex] = instance;
+        
+        return instance;
+    }
+    
+    /**
+     * @brief Get a scoped instance for void pointers
+     */
+    std::shared_ptr<void> getScopedInstanceVoid(std::function<std::shared_ptr<void>()> factory) {
+        // Generate a unique type index for this factory function
+        // Using the address of the factory function as part of the key
+        const void* factoryAddr = reinterpret_cast<const void*>(&factory);
+        std::string typeKey = "void_factory_" + std::to_string(reinterpret_cast<uintptr_t>(factoryAddr));
+        std::type_index typeIndex = std::type_index(typeid(void));
+        
+        std::cout << "  LifetimeManager::getScopedInstanceVoid called, this=" << this 
+                  << ", factory addr: " << factoryAddr
+                  << std::endl;
+        
+        // First, try to find an existing instance with a shared lock
+        std::shared_ptr<void> instance;
+        bool instanceFound = false;
+        
+        {
+            shared_lock_t<shared_mutex_t> lock(scopedInstancesMutex_);
+            auto it = scopedInstances_.find(typeIndex);
+            if (it != scopedInstances_.end()) {
+                try {
+                    instance = std::any_cast<std::shared_ptr<void>>(it->second);
+                    instanceFound = true;
+                    std::cout << "    Found existing scoped instance (void): " << instance.get() << std::endl;
+                }
+                catch (const std::bad_any_cast&) {
+                    std::cout << "    Bad any cast for scoped instance (void)" << std::endl;
+                    // Continue with creation if cast fails
+                }
+            }
+        }
+        
+        // If instance was found, return it immediately without taking exclusive lock
+        if (instanceFound) {
+            return instance;
+        }
+        
+        // If not found, create with an exclusive lock
+        unique_lock_t<shared_mutex_t> lock(scopedInstancesMutex_);
+        
+        // Check again in case another thread created the instance while we were waiting
+        auto it = scopedInstances_.find(typeIndex);
+        if (it != scopedInstances_.end()) {
+            try {
+                instance = std::any_cast<std::shared_ptr<void>>(it->second);
+                std::cout << "    Found existing scoped instance after lock upgrade (void): " 
+                          << instance.get() << std::endl;
+                return instance;
+            }
+            catch (const std::bad_any_cast&) {
+                std::cout << "    Bad any cast for scoped instance after lock upgrade (void)" << std::endl;
+                // Continue with creation if cast fails
+            }
+        }
+        
+        // Create new instance
+        std::cout << "    Creating new scoped instance (void)" << std::endl;
+        instance = factory();
+        std::cout << "    Created new scoped instance (void): " << instance.get() << std::endl;
+        
+        // Register for disposal if needed
+        registerForDisposalIfNeeded(instance);
+        
+        // Store the instance
+        scopedInstances_[typeIndex] = instance;
+        
+        return instance;
     }
 };
 
@@ -720,7 +933,55 @@ public:
      */
     template<typename T>
     std::shared_ptr<T> get() {
-        return injector_.get<T>();
+        auto typeIndex = std::type_index(typeid(T));
+        
+        std::cout << "LifetimeInjector::get<" << typeid(T).name() << "> called, this=" << this << std::endl;
+        
+        try {
+            // First check if we have a factory registered with lifetime management
+            auto factory = factories_.getFactory(typeIndex);
+            if (factory) {
+                std::cout << "  Factory found for type " << typeid(T).name() << ", creating instance with lifetime management" << std::endl;
+                
+                // Determine the lifetime for this type
+                auto lifetime = ServiceLifetime::Transient;
+                auto it = lifetimes_.find(typeIndex);
+                if (it != lifetimes_.end()) {
+                    lifetime = it->second;
+                }
+                
+                std::cout << "  Creating instance with lifetime: " 
+                          << (lifetime == ServiceLifetime::Singleton ? "Singleton" : 
+                              lifetime == ServiceLifetime::Scoped ? "Scoped" : "Transient")
+                          << std::endl;
+                
+                // Create a local copy of the lifetime manager to avoid potential recursive issues
+                auto lifetimeMgr = lifetimeManager_;
+                if (!lifetimeMgr) {
+                    std::cout << "  ERROR: Lifetime manager is null" << std::endl;
+                    throw std::runtime_error("Lifetime manager is null");
+                }
+                
+                // Get the instance using the lifetime manager
+                auto instance = std::static_pointer_cast<T>(
+                    lifetimeMgr->getInstance<void>(
+                        factory,
+                        lifetime
+                    )
+                );
+                
+                std::cout << "  Resolved instance: " << instance.get() << std::endl;
+                return instance;
+            }
+            
+            // Fall back to the injector if no factory is registered
+            std::cout << "  No factory found for type " << typeid(T).name() << ", delegating to injector" << std::endl;
+            return injector_.get<T>();
+        }
+        catch (const std::exception& ex) {
+            std::cout << "  Exception during get: " << ex.what() << std::endl;
+            throw; // Re-throw to propagate the exception
+        }
     }
     
     /**
@@ -922,6 +1183,91 @@ public:
         }
     }
     
+    /**
+     * @brief Register a factory function by type index
+     * 
+     * This method registers a factory function for a specific type index.
+     * It is used by the ServiceCollection to register services without using template parameters.
+     * 
+     * @param typeIndex The type index to register
+     * @param factory The factory function that creates the instance
+     * @param lifetime The lifetime of the service
+     */
+    void registerRaw(
+        const std::type_index& typeIndex,
+        std::function<std::shared_ptr<void>()> factory,
+        ServiceLifetime lifetime = ServiceLifetime::Transient) {
+        
+        // Store the original factory for creating child scopes
+        originalFactories_[typeIndex] = factory;
+        
+        // Store the lifetime for the type
+        lifetimes_[typeIndex] = lifetime;
+        
+        // Create a factory that wraps the original factory with lifetime management
+        std::function<std::shared_ptr<void>()> wrappedFactory;
+        
+        switch (lifetime) {
+            case ServiceLifetime::Singleton:
+                wrappedFactory = [factory, this, typeIndex]() {
+                    try {
+                        return lifetimeManager_->getScopedInstanceByTypeIndex(
+                            typeIndex, factory);
+                    }
+                    catch (const std::exception& ex) {
+                        std::cerr << "Error creating singleton instance for type " 
+                                  << typeIndex.name() << ": " << ex.what() << std::endl;
+                        throw;
+                    }
+                };
+                break;
+                
+            case ServiceLifetime::Scoped:
+                wrappedFactory = [factory, this, typeIndex]() {
+                    try {
+                        return lifetimeManager_->getScopedInstanceByTypeIndex(
+                            typeIndex, factory);
+                    }
+                    catch (const std::exception& ex) {
+                        std::cerr << "Error creating scoped instance for type " 
+                                  << typeIndex.name() << ": " << ex.what() << std::endl;
+                        throw;
+                    }
+                };
+                break;
+                
+            case ServiceLifetime::Transient:
+            default:
+                wrappedFactory = [factory, this]() {
+                    try {
+                        auto instance = factory();
+                        // Register the instance for disposal if needed
+                        lifetimeManager_->registerForDisposalIfNeeded(instance);
+                        return instance;
+                    }
+                    catch (const std::exception& ex) {
+                        std::cerr << "Error creating transient instance: " 
+                                  << ex.what() << std::endl;
+                        throw;
+                    }
+                };
+                break;
+        }
+        
+        // Register the wrapped factory with the injector
+        injector_.registerFactory(typeIndex, wrappedFactory);
+        
+        // Register a dispose handler for the type
+        registerDisposeHandler(typeIndex, [](std::shared_ptr<void> instance, std::shared_ptr<LifetimeManager> manager) {
+            // We cannot use dynamic_pointer_cast on void* 
+            // If this is a disposable type, it should be registered through the typed registerFactory method
+            // or the caller should handle the disposal manually
+            
+            // No-op: this type isn't known to be disposable through the void* interface
+            std::cout << "Cannot determine if instance is disposable through void* interface" << std::endl;
+        });
+    }
+
 private:
     // The injector to delegate to
     Injector injector_;
