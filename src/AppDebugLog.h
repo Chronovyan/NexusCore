@@ -65,7 +65,14 @@ inline void logImpl(LogLevel level, const char* file, int line, const char* form
     std::cout << prefixBuffer << messageBuffer << std::endl;
 }
 
+// Overload for std::string messages
+inline void logImpl(LogLevel level, const char* file, int line, const std::string& message) {
+    // Call the original implementation with c_str()
+    logImpl(level, file, line, "%s", message.c_str());
+}
+
 // Macros for easy logging
+#define LOG_INIT(component) initAppDebugLog(); LOG_INFO("Initializing %s", component)
 #define LOG_DEBUG(format, ...) logImpl(LogLevel::DEBUG, __FILE__, __LINE__, format, ##__VA_ARGS__)
 #define LOG_INFO(format, ...) logImpl(LogLevel::INFO, __FILE__, __LINE__, format, ##__VA_ARGS__)
 #define LOG_WARNING(format, ...) logImpl(LogLevel::WARNING, __FILE__, __LINE__, format, ##__VA_ARGS__)

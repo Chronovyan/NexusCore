@@ -107,7 +107,7 @@ private:
     
     // Core application services
     di::Injector injector_;
-    ModuleManager moduleManager_;
+    di::ModuleManager moduleManager_;
     std::shared_ptr<IEditor> editor_;
     
     // Application state

@@ -188,7 +188,7 @@ private:
         } else if (command == "lines") {
             out << "Total lines: " << editor.getBuffer().lineCount() << '\n';
         } else if (command == "clear") {
-            TextBuffer& buf = editor.getBuffer();
+            ITextBuffer& buf = editor.getBuffer();
             while(!buf.isEmpty()){
                 buf.deleteLine(0);
             }

@@ -105,7 +105,7 @@ TEST_F(EditorFileIOTest, SaveToNewFile) {
     std::string new_file = test_dir + "new_save_file.txt";
     
     // Save to a new file
-    ASSERT_TRUE(editor.saveFile(new_file));
+    ASSERT_TRUE(editor.saveFileAs(new_file));
     
     // Verify file was saved
     std::ifstream file(new_file);
@@ -128,7 +128,7 @@ TEST_F(EditorFileIOTest, SaveToNewFile) {
 // Test saving with no filename specified
 TEST_F(EditorFileIOTest, SaveWithNoFilename) {
     // Default editor with "untitled.txt" as filename
-    ASSERT_FALSE(editor.saveFile(""));
+    ASSERT_FALSE(editor.saveFileAs(""));
     
     // Should not create an empty-named file
     std::ifstream file("");
@@ -140,7 +140,7 @@ TEST_F(EditorFileIOTest, SaveToReadOnlyFile) {
     editor.typeText("This should not overwrite the read-only file");
     
     // Try to save to the read-only file
-    ASSERT_FALSE(editor.saveFile(read_only_file));
+    ASSERT_FALSE(editor.saveFileAs(read_only_file));
     
     // Verify the original content is unchanged
     std::ifstream file(read_only_file);
@@ -189,7 +189,7 @@ TEST_F(EditorFileIOTest, SavePreservesLineEndings) {
     std::string new_file = test_dir + "line_endings_test.txt";
     
     // Save to a new file
-    ASSERT_TRUE(editor.saveFile(new_file));
+    ASSERT_TRUE(editor.saveFileAs(new_file));
     
     // Read the file in binary mode to check line endings
     std::ifstream file(new_file, std::ios::binary);
@@ -236,7 +236,7 @@ TEST_F(EditorFileIOTest, LargeFileHandling) {
     
     // Save to a new file
     std::string modified_large_file = test_dir + "modified_large_file.txt";
-    ASSERT_TRUE(editor.saveFile(modified_large_file));
+    ASSERT_TRUE(editor.saveFileAs(modified_large_file));
     
     // Verify the saved file
     std::ifstream verify_file(modified_large_file);
@@ -249,7 +249,7 @@ TEST_F(EditorFileIOTest, LargeFileHandling) {
         line_count++;
         if (line_count == 51) { // 1-indexed in the file
             line50_correct = (line.find("Modified: ") == 0);
-        } else if (line_count == 101) { // 1-indexed in the file
+        } else if (line_count == 101) {
             line100_correct = (line.find("Also changed: ") == 0);
         }
     }

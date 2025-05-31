@@ -1,0 +1,15 @@
+# Add the LifetimeManagerFixedTest
+add_executable(LifetimeManagerFixedTest
+    LifetimeManagerTest.temp.cpp
+)
+
+# Link against the DI library and gtest
+target_link_libraries(LifetimeManagerFixedTest
+    PRIVATE
+    di
+    gtest
+    gtest_main
+)
+
+# Add the test
+add_test(NAME LifetimeManagerFixedTest COMMAND LifetimeManagerFixedTest) 

@@ -178,14 +178,18 @@ public:
         return validCount;
     }
 
-    // Control debug logging
-    static void setDebugLoggingEnabled(bool enabled);
-    static bool isDebugLoggingEnabled();
+    // Control debug logging - instance methods to override interface
+    void setDebugLoggingEnabled(bool enabled) override;
+    bool isDebugLoggingEnabled() const override;
+    
+    // Static methods for global access (used by anonymous namespace functions)
+    static void setDebugLoggingEnabled_static(bool enabled);
+    static bool isDebugLoggingEnabled_static();
 
 private:
     void invalidateAllLines_nolock(); // Internal use without locking
     
-    // Helper function to log vector access for debugging
+    // Helper method for debugging vector access
     void logVectorAccess(const char* location, size_t index, size_t vectorSize) const;
     
     // Internal method to highlight a single line, assumes caller holds unique_lock.
@@ -205,7 +209,7 @@ private:
     bool isCacheEntryExpired(const CacheEntry& entry) const;
     
     // Perform cache cleanup, evicting old entries
-    void evictLRUEntries_nolock(size_t targetSize);
+    void evictLRUEntries_nolock(size_t targetSize) const;
     
     // Check if a line was recently processed to avoid redundant work
     bool wasRecentlyProcessed(size_t line) const;
@@ -220,11 +224,17 @@ private:
     // Reduce log verbosity and only log significant changes in status
     void logWithReduction(const char* format, ...) const;
     
+    // Get buffer pointer safely (may return nullptr if buffer not set)
+    const TextBuffer* getBuffer() const;
+    
+    // Get highlighter pointer WITHOUT locking - for internal use when mutex is already held
+    SyntaxHighlighter* getHighlighterPtr_nolock() const;
+    
     // Mutex for thread safety
     mutable std::recursive_mutex mutex_;
     
     // The buffer to highlight - not owned by this class
-    const TextBuffer* buffer_ = nullptr;
+    std::atomic<const TextBuffer*> buffer_{nullptr};
     
     // The current highlighter
     std::shared_ptr<SyntaxHighlighter> highlighter_;
@@ -233,7 +243,7 @@ private:
     bool enabled_ = true;
     
     // Cache of highlighted lines (for const methods that can't update the cache)
-    mutable std::vector<std::unique_ptr<CacheEntry>> cachedStyles_;
+    mutable std::vector<std::shared_ptr<CacheEntry>> cachedStyles_;
     
     // Tracking of invalidated lines
     mutable std::unordered_set<size_t> invalidatedLines_;
@@ -242,35 +252,37 @@ private:
     mutable std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineTimestamps_;
     mutable std::unordered_map<size_t, std::chrono::steady_clock::time_point> lineAccessTimes_;
     
-    // Last cleanup time for cache maintenance
-    mutable std::chrono::steady_clock::time_point lastCleanupTime_ = std::chrono::steady_clock::now();
+    // Time since last cache cleanup
+    mutable std::chrono::steady_clock::time_point lastCleanupTime_{std::chrono::steady_clock::now()};
     
-    // Visible range
-    mutable size_t visibleStartLine_ = 0;
-    mutable size_t visibleEndLine_ = 0;
+    // Visible range (for prioritizing highlighting)
+    mutable std::atomic<size_t> visibleStartLine_{0};
+    mutable std::atomic<size_t> visibleEndLine_{0};
     
-    // Configuration
-    size_t highlightingTimeoutMs_ = DEFAULT_HIGHLIGHTING_TIMEOUT_MS;
-    size_t contextLines_ = DEFAULT_CONTEXT_LINES;
+    // Highlighting timeout in milliseconds
+    std::atomic<size_t> highlightingTimeoutMs_{DEFAULT_HIGHLIGHTING_TIMEOUT_MS};
+    
+    // Number of context lines to highlight around visible area
+    std::atomic<size_t> contextLines_{DEFAULT_CONTEXT_LINES};
     
     // Recently processed lines (to avoid redundant work)
     struct LastProcessedRange {
         size_t startLine{0};
         size_t endLine{0};
-        std::chrono::steady_clock::time_point timestamp;
+        bool valid{false};  // Add missing valid field
         
         void update(size_t start, size_t end) {
             startLine = start;
             endLine = end;
-            timestamp = std::chrono::steady_clock::now();
+            valid = true;
         }
         
         void invalidate() {
-            timestamp = std::chrono::steady_clock::time_point();
+            valid = false;
         }
         
         bool isSequentialWith(size_t line) const {
-            return (line == endLine + 1) || (line + 1 == startLine);
+            return valid && (line == endLine + 1 || line + 1 == startLine);
         }
     };
     
@@ -282,9 +294,13 @@ private:
     // Helper methods for internal implementation
     std::pair<size_t, size_t> calculateEffectiveRange(size_t requestedStartLine, size_t requestedEndLine) const;
     void cleanupCache_nolock() const;
-    bool isEntryExpired_nolock(const CacheEntry& entry) const;
-    void evictLRUEntries_nolock(size_t targetSize) const;
+    bool isEntryExpired_nolock(size_t line) const;
     std::pair<size_t, size_t> calculateOptimalProcessingRange(size_t startLine, size_t endLine) const;
-    void logCacheMetrics() const;
-    void logVectorAccess(const char* operation, size_t index, size_t size) const;
+    void logCacheMetrics(const char* context, size_t visibleLines, size_t totalProcessed) const;
+
+    // Add declaration for recentlyProcessed_ member
+    std::unordered_map<size_t, std::chrono::steady_clock::time_point> recentlyProcessed_;
+
+    // Add declaration for evictedCount
+    size_t evictedCount = 0;
 }; 

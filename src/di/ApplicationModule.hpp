@@ -1,56 +1,64 @@
 #pragma once
 
-#include <memory>
 #include "Injector.hpp"
-#include "TextBufferFactory.hpp"
-#include "CommandManagerFactory.hpp"
+#include "CoreModule.hpp"
 #include "EditorFactory.hpp"
+#include "../TextBuffer.h"
+#include "../CommandManager.h"
+#include "../SyntaxHighlightingManager.h"
 #include "../interfaces/ITextBuffer.hpp"
 #include "../interfaces/ICommandManager.hpp"
+#include "../interfaces/ISyntaxHighlightingManager.hpp"
 #include "../interfaces/IEditor.hpp"
-#include "../AppDebugLog.h"
+#include <iostream>
+
+namespace di {
 
 /**
- * @class ApplicationModule
  * @brief Configures the dependency injection container for the application
  * 
- * This module registers all the application's components with the DI container,
- * ensuring they are properly created and wired together.
+ * This module registers all the application services with the DI container.
+ * It builds on top of the CoreModule, which registers essential services.
  */
 class ApplicationModule {
 public:
     /**
-     * @brief Configure the given DI container with application components
+     * @brief Configure the application services
      * 
-     * @param injector The DI container to configure
+     * This method registers all application-specific services with the injector.
+     * It should be called after the CoreModule is configured.
+     * 
+     * @param injector The injector to configure
      */
-    static void configure(di::Injector& injector) {
-        LOG_DEBUG("Configuring ApplicationModule");
+    static void configure(Injector& injector) {
+        std::cout << "Configuring ApplicationModule..." << std::endl;
         
-        // Register TextBuffer
-        injector.registerFactory<ITextBuffer>(
-            [](di::Injector& inj) {
-                return TextBufferFactory::create(inj);
-            },
-            di::Lifetime::Transient
-        );
+        // Register ITextBuffer implementation
+        injector.registerFactory<ITextBuffer>([]() {
+            std::cout << "Creating new TextBuffer" << std::endl;
+            return std::make_shared<TextBuffer>();
+        });
         
-        // Register CommandManager
-        injector.registerFactory<ICommandManager>(
-            [](di::Injector& inj) {
-                return CommandManagerFactory::create(inj);
-            },
-            di::Lifetime::Transient
-        );
+        // Register ICommandManager implementation
+        injector.registerFactory<ICommandManager>([]() {
+            std::cout << "Creating new CommandManager" << std::endl;
+            return std::make_shared<CommandManager>();
+        });
         
-        // Register Editor
-        injector.registerFactory<IEditor>(
-            [](di::Injector& inj) {
-                return EditorFactory::create(inj);
-            },
-            di::Lifetime::Transient
-        );
+        // Register ISyntaxHighlightingManager implementation
+        injector.registerFactory<ISyntaxHighlightingManager>([]() {
+            std::cout << "Creating new SyntaxHighlightingManager" << std::endl;
+            return std::make_shared<SyntaxHighlightingManager>();
+        });
         
-        LOG_DEBUG("ApplicationModule configured successfully");
+        // Register IEditor implementation
+        injector.registerFactory<IEditor>([](Injector& inj) {
+            std::cout << "Creating new Editor via factory" << std::endl;
+            return EditorFactory::createEditor(inj);
+        });
+        
+        std::cout << "ApplicationModule configured successfully" << std::endl;
     }
-}; 
+};
+
+} // namespace di 

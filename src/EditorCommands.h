@@ -3,12 +3,14 @@
 
 #include "Command.h"
 #include "Editor.h"
-#include "TextBuffer.h"
+#include "interfaces/ITextBuffer.hpp"
 #include <string>
 #include <utility>
 #include <iostream>
 #include <vector>
 #include <set>
+#include <memory>
+#include <fstream>
 
 // InsertTextCommand - Handles insertion of text at current cursor position
 class InsertTextCommand : public Command {
@@ -60,6 +62,9 @@ public:
     AddLineCommand() : text_(""), originalBufferLineCount_(0), splitLine_(true), originalCursorLine_(0), originalCursorCol_(0) {} 
     // Add new line with text
     AddLineCommand(const std::string& text) : text_(text), originalBufferLineCount_(0), splitLine_(false), originalCursorLine_(0), originalCursorCol_(0) {} 
+    // New constructor that accepts a text buffer directly
+    AddLineCommand(std::shared_ptr<ITextBuffer> textBuffer, const std::string& text) 
+        : textBuffer_(textBuffer), text_(text), originalBufferLineCount_(0), splitLine_(false), originalCursorLine_(0), originalCursorCol_(0) {} 
     
     void execute(Editor& editor) override;
     
@@ -68,6 +73,7 @@ public:
     std::string getDescription() const override;
     
 private:
+    std::shared_ptr<ITextBuffer> textBuffer_;
     std::string text_;
     size_t originalBufferLineCount_; // Stores buffer.lineCount() before adding line (for non-split case)
     bool splitLine_;
@@ -83,38 +89,84 @@ private:
 // DeleteLineCommand - Handles deletion of a line
 class DeleteLineCommand : public Command {
 public:
+    // Old constructor for backward compatibility
     DeleteLineCommand(size_t lineIndex) 
-        : lineIndex_(lineIndex), originalLineCount_(0), wasDeleted_(false), 
-          originalCursorLine_(0), originalCursorCol_(0) {}
+        : lineIndex_(lineIndex), wasDeleted_(false) {}
+    
+    // New constructor that accepts a text buffer directly
+    DeleteLineCommand(std::shared_ptr<ITextBuffer> textBuffer, size_t lineIndex) 
+        : textBuffer_(textBuffer), lineIndex_(lineIndex), wasDeleted_(false) {}
     
     void execute(Editor& editor) override;
+    void execute() {
+        if (textBuffer_) {
+            // Store the line before deleting
+            deletedLine_ = textBuffer_->getLine(lineIndex_);
+            
+            // Delete the line
+            textBuffer_->deleteLine(lineIndex_);
+            wasDeleted_ = true;
+        }
+    }
     
     void undo(Editor& editor) override;
+    void undo() {
+        if (textBuffer_ && wasDeleted_) {
+            // Re-insert the deleted line
+            textBuffer_->insertLine(lineIndex_, deletedLine_);
+            wasDeleted_ = false;
+        }
+    }
     
-    std::string getDescription() const override;
+    std::string getDescription() const override {
+        return "Delete line " + std::to_string(lineIndex_);
+    }
     
 private:
+    std::shared_ptr<ITextBuffer> textBuffer_;
     size_t lineIndex_;
     std::string deletedLine_;
-    size_t originalLineCount_ = 0; // To track if this was the only line
-    bool wasDeleted_ = false;     // To track if execute succeeded
-    size_t originalCursorLine_;
-    size_t originalCursorCol_;
+    bool wasDeleted_ = false;
 };
 
 // ReplaceLineCommand - Handles replacing a line with new text
 class ReplaceLineCommand : public Command {
 public:
+    // Old constructor for backward compatibility
     ReplaceLineCommand(size_t lineIndex, const std::string& newText) 
         : lineIndex_(lineIndex), newText_(newText), wasExecuted_(false) {}
     
+    // New constructor that accepts a text buffer directly
+    ReplaceLineCommand(std::shared_ptr<ITextBuffer> textBuffer, size_t lineIndex, const std::string& newText) 
+        : textBuffer_(textBuffer), lineIndex_(lineIndex), newText_(newText), wasExecuted_(false) {}
+    
     void execute(Editor& editor) override;
+    void execute() {
+        if (textBuffer_) {
+            // Store the original text before replacing
+            originalText_ = textBuffer_->getLine(lineIndex_);
+            
+            // Replace the line
+            textBuffer_->replaceLine(lineIndex_, newText_);
+            wasExecuted_ = true;
+        }
+    }
     
     void undo(Editor& editor) override;
+    void undo() {
+        if (textBuffer_ && wasExecuted_) {
+            // Restore the original text
+            textBuffer_->replaceLine(lineIndex_, originalText_);
+            wasExecuted_ = false;
+        }
+    }
     
-    std::string getDescription() const override;
+    std::string getDescription() const override {
+        return "Replace line " + std::to_string(lineIndex_);
+    }
     
 private:
+    std::shared_ptr<ITextBuffer> textBuffer_;
     size_t lineIndex_;
     std::string newText_;
     std::string originalText_;
@@ -124,16 +176,38 @@ private:
 // InsertLineCommand - Handles inserting a line at a specific index
 class InsertLineCommand : public Command {
 public:
+    // Old constructor for backward compatibility
     InsertLineCommand(size_t lineIndex, const std::string& text) 
         : lineIndex_(lineIndex), text_(text), wasExecuted_(false) {}
     
+    // New constructor that accepts a text buffer directly
+    InsertLineCommand(std::shared_ptr<ITextBuffer> textBuffer, size_t lineIndex, const std::string& text) 
+        : textBuffer_(textBuffer), lineIndex_(lineIndex), text_(text), wasExecuted_(false) {}
+    
     void execute(Editor& editor) override;
+    void execute() {
+        if (textBuffer_) {
+            // Insert the line
+            textBuffer_->insertLine(lineIndex_, text_);
+            wasExecuted_ = true;
+        }
+    }
     
     void undo(Editor& editor) override;
+    void undo() {
+        if (textBuffer_ && wasExecuted_) {
+            // Delete the inserted line
+            textBuffer_->deleteLine(lineIndex_);
+            wasExecuted_ = false;
+        }
+    }
     
-    std::string getDescription() const override;
+    std::string getDescription() const override {
+        return "Insert line at " + std::to_string(lineIndex_);
+    }
     
 private:
+    std::shared_ptr<ITextBuffer> textBuffer_;
     size_t lineIndex_;
     std::string text_;
     bool wasExecuted_;
@@ -285,17 +359,22 @@ public:
     bool wasSuccessful() const;
 
 private:
+    bool findAndStageNextReplacement(Editor& editor);
+
     std::string searchTerm_;
     std::string replacementText_;
     bool caseSensitive_;
     bool replaceSuccessful_;
-    std::string replacementCount_;
+    std::string replacementCount_; // String representation of replacement count
+    
+    // For undo
     size_t originalCursorLine_;
     size_t originalCursorCol_;
-    std::vector<std::string> originalLines_;
     size_t newCursorLine_;
     size_t newCursorCol_;
-    std::vector<std::string> newLines_; // Added for completeness, was in original header logic
+    std::vector<std::string> originalLines_; // Original buffer content for undo
+    
+    // For staged replacements
     struct StagedMatch {
         std::string originalText;
         size_t startLine;
@@ -304,8 +383,6 @@ private:
         size_t endCol;
     };
     StagedMatch stagedMatch_;
-
-    bool findAndStageNextReplacement(Editor& editor);
 };
 
 // JoinLinesCommand - Joins the specified line with the next one
@@ -416,15 +493,17 @@ private:
     bool wasSelection_;
 };
 
+// IncreaseIndentCommand Implementation
 class IncreaseIndentCommand : public Command {
 public:
     IncreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
                          size_t tabWidth, bool isSelectionActive, 
                          const Position& selectionStartPos, const Position& cursorPos);
+    
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
     std::string getDescription() const override;
-
+    
 private:
     size_t mFirstLineIndex;
     size_t mLastLineIndex;
@@ -436,17 +515,21 @@ private:
     Position mOldCursorPos;
     Position mNewSelectionStartPos;
     Position mNewCursorPos;
+    bool executed_ = false;
+    std::vector<std::string> originalLines_;
 };
 
+// DecreaseIndentCommand Implementation
 class DecreaseIndentCommand : public Command {
 public:
     DecreaseIndentCommand(size_t firstLine, size_t lastLine, const std::vector<std::string>& lines, 
                          size_t tabWidth, bool isSelectionActive, 
                          const Position& selectionStartPos, const Position& cursorPos);
+    
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
     std::string getDescription() const override;
-
+    
 private:
     size_t mFirstLineIndex;
     size_t mLastLineIndex;
@@ -458,6 +541,186 @@ private:
     Position mOldCursorPos;
     Position mNewSelectionStartPos;
     Position mNewCursorPos;
+    bool executed_ = false;
+};
+
+// LoadFileCommand - Handles loading a file into the text buffer
+class LoadFileCommand : public Command {
+public:
+    LoadFileCommand(std::shared_ptr<ITextBuffer> textBuffer, const std::string& filePath)
+        : textBuffer_(textBuffer), filePath_(filePath), wasExecuted_(false) {}
+    
+    void execute(Editor& editor) override;
+    void execute() {
+        if (textBuffer_) {
+            // Store the original buffer state
+            originalBufferContent_ = saveBufferState();
+            
+            // Load the file
+            bool success = loadFile();
+            wasExecuted_ = success;
+        }
+    }
+    
+    void undo(Editor& editor) override;
+    void undo() {
+        if (textBuffer_ && wasExecuted_) {
+            // Restore the original buffer state
+            restoreBufferState(originalBufferContent_);
+            wasExecuted_ = false;
+        }
+    }
+    
+    std::string getDescription() const override {
+        return "Load file " + filePath_;
+    }
+    
+private:
+    bool loadFile() {
+        try {
+            std::ifstream file(filePath_);
+            if (!file.is_open()) {
+                return false;
+            }
+            
+            // Clear existing buffer
+            while (textBuffer_->lineCount() > 0) {
+                textBuffer_->deleteLine(0);
+            }
+            
+            // Read file line by line
+            std::string line;
+            while (std::getline(file, line)) {
+                // Handle different line endings
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back();
+                }
+                textBuffer_->addLine(line);
+            }
+            
+            // Ensure buffer has at least one line
+            if (textBuffer_->lineCount() == 0) {
+                textBuffer_->addLine("");
+            }
+            
+            return true;
+        } catch (const std::exception& e) {
+            return false;
+        }
+    }
+    
+    std::vector<std::string> saveBufferState() {
+        std::vector<std::string> bufferContent;
+        for (size_t i = 0; i < textBuffer_->lineCount(); ++i) {
+            bufferContent.push_back(textBuffer_->getLine(i));
+        }
+        return bufferContent;
+    }
+    
+    void restoreBufferState(const std::vector<std::string>& bufferContent) {
+        // Clear existing buffer
+        while (textBuffer_->lineCount() > 0) {
+            textBuffer_->deleteLine(0);
+        }
+        
+        // Restore saved content
+        for (const auto& line : bufferContent) {
+            textBuffer_->addLine(line);
+        }
+    }
+    
+    std::shared_ptr<ITextBuffer> textBuffer_;
+    std::string filePath_;
+    std::vector<std::string> originalBufferContent_;
+    bool wasExecuted_;
+};
+
+// SaveFileCommand - Handles saving the text buffer to a file
+class SaveFileCommand : public Command {
+public:
+    SaveFileCommand(std::shared_ptr<ITextBuffer> textBuffer, const std::string& filePath)
+        : textBuffer_(textBuffer), filePath_(filePath), wasExecuted_(false) {}
+    
+    void execute(Editor& editor) override;
+    void execute() {
+        if (textBuffer_) {
+            // Save the file
+            bool success = saveFile();
+            wasExecuted_ = success;
+        }
+    }
+    
+    void undo(Editor& editor) override;
+    void undo() {
+        // Saving a file doesn't change the buffer state, so undo is a no-op
+    }
+    
+    std::string getDescription() const override {
+        return "Save file " + filePath_;
+    }
+    
+private:
+    bool saveFile() {
+        try {
+            std::ofstream file(filePath_);
+            if (!file.is_open()) {
+                return false;
+            }
+            
+            // Write buffer content to file
+            for (size_t i = 0; i < textBuffer_->lineCount(); ++i) {
+                file << textBuffer_->getLine(i);
+                // Add newline after each line except the last
+                if (i < textBuffer_->lineCount() - 1) {
+                    file << "\n";
+                }
+            }
+            
+            return true;
+        } catch (const std::exception& e) {
+            return false;
+        }
+    }
+    
+    std::shared_ptr<ITextBuffer> textBuffer_;
+    std::string filePath_;
+    bool wasExecuted_;
+};
+
+// BatchCommand - Handles executing multiple commands as a single operation
+class BatchCommand : public Command {
+public:
+    BatchCommand() : wasExecuted_(false) {}
+    
+    void addCommand(std::shared_ptr<Command> command) {
+        commands_.push_back(command);
+    }
+    
+    void execute(Editor& editor) override {
+        // Execute each command in sequence
+        for (auto& command : commands_) {
+            command->execute(editor);
+        }
+        wasExecuted_ = true;
+    }
+    
+    void undo(Editor& editor) override {
+        if (wasExecuted_) {
+            // Undo commands in reverse order
+            for (auto it = commands_.rbegin(); it != commands_.rend(); ++it) {
+                (*it)->undo(editor);
+            }
+            wasExecuted_ = false;
+        }
+    }
+    
+    std::string getDescription() const override {
+        return "Batch command with " + std::to_string(commands_.size()) + " operations";
+    }
+    
+private:
+    std::vector<std::shared_ptr<Command>> commands_;
+    bool wasExecuted_;
 };
 
 // CompoundCommand class

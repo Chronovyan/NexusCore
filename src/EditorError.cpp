@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <limits>
+#include <algorithm> // Add algorithm header for std::sort
 
 #ifdef _WIN32
 #include <direct.h>  // For _getcwd on Windows

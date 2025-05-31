@@ -48,6 +48,7 @@ public:
     bool saveFileAs(const std::string& filename) override; // Uses specified filename
     bool isModified() const override { return modified_; } // Already existed, ensure it's used consistently
     void setModified(bool modified) override { modified_ = modified; }
+    bool loadFile(const std::string& filename);
 
     // Terminal/Display Dimension (stubbed for now, to be implemented properly)
     int getTerminalWidth() const;  // To be implemented
@@ -71,6 +72,10 @@ public:
     void moveCursorToPrevWord();
 
     void printView(std::ostream& os) const;
+    void printLineWithHighlighting(std::ostream& os, const std::string& line, const std::vector<SyntaxStyle>& styles) const;
+    void applyColorForSyntaxColor(std::ostream& os, SyntaxColor color) const;
+    void printStatusBar(std::ostream& os) const;
+    void positionCursor();
 
     // Buffer access methods
     ITextBuffer& getBuffer() override { return *textBuffer_; }
@@ -91,6 +96,7 @@ public:
     void typeChar(char charToInsert) override;  // Uses InsertTextCommand with a single char
     void processCharacterInput(char ch) override; // Processes single character input using TypeTextCommand
     void deleteSelection() override;  // Uses DeleteSelectionCommand
+    void deleteCharacter();           // Implements delete key functionality
     void backspace() override;        // Uses BackspaceCommand
     void deleteForward() override;    // Uses DeleteCommand
     virtual void newLine() override;          // Uses NewLineCommand, made virtual to allow overriding in TestEditor
@@ -114,6 +120,7 @@ public:
     virtual std::string getSelectedText() const override;
     virtual void startSelection() override;
     virtual void updateSelection() override;
+    virtual void endSelection();
     virtual void replaceSelection(const std::string& text) override;
     void selectLine() override; // Selects the entire current line
     void selectAll() override; // Selects the entire buffer content
@@ -161,6 +168,10 @@ public:
     bool isSyntaxHighlightingEnabled() const override;
     void setFilename(const std::string& filename) override;
     std::string getFilename() const override;
+    void setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter);
+    void detectAndSetHighlighter();
+    void invalidateHighlightingCache();
+    void applyColorForSyntaxColor(SyntaxColor color);
 
     // --- Potentially public helpers for Commands (revisit access level later) ---
     void directDeleteTextRange(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
@@ -186,14 +197,10 @@ public:
     );
     // --- End Potentially public helpers ---
 
-    virtual void detectAndSetHighlighter();
     std::shared_ptr<SyntaxHighlighter> getCurrentHighlighter() const override;
     std::vector<std::vector<SyntaxStyle>> getHighlightingStyles();
     virtual std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const override;
     
-    // Invalidate syntax highlighting cache after buffer modifications
-    void invalidateHighlightingCache();
-
     // Helper methods for indentation commands
     void setLine(size_t lineIndex, const std::string& text);
     void setCursorPosition(const Position& pos);

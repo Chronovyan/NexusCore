@@ -94,6 +94,6 @@ Navigate to your build directory and run the executable:
 
 ## Next Steps
 
-- Check out the [Codebase Structure](codebase_structure.md) document to learn more about the architecture
+- Check out the [Codebase Structure](development/CODEBASE_STRUCTURE.md) document to learn more about the architecture
 - See [Testing Guide](testing_guide.md) to learn about running and writing tests
-- Review [OpenAI Integration](openai_integration.md) to understand how the AI capabilities work 
+- Review [OpenAI Integration](features/ai_integration.md) to understand how the AI capabilities work 

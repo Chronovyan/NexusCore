@@ -16,7 +16,7 @@ void InsertTextCommand::execute(Editor& editor) {
     cursorCol_ = editor.getCursorCol();
     
     // Get direct access to the buffer and insert text
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     
     if (useSpecifiedPosition_) {
         // Use the specified line and column position
@@ -78,78 +78,24 @@ std::string InsertTextCommand::getDescription() const {
 // --- DeleteTextCommand --- 
 // --- NewLineCommand --- 
 void NewLineCommand::execute(Editor& editor) {
-    // Store cursor position for undo
+    ITextBuffer& buffer = editor.getBuffer();
+    
+    // Store the current cursor position
     cursorLine_ = editor.getCursorLine();
     cursorCol_ = editor.getCursorCol();
     
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // Check if buffer is empty
-    if (buffer.isEmpty()) {
-        buffer.clear(false); // Ensure it's really empty
-        buffer.addLine(""); // Add first line
-        buffer.addLine(""); // Add second line
-        editor.setCursor(1, 0); // Set cursor to beginning of second line
-    } else {
-        // Get the current line before splitting to determine indentation
-        const std::string currentLine = buffer.getLine(cursorLine_);
-        
-        // Handle special case: cursor at beginning of line (insert new line before current)
-        if (cursorCol_ == 0) {
-            // Insert an empty line at the current position (before current line)
-            buffer.insertLine(cursorLine_, "");
-            // Keep cursor at beginning of original line, which is now at cursorLine_ + 1
-            editor.setCursor(cursorLine_ + 1, 0);
-        }
-        // Handle special case: cursor at end of line (add empty line after current)
-        else if (cursorCol_ >= currentLine.length()) {
-            // Insert an empty line after the current line
-            buffer.insertLine(cursorLine_ + 1, "");
-            // Move cursor to beginning of new line
-            editor.setCursor(cursorLine_ + 1, 0);
-        }
-        // Normal case: split line at cursor position
-        else {
-            // Calculate the indentation level of the current line
-            size_t indentationLevel = 0;
-            for (char c : currentLine) {
-                if (c == ' ' || c == '\t') {
-                    indentationLevel++;
-                } else {
-                    break;
-                }
-            }
-            
-            // Split the current line at cursor position
+    // Split the line at cursor position
             buffer.splitLine(cursorLine_, cursorCol_);
             
-            // The new line will be at cursorLine_ + 1
-            if (indentationLevel > 0 && cursorLine_ + 1 < buffer.lineCount()) {
-                // Add indentation to the new line
-                std::string indentation = currentLine.substr(0, indentationLevel);
-                // Check if the line already exists and has content
-                if (buffer.lineCount() > cursorLine_ + 1) {
-                    std::string newLineContent = buffer.getLine(cursorLine_ + 1);
-                    buffer.setLine(cursorLine_ + 1, indentation + newLineContent);
-                }
-                
-                // Move the cursor to after the indentation on the new line
-                editor.setCursor(cursorLine_ + 1, indentationLevel);
-            } else {
-                // Move the cursor to the beginning of the new line
+    // Update cursor position to the beginning of the new line
                 editor.setCursor(cursorLine_ + 1, 0);
-            }
-        }
-    }
     
-    // Mark the document as modified
     editor.setModified(true);
-    
     editor.invalidateHighlightingCache();
 }
 
 void NewLineCommand::undo(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     
     // Join the lines back together
     // This assumes that cursorLine_ stored from execute is the line *before* the split
@@ -170,85 +116,94 @@ std::string NewLineCommand::getDescription() const {
 
 // --- AddLineCommand --- 
 void AddLineCommand::execute(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
-    
-    // Store the original cursor position and buffer state
+    // Store editor state
     originalCursorLine_ = editor.getCursorLine();
     originalCursorCol_ = editor.getCursorCol();
+    
+    auto& buffer = textBuffer_ ? *textBuffer_ : editor.getBuffer();
+    
+    // Remember original buffer line count (used for undo)
     originalBufferLineCount_ = buffer.lineCount();
     
     if (splitLine_) {
-        // Store the text after cursor for proper undo
-        if (originalCursorLine_ < buffer.lineCount()) {
-            const std::string& currentLine = buffer.getLine(originalCursorLine_);
-            if (originalCursorCol_ <= currentLine.length()) {
-                textAfterCursor_ = currentLine.substr(originalCursorCol_);
+        // Case 1: Split the current line at cursor
+        size_t cursorLine = editor.getCursorLine();
+        size_t cursorCol = editor.getCursorCol();
+        
+        if (cursorLine < buffer.lineCount()) {
+            std::string currentLine = buffer.getLine(cursorLine);
+            textAfterCursor_ = cursorCol < currentLine.length() ? currentLine.substr(cursorCol) : "";
+            
+            // Truncate current line at cursor
+            buffer.setLine(cursorLine, currentLine.substr(0, cursorCol));
+            
+            // Add new line with content after cursor
+            if (cursorLine + 1 >= buffer.lineCount()) {
+                buffer.addLine(textAfterCursor_);
+            } else {
+                buffer.insertLine(cursorLine + 1, textAfterCursor_);
+            }
+            
+            // Move cursor to start of new line
+            if (!textBuffer_) { // Only update cursor if we're operating on the editor's buffer
+                Position newPos;
+                newPos.line = cursorLine + 1;
+                newPos.column = 0;
+                editor.setCursorPosition(newPos);
+                editor.invalidateHighlightingCache();
             }
         }
-        
-        // Split the line at the cursor position
-        buffer.splitLine(originalCursorLine_, originalCursorCol_);
-        editor.setCursor(originalCursorLine_ + 1, 0); // Move cursor to the beginning of the new line
     } else {
-        // Add a new line at the end with specified text
+        // Case 2: Add a new line at the end with optional text
         buffer.addLine(text_);
         
-        // Set cursor at the beginning of the new line
-        // The test cases expect cursor at column 0 of the new line, not preserving originalCursorCol_
-        editor.setCursor(buffer.lineCount() - 1, 0); 
+        // Move cursor to the new line if we're operating on the editor's buffer
+        if (!textBuffer_) {
+            Position newPos;
+            newPos.line = buffer.lineCount() - 1;
+            newPos.column = 0;
+            editor.setCursorPosition(newPos);
+            editor.invalidateHighlightingCache();
+        }
     }
-    
-    editor.setModified(true);
 }
 
 void AddLineCommand::undo(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
+    auto& buffer = textBuffer_ ? *textBuffer_ : editor.getBuffer();
     
     if (splitLine_) {
-        // Undo for a line split operation
-        if (originalCursorLine_ < buffer.lineCount() && (originalCursorLine_ + 1) < buffer.lineCount()) {
-            buffer.joinLines(originalCursorLine_);
-            // Restore cursor to original position
-            editor.setCursor(originalCursorLine_, originalCursorCol_);
-        } else {
-            std::cerr << "AddLineCommand::undo (split): Cannot perform simple join. originalCursorLine_=" \
-                      << originalCursorLine_ << ", lineCount=" << buffer.lineCount() << std::endl;
+        // Undo split line operation
+        if (originalCursorLine_ < buffer.lineCount()) {
+            std::string originalLine = buffer.getLine(originalCursorLine_);
+            
+            // Combine with next line (which contains text after cursor)
+            if (originalCursorLine_ + 1 < buffer.lineCount()) {
+                originalLine += buffer.getLine(originalCursorLine_ + 1);
+                buffer.setLine(originalCursorLine_, originalLine);
+                buffer.deleteLine(originalCursorLine_ + 1);
+            } else {
+                buffer.setLine(originalCursorLine_, originalLine);
+            }
         }
     } else {
-        // Undo for AddLineCommand("text") 
-        // If originalBufferLineCount_ was 1 and the buffer still has 1 line (it was replaced),
-        // we need to revert it to an empty line.
-        // If lines were added (lineCount_ > originalBufferLineCount_), we delete the last one.
-        
-        if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && !text_.empty() &&
-            originalCursorLine_ == 0 && buffer.getLine(0) == text_) {
-            // This handles the "replace initial empty line" case like in AddLineCommand_WithText_ToEmptyBuffer
-            // Ensure we're reverting the line that was indeed set by this command's text_.
-            buffer.replaceLine(0, ""); // Revert the content of the single line to empty
-        } else if (buffer.lineCount() > originalBufferLineCount_ && buffer.lineCount() > 0) {
-            // This handles appending a new line
+        // Remove the line we added if it still exists
+        if (buffer.lineCount() > originalBufferLineCount_) {
             buffer.deleteLine(buffer.lineCount() - 1);
-        } else if (originalBufferLineCount_ == 1 && buffer.lineCount() == 1 && text_.empty() &&
-                  originalCursorLine_ == 0) {
-             // Handles AddLineCommand("", false) when buffer was [""], became ["", ""], undo should go back to [""].
-             // The previous condition (lineCount > originalBufferLineCount) would handle if it became ["First", ""]
-             // This case is if the *original* was [""], and we added an empty line, it should become ["", ""], then deleteLine(1) makes it [""].
-             // If buffer.addLine("") on [""] results in ["", ""], then the `else if (buffer.lineCount() > originalBufferLineCount_ ...)` handles it.
-            buffer.replaceLine(0, "");
         }
-        
-        // Always restore the original cursor position after undoing
-        editor.setCursor(originalCursorLine_, originalCursorCol_);
     }
     
-    editor.invalidateHighlightingCache();
+    // Restore cursor position if we're operating on the editor's buffer
+    if (!textBuffer_) {
+        Position originalPos;
+        originalPos.line = originalCursorLine_;
+        originalPos.column = originalCursorCol_;
+        editor.setCursorPosition(originalPos);
+        editor.invalidateHighlightingCache();
+    }
 }
 
 std::string AddLineCommand::getDescription() const {
-    if (splitLine_) {
-        return "Add new line (split)";
-    }
-    return "Add new line with text: " + text_;
+    return splitLine_ ? "Split line at cursor" : "Add new line";
 }
 
 // --- DeleteLineCommand --- 
@@ -277,10 +232,6 @@ void DeleteLineCommand::undo(Editor& editor) {
     }
 }
 
-std::string DeleteLineCommand::getDescription() const {
-    return "Delete line at index " + std::to_string(lineIndex_);
-}
-
 // --- ReplaceLineCommand --- 
 void ReplaceLineCommand::execute(Editor& editor) {
     if (textBuffer_) {
@@ -307,10 +258,6 @@ void ReplaceLineCommand::undo(Editor& editor) {
     }
 }
 
-std::string ReplaceLineCommand::getDescription() const {
-    return "Replace line at index " + std::to_string(lineIndex_);
-}
-
 // --- InsertLineCommand --- 
 void InsertLineCommand::execute(Editor& editor) {
     if (textBuffer_) {
@@ -334,58 +281,49 @@ void InsertLineCommand::undo(Editor& editor) {
     }
 }
 
-std::string InsertLineCommand::getDescription() const {
-    return "Insert line at index " + std::to_string(lineIndex_) + " with text: " + text_;
-}
-
 // --- ReplaceSelectionCommand --- 
 void ReplaceSelectionCommand::execute(Editor& editor) {
-    if (!editor.hasSelection()) {
-        executed_ = false;
-        return;
-    }
+    ITextBuffer& buffer = editor.getBuffer();
     
-    // Store selection details & text BEFORE modifying buffer
-    originalSelectedText_ = editor.getSelectedText();
-    selStartLine_ = editor.getSelectionStartLine();
-    selStartCol_ = editor.getSelectionStartCol();
-    selEndLine_ = editor.getSelectionEndLine();
-    selEndCol_ = editor.getSelectionEndCol();
+    if (!executed_) {
+        // Store the selection range
+        selStartLine_ = editor.getSelectionStartLine();
+        selStartCol_ = editor.getSelectionStartCol();
+        selEndLine_ = editor.getSelectionEndLine();
+        selEndCol_ = editor.getSelectionEndCol();
 
-    // Directly delete the selected text range from the buffer.
-    // This command should NOT use other commands like DeleteTextCommand.
-    editor.directDeleteTextRange(selStartLine_, selStartCol_, selEndLine_, selEndCol_);
-    
-    // Cursor is now at the start of where the selection was (selStartLine_, selStartCol_).
-    // Store this as cursorAfterDeleteLine_ for clarity, though it's same as selStartLine_.
-    cursorAfterDeleteLine_ = selStartLine_;
-    cursorAfterDeleteCol_ = selStartCol_;
-    
-    // Insert the new text using direct buffer manipulation.
-    // This needs to handle potential newlines in newText_.
-    size_t insertEndLine, insertEndCol;
-    editor.directInsertText(cursorAfterDeleteLine_, cursorAfterDeleteCol_, newText_, insertEndLine, insertEndCol);
-
-    // Special case for the test: if replacing "quick brown" with "fast red" at the start of a line that begins with "The quick brown"
-    // This may need to be a more general solution that correctly handles position after replacement for various scenarios
-    bool isSpecialCase = false;
-    if (selStartLine_ == 0 && selStartCol_ == 4 && 
-        selEndLine_ == 0 && selEndCol_ == 15 &&
-        newText_ == "fast red" && 
-        originalSelectedText_ == "quick brown") {
+        // Store the original text
+        if (selStartLine_ == selEndLine_) {
+            // Single line selection
+            originalSelectedText_ = buffer.getLine(selStartLine_).substr(selStartCol_, selEndCol_ - selStartCol_);
+        } else {
+            // Multi-line selection
+            originalSelectedText_ = buffer.getLine(selStartLine_).substr(selStartCol_);
+            
+            for (size_t line = selStartLine_ + 1; line < selEndLine_; ++line) {
+                originalSelectedText_ += "\n" + buffer.getLine(line);
+            }
+            
+            originalSelectedText_ += "\n" + buffer.getLine(selEndLine_).substr(0, selEndCol_);
+        }
         
-        // For this special case, we know the cursor should end up at column 11 (after "fast red")
-        editor.setCursor(insertEndLine, 11);
-        isSpecialCase = true;
+        // Delete selected text and insert new text
+        size_t endLine, endCol;
+        editor.directDeleteTextRange(selStartLine_, selStartCol_, selEndLine_, selEndCol_);
+        
+        // Store the cursor position after deletion but before insertion
+        cursorAfterDeleteLine_ = selStartLine_;
+        cursorAfterDeleteCol_ = selStartCol_;
+        
+        editor.directInsertText(selStartLine_, selStartCol_, newText_, endLine, endCol);
+        
+        // Set cursor to the end of the inserted text
+        editor.setCursor(endLine, endCol);
+        
+        executed_ = true;
+        editor.clearSelection();
+        editor.setModified(true);
     }
-    // Normal case: update cursor position to the end of the inserted text
-    else {
-        editor.setCursor(insertEndLine, insertEndCol);
-    }
-    
-    editor.clearSelection(); // Selection is gone after replacement
-    editor.invalidateHighlightingCache();
-    executed_ = true;
 }
 
 void ReplaceSelectionCommand::undo(Editor& editor) {
@@ -393,38 +331,42 @@ void ReplaceSelectionCommand::undo(Editor& editor) {
         return;
     }
     
-    // 1. Delete the newText_ that was inserted.
-    //    It was inserted at (cursorAfterDeleteLine_, cursorAfterDeleteCol_)
-    //    and its end was (editor.getCursorLine(), editor.getCursorCol()) at the end of execute().
-    //    Or, more robustly, calculate its end based on newText_ content and insert point.
+    // Calculate the end position of the inserted text based on newText_ content
     size_t newTextEndLine = cursorAfterDeleteLine_;
     size_t newTextEndCol = cursorAfterDeleteCol_;
+    
+    // Count newlines in the inserted text
     size_t newlineCount = 0;
     size_t lastNewlinePos = std::string::npos;
-
     for(size_t i = 0; i < newText_.length(); ++i) {
         if (newText_[i] == '\n') {
             newlineCount++;
             lastNewlinePos = i;
         }
     }
+    
+    // Calculate the end position of the inserted text
     newTextEndLine += newlineCount;
     if (newlineCount > 0) {
+        // For multi-line text, column is relative to the last line
         newTextEndCol = newText_.length() - (lastNewlinePos + 1);
     } else {
+        // For single-line text, just add the text length
         newTextEndCol += newText_.length();
     }
+    
+    // 1. Delete the inserted text
     editor.directDeleteTextRange(cursorAfterDeleteLine_, cursorAfterDeleteCol_, newTextEndLine, newTextEndCol);
     
-    // 2. Re-insert the originalSelectedText_ at the original selection start point.
-    //    (cursorAfterDeleteLine_, cursorAfterDeleteCol_) which is (selStartLine_, selStartCol_).
+    // 2. Re-insert the original selected text
     size_t originalTextEndLine, originalTextEndCol;
     editor.directInsertText(selStartLine_, selStartCol_, originalSelectedText_, originalTextEndLine, originalTextEndCol);
     
-    // 3. Restore cursor to where it was after originalSelectedText_ was inserted.
-    //    And re-select the originalSelectedText_.
-    editor.setCursor(originalTextEndLine, originalTextEndCol);
+    // 3. Restore selection to match the original selected text
     editor.setSelectionRange(selStartLine_, selStartCol_, originalTextEndLine, originalTextEndCol);
+    
+    // 4. Position cursor at the end of the selection
+    editor.setCursor(originalTextEndLine, originalTextEndCol);
     
     editor.invalidateHighlightingCache();
 }
@@ -681,67 +623,89 @@ void ReplaceAllCommand::execute(Editor& editor) {
         
         // Store the entire buffer content for undo
         originalLines_.clear(); // Ensure it's empty before populating
-        const TextBuffer& currentBuffer = editor.getBuffer();
+        const ITextBuffer& currentBuffer = editor.getBuffer();
         for (size_t i = 0; i < currentBuffer.lineCount(); ++i) {
             originalLines_.push_back(currentBuffer.getLine(i));
         }
         
-        int numReplacements = 0;
-        // It's safer to use the editor's performReplaceAllLogic if available,
-        // or implement a robust loop here.
-        // The previous logic using editor.search() then editor.deleteSelectedText() and editor.typeText()
-        // could be problematic if searchNext() behavior or selection is not perfectly managed.
+        // Verify we've successfully stored the original content
+        if (originalLines_.empty() && currentBuffer.lineCount() > 0) {
+            throw std::runtime_error("Failed to store original content for undo");
+        }
         
-        // Let's assume a conceptual editor.performReplaceAllLogic exists or build it carefully.
-        // For now, re-implementing the loop with care:
-        editor.setCursor(0,0); // Start from the beginning
+        int numReplacements = 0;
+        
+        // Start from the beginning of the buffer
+        editor.setCursor(0, 0);
         editor.clearSelection();
         
+        // Track last replacement position to avoid infinite loops
+        size_t lastReplacementLine = 0;
+        size_t lastReplacementCol = 0;
+        size_t safetyCounter = 0; // To prevent infinite loops
+        const size_t MAX_ITERATIONS = 10000; // Safety limit
+        
         // Loop to find and replace all occurrences
-        while(findAndStageNextReplacement(editor)) {
-            // performSearchLogic should select the found text and move cursor to its end.
-            // The text to replace is now selected.
-            // We need to know where it started to replace it accurately if not using editor.deleteSelectedText + typeText
-            // However, editor.performReplaceLogic (single instance) is more robust.
+        while(findAndStageNextReplacement(editor) && safetyCounter < MAX_ITERATIONS) {
+            safetyCounter++;
             
-            std::string actualReplacedText_ignored; // performReplaceLogic needs these
-            size_t replacedAtLine_ignored, replacedAtCol_ignored;
-            size_t originalEndLine_ignored, originalEndCol_ignored;
+            // Get current selection positions
+            size_t selStartLine = editor.getSelectionStartLine();
+            size_t selStartCol = editor.getSelectionStartCol();
+            size_t selEndLine = editor.getSelectionEndLine();
+            size_t selEndCol = editor.getSelectionEndCol();
+            
+            // Check for potential infinite loop - if we're at the same position as last time
+            if (selStartLine == lastReplacementLine && selStartCol == lastReplacementCol) {
+                // Move cursor forward by one character to break the loop
+                size_t currentLine = editor.getCursorLine();
+                size_t currentCol = editor.getCursorCol();
+                if (currentCol < currentBuffer.lineLength(currentLine)) {
+                    editor.setCursor(currentLine, currentCol + 1);
+                } else if (currentLine < currentBuffer.lineCount() - 1) {
+                    editor.setCursor(currentLine + 1, 0);
+                } else {
+                    break; // At end of buffer, can't advance further
+                }
+                continue;
+            }
+            
+            // Store current match position for loop detection
+            lastReplacementLine = selStartLine;
+            lastReplacementCol = selStartCol;
+            
+            std::string actualReplacedText;
+            size_t replacedAtLine, replacedAtCol;
+            size_t originalEndLine, originalEndCol;
 
-            // Use the single performReplaceLogic for the current selection
+            // Perform the replacement
             if (editor.performReplaceLogic(searchTerm_, replacementText_, caseSensitive_,
-                                        actualReplacedText_ignored, 
-                                        replacedAtLine_ignored, replacedAtCol_ignored,
-                                        originalEndLine_ignored, originalEndCol_ignored)) {
+                                        actualReplacedText, 
+                                        replacedAtLine, replacedAtCol,
+                                        originalEndLine, originalEndCol)) {
                 numReplacements++;
-                // performReplaceLogic leaves the cursor after the replacement.
-                // The next search should ideally start from this new cursor position.
-                // editor.performSearchLogic should handle starting from current cursor.
             } else {
-                // If replace failed but search succeeded, something is wrong.
-                // Break to avoid infinite loop. Or move cursor past the failed match.
-                // For now, assume performReplaceLogic advances cursor appropriately or search logic handles it.
-                // If performSearchLogic always starts from current cursor, this is okay.
-                // To be safe, if a replace fails, move cursor past the current selection to avoid re-finding same spot.
-                if(editor.hasSelection()){
+                // Move past the current match if replacement failed
+                if (editor.hasSelection()) {
                     editor.setCursor(editor.getSelectionEndLine(), editor.getSelectionEndCol());
                     editor.clearSelection();
                 } else {
-                    // No selection, but search found something? Unlikely with selectResult=true.
-                    // Move cursor by one char/line to try to break loop.
+                    // Advance cursor to avoid getting stuck
                     size_t currentLine = editor.getCursorLine();
                     size_t currentCol = editor.getCursorCol();
-                    TextBuffer& buffer = editor.getBuffer(); // Get buffer to check line length
-                    if (currentCol < buffer.lineLength(currentLine)) {
+                    if (currentCol < currentBuffer.lineLength(currentLine)) {
                         editor.setCursor(currentLine, currentCol + 1);
-                    } else if (currentLine < buffer.lineCount() - 1) {
+                    } else if (currentLine < currentBuffer.lineCount() - 1) {
                         editor.setCursor(currentLine + 1, 0);
                     } else {
-                        // At end of last line, cannot advance further this way. Break.
-                        break; 
+                        break; // At end of buffer, can't advance further
                     }
                 }
             }
+        }
+        
+        if (safetyCounter >= MAX_ITERATIONS) {
+            std::cerr << "ReplaceAllCommand: Safety limit reached, possibly infinite loop detected" << std::endl;
         }
 
         replacementCount_ = std::to_string(numReplacements);
@@ -750,8 +714,8 @@ void ReplaceAllCommand::execute(Editor& editor) {
         newCursorLine_ = editor.getCursorLine();
         newCursorCol_ = editor.getCursorCol();
         
-        replaceSuccessful_ = true; // Assume success if no exceptions
-        editor.invalidateHighlightingCache(); // Invalidate after all changes
+        replaceSuccessful_ = true;
+        editor.invalidateHighlightingCache();
 
     } catch (const std::exception& e) {
         std::cerr << "Error in ReplaceAllCommand::execute: " << e.what() << std::endl;
@@ -763,34 +727,42 @@ void ReplaceAllCommand::execute(Editor& editor) {
 }
 
 void ReplaceAllCommand::undo(Editor& editor) {
-    if (!replaceSuccessful_ || originalLines_.empty()) {
-        // If not successful or nothing to restore, do nothing (or only restore cursor if needed)
-        // If originalLines_ is empty it means execute might have failed before storing them.
-        if (replaceSuccessful_ && originalLines_.empty()){
-             std::cerr << "ReplaceAllCommand::undo: execute was successful but no original lines stored." << std::endl;
-        }
-        // Optionally restore original cursor if execute started changing things
-        // editor.setCursor(originalCursorLine_, originalCursorCol_); 
+    if (!replaceSuccessful_) {
+        // If execute wasn't successful, nothing to undo
+        return;
+    }
+    
+    if (originalLines_.empty()) {
+        // This shouldn't happen if execute was successful, but check anyway
+        std::cerr << "ReplaceAllCommand::undo: execute was successful but no original lines stored." << std::endl;
         return;
     }
     
     try {
-        TextBuffer& buffer = editor.getBuffer();
-        // buffer.replaceAllLines(originalLines_); // Assumes TextBuffer has a method to replace all content
-                                              // If not, clear and add lines one by one.
-        // Fallback if replaceAllLines is not available:
+        ITextBuffer& buffer = editor.getBuffer();
+        
+        // Completely restore the buffer to its original state
         buffer.clear(false); // Clear without adding default empty line
-        if (originalLines_.empty()) {
-            buffer.addLine(""); // Ensure at least one empty line if original was empty
-        } else {
-            for (const auto& line : originalLines_) {
-                buffer.addLine(line);
-            }
+        
+        // Add all original lines back
+        for (size_t i = 0; i < originalLines_.size(); i++) {
+            buffer.addLine(originalLines_[i]);
         }
         
-        // Restore original cursor position that was there BEFORE execute
-        editor.setCursor(originalCursorLine_, originalCursorCol_);
-        editor.clearSelection(); // Clear any selection that might have resulted from execute
+        // If buffer is now empty (unlikely but possible), add an empty line
+        if (buffer.lineCount() == 0) {
+            buffer.addLine("");
+        }
+        
+        // Ensure cursor position is valid for the restored buffer
+        size_t maxLine = buffer.lineCount() - 1;
+        size_t restoreLine = std::min(originalCursorLine_, maxLine);
+        size_t maxCol = buffer.lineLength(restoreLine);
+        size_t restoreCol = std::min(originalCursorCol_, maxCol);
+        
+        // Restore cursor position
+        editor.setCursor(restoreLine, restoreCol);
+        editor.clearSelection();
         editor.invalidateHighlightingCache();
 
     } catch (const std::exception& e) {
@@ -833,7 +805,7 @@ bool ReplaceAllCommand::findAndStageNextReplacement(Editor& editor) {
 
 // --- JoinLinesCommand --- 
 void JoinLinesCommand::execute(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     
     // Store pre-join cursor position for potential exact restoration if needed
     originalCursorLine_ = editor.getCursorLine();
@@ -864,7 +836,7 @@ void JoinLinesCommand::undo(Editor& editor) {
         return;
     }
     
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     
     try {
         // To undo, we need to split the line lineIndex_.
@@ -909,7 +881,7 @@ void DeleteCharCommand::execute(Editor& editor) {
     deletedChar_ = 0; // Initialize to null char
     joinedLineOriginalContent_ = ""; // Initialize
 
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
 
     if (isBackspace_) {
         if (originalCursorCol_ > 0) {
@@ -955,7 +927,7 @@ void DeleteCharCommand::execute(Editor& editor) {
 }
 
 void DeleteCharCommand::undo(Editor& editor) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     if (lineJoined_) {
         // Undo a line join operation
         if (isBackspace_) { 
@@ -970,9 +942,15 @@ void DeleteCharCommand::undo(Editor& editor) {
             // `joinedLineOriginalContent_` was the content of the line that was merged upwards from below.
             // Split current `originalCursorLine_` at `originalCursorCol_` (which was its original end).
             // The text `joinedLineOriginalContent_` should form the new line `originalCursorLine_ + 1`.
-            buffer.splitLine(originalCursorLine_, originalCursorCol_); 
-            // This assumes `splitLine` correctly uses `originalCursorCol_` on the `originalCursorLine_` 
-            // and the `joinedLineOriginalContent_`
+            buffer.splitLine(originalCursorLine_, originalCursorCol_);
+            
+            // Make sure the second line contains the original content of the joined line
+            if (buffer.lineCount() > originalCursorLine_ + 1) {
+                // Replace the content of the newly created line with the original content of the joined line
+                if (buffer.getLine(originalCursorLine_ + 1) != joinedLineOriginalContent_) {
+                    buffer.replaceLine(originalCursorLine_ + 1, joinedLineOriginalContent_);
+                }
+            }
         }
     } else if (deletedChar_ != 0) {
         // Undo a single character deletion
@@ -1257,39 +1235,74 @@ IncreaseIndentCommand::IncreaseIndentCommand(size_t firstLine, size_t lastLine, 
 }
 
 void IncreaseIndentCommand::execute(Editor& editor) {
-    for (size_t i = 0; i < mNewLines.size(); ++i) {
-        editor.setLine(mFirstLineIndex + i, mNewLines[i]);
+    ITextBuffer& buffer = editor.getBuffer();
+    
+    bool modified = false;
+    
+    // Store original lines for undo
+    if (originalLines_.empty()) {
+        originalLines_.resize(mLastLineIndex - mFirstLineIndex + 1);
+        for (size_t i = mFirstLineIndex; i <= mLastLineIndex; ++i) {
+            if (i < buffer.lineCount()) {
+                originalLines_[i - mFirstLineIndex] = buffer.getLine(i);
+            }
+        }
+    }
+    
+    // Process each line in the range
+    for (size_t i = mFirstLineIndex; i <= mLastLineIndex; ++i) {
+        if (i >= buffer.lineCount()) {
+            continue;
+        }
+        
+        std::string line = buffer.getLine(i);
+        if (line.empty()) {
+            continue;
+        }
+        
+        // Add indentation to the beginning of the line
+        std::string indentation(mTabWidth, ' ');
+        buffer.replaceLine(i, indentation + line);
+        modified = true;
+    }
+    
+    // Adjust cursor position if this is from a direct keystroke (not part of a selection operation)
+    if (!mWasSelectionActive && modified) {
+        // Get the current cursor position
+        size_t cursorLine = editor.getCursorLine();
+        size_t cursorCol = editor.getCursorCol();
+        
+        // If the cursor is within the affected range
+        if (cursorLine >= mFirstLineIndex && cursorLine <= mLastLineIndex) {
+            // Move the cursor right by the indent amount
+            editor.setCursor(cursorLine, cursorCol + mTabWidth);
+        }
+    }
+    
+    editor.setModified(true);
+    executed_ = true;
+}
+
+void IncreaseIndentCommand::undo(Editor& editor) {
+    for (size_t i = 0; i < originalLines_.size(); ++i) {
+        editor.setLine(mFirstLineIndex + i, originalLines_[i]);
     }
     
     if (mWasSelectionActive) {
         // Check if we need to swap positions to maintain correct selection orientation
-        // In document order, if mNewCursorPos is before mNewSelectionStartPos, we need to swap
-        if (mNewCursorPos.line < mNewSelectionStartPos.line || 
-            (mNewCursorPos.line == mNewSelectionStartPos.line && mNewCursorPos.column < mNewSelectionStartPos.column)) {
+        // In document order, if mOldCursorPos is before mOldSelectionStartPos, we need to swap
+        if (mOldCursorPos.line < mOldSelectionStartPos.line || 
+            (mOldCursorPos.line == mOldSelectionStartPos.line && mOldCursorPos.column < mOldSelectionStartPos.column)) {
             // The cursor is before the selection start, so we need to ensure the selection is set correctly
-            // by explicitly setting the selection range with the right order
-            editor.setSelectionRange(mNewCursorPos.line, mNewCursorPos.column, 
-                                    mNewSelectionStartPos.line, mNewSelectionStartPos.column);
+            editor.setSelectionRange(mOldCursorPos.line, mOldCursorPos.column, 
+                                    mOldSelectionStartPos.line, mOldSelectionStartPos.column);
         } else {
             // Normal case - selection start is before cursor
-            editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
-                                    mNewCursorPos.line, mNewCursorPos.column);
+            editor.setSelectionRange(mOldSelectionStartPos.line, mOldSelectionStartPos.column,
+                                    mOldCursorPos.line, mOldCursorPos.column);
         }
     } else {
-        editor.setCursorPosition(mNewCursorPos);
-    }
-}
-
-void IncreaseIndentCommand::undo(Editor& editor) {
-    for (size_t i = 0; i < mOldLines.size(); ++i) {
-        editor.setLine(mFirstLineIndex + i, mOldLines[i]);
-    }
-    
-    if (mWasSelectionActive) {
-        editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
-                               mNewCursorPos.line, mNewCursorPos.column);
-    } else {
-        editor.setCursorPosition(mNewCursorPos);
+        editor.setCursorPosition(mOldCursorPos);
     }
 }
 
@@ -1375,42 +1388,81 @@ DecreaseIndentCommand::DecreaseIndentCommand(size_t firstLine, size_t lastLine, 
 }
 
 void DecreaseIndentCommand::execute(Editor& editor) {
-    std::vector<std::string> newLines;
-    bool anyChanges = false;
+    ITextBuffer& buffer = editor.getBuffer();
     
-    for (size_t i = 0; i < mOldLines.size(); ++i) {
-        const std::string& oldLine = mOldLines[i];
-        std::string newLine = oldLine;
-        
-        // Only unindent if there's no selection active
-        if (!mWasSelectionActive) {
-            // Count leading spaces
-            size_t leadingSpaces = 0;
-            while (leadingSpaces < newLine.size() && newLine[leadingSpaces] == ' ') {
-                leadingSpaces++;
-            }
-            
-            // Remove up to tabWidth spaces
-            size_t spacesToRemove = std::min(leadingSpaces, mTabWidth);
-            if (spacesToRemove > 0) {
-                newLine = newLine.substr(spacesToRemove);
-                anyChanges = true;
+    bool modified = false;
+    
+    // Store original lines for undo
+    if (mOldLines.empty()) {
+        mOldLines.resize(mLastLineIndex - mFirstLineIndex + 1);
+        for (size_t i = mFirstLineIndex; i <= mLastLineIndex; ++i) {
+            if (i < buffer.lineCount()) {
+                mOldLines[i - mFirstLineIndex] = buffer.getLine(i);
             }
         }
+    }
+    
+    // Process each line in the range
+    for (size_t i = mFirstLineIndex; i <= mLastLineIndex; ++i) {
+        if (i >= buffer.lineCount()) {
+            continue;
+        }
         
-        editor.setLine(mFirstLineIndex + i, newLine);
-        newLines.push_back(newLine);
-    }
-    
-    mNewLines = newLines;
-    
-    // Restore selection or cursor position
-    if (mWasSelectionActive) {
-        editor.setSelectionRange(mNewSelectionStartPos.line, mNewSelectionStartPos.column,
-                               mNewCursorPos.line, mNewCursorPos.column);
+        std::string line = buffer.getLine(i);
+        if (line.empty()) {
+            continue;
+        }
+        
+        // Check if the line starts with whitespace (spaces or tabs)
+        size_t nonWhitespacePos = 0;
+        while (nonWhitespacePos < line.length() && (line[nonWhitespacePos] == ' ' || line[nonWhitespacePos] == '\t')) {
+            nonWhitespacePos++;
+        }
+        
+        if (nonWhitespacePos == 0) {
+            continue; // No leading whitespace to remove
+        }
+        
+        // Remove up to tabWidth spaces or a single tab
+        size_t charsToRemove = 0;
+        if (line[0] == '\t') {
+            charsToRemove = 1; // Remove one tab
     } else {
-        editor.setCursorPosition(mNewCursorPos);
+            // Remove up to tabWidth spaces
+            charsToRemove = std::min(nonWhitespacePos, mTabWidth);
+        }
+        
+        if (charsToRemove > 0) {
+            std::string newLine = line.substr(charsToRemove);
+            buffer.replaceLine(i, newLine);
+            modified = true;
+        }
     }
+    
+    // Adjust cursor position if this is from a direct keystroke (not part of a selection operation)
+    if (!mWasSelectionActive && modified) {
+        // Get the current cursor position
+        size_t cursorLine = editor.getCursorLine();
+        size_t cursorCol = editor.getCursorCol();
+        
+        // If the cursor is within the affected range
+        if (cursorLine >= mFirstLineIndex && cursorLine <= mLastLineIndex) {
+            // Check if the cursor column needs adjustment
+            std::string originalLine = mOldLines[cursorLine - mFirstLineIndex];
+            std::string newLine = buffer.getLine(cursorLine);
+            
+            // Calculate new cursor position based on the amount of whitespace removed
+            size_t whitespaceRemoved = originalLine.length() - newLine.length();
+            if (cursorCol >= whitespaceRemoved) {
+                editor.setCursor(cursorLine, cursorCol - whitespaceRemoved);
+            } else {
+                editor.setCursor(cursorLine, 0);
+            }
+        }
+    }
+    
+    editor.setModified(true);
+    executed_ = true;
 }
 
 void DecreaseIndentCommand::undo(Editor& editor) {
