@@ -1,27 +1,21 @@
 #pragma once
 
-#include <memory>
 #include <vector>
 #include <functional>
 #include "Injector.hpp"
-#include "../AppDebugLog.h"
+
+namespace di {
 
 /**
- * @class ModuleManager
- * @brief Manages the configuration of application modules
- * 
- * The ModuleManager class provides a centralized mechanism for registering
- * and configuring application modules, ensuring they are initialized in 
- * the correct order.
+ * ModuleManager manages the registration and configuration of modules in the DI container.
+ * Modules are responsible for registering their services with the container.
  */
 class ModuleManager {
 public:
     /**
      * @brief Constructor
      */
-    ModuleManager() {
-        LOG_DEBUG("ModuleManager created");
-    }
+    ModuleManager();
     
     /**
      * @brief Destructor
@@ -29,30 +23,30 @@ public:
     ~ModuleManager() = default;
     
     /**
-     * @brief Register a module configuration function
+     * @brief Register a module configuration function with the manager.
      * 
-     * @param configureFunc The function to call to configure the module
+     * @param configureFunc The function that configures the module
+     * @param priority The priority of the module (higher priority modules are configured first)
      */
-    void registerModule(std::function<void(di::Injector&)> configureFunc) {
-        moduleConfigurators_.push_back(std::move(configureFunc));
-        LOG_DEBUG("Module registered with ModuleManager");
-    }
+    void registerModule(std::function<void(Injector&)> configureFunc, int priority = 0);
     
     /**
-     * @brief Configure all registered modules using the given injector
+     * @brief Configure all registered modules in priority order.
      * 
-     * @param injector The DI container to configure
+     * @param injector The injector to configure
      */
-    void configureAll(di::Injector& injector) {
-        LOG_DEBUG("Configuring all modules");
-        
-        for (const auto& configurator : moduleConfigurators_) {
-            configurator(injector);
-        }
-        
-        LOG_DEBUG("All modules configured successfully");
-    }
+    void configureAll(Injector& injector);
     
 private:
-    std::vector<std::function<void(di::Injector&)>> moduleConfigurators_;
-}; 
+    /**
+     * @brief Structure to hold a module configurator and its priority
+     */
+    struct ModuleConfigurator {
+        std::function<void(Injector&)> configureFunc;
+        int priority;
+    };
+    
+    std::vector<ModuleConfigurator> modules_;
+};
+
+} // namespace di 

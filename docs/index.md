@@ -2,18 +2,27 @@
 
 Welcome to the AI-First TextEditor documentation. This guide will help you get started with building, using, and contributing to the project.
 
-## Getting Started
+## Main Documentation
 
+- [Project Overview](project_overview.md) - Comprehensive introduction to the project
 - [Getting Started Guide](getting_started.md) - First-time setup and basic usage
 - [Troubleshooting Guide](troubleshooting.md) - Common issues and solutions
 
 ## Architecture and Design
 
-- [Codebase Structure](codebase_structure.md) - Overview of code organization
-- [OpenAI Integration](openai_integration.md) - How AI capabilities are implemented
+- [Architecture Overview](development/ARCHITECTURE.md) - System design and component interactions
+- [Codebase Structure](development/CODEBASE_STRUCTURE.md) - Overview of code organization
+- [OpenAI Integration](features/ai_integration.md) - How AI capabilities are implemented
+- [Async Logging](features/async_logging.md) - High-performance logging system
+
+## Project Planning & Status
+
+- [Development Roadmap](project/ROADMAP.md) - Phased development plan
+- [Implementation Progress](project/PROGRESS.md) - Current status and achievements
 
 ## Development
 
+- [Contributing Guide](development/CONTRIBUTING.md) - How to contribute to the project
 - [Testing Guide](testing_guide.md) - Running and writing tests
 
 ## Command Reference
@@ -47,6 +56,5 @@ Run commands:
 
 ## Quick Links
 
-- [README](../README.md) - Project overview
 - [GitHub Repository](https://github.com/your-org/AI-First-TextEditor) - Source code
 - [Issue Tracker](https://github.com/your-org/AI-First-TextEditor/issues) - Report bugs and feature requests 

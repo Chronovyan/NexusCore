@@ -4,25 +4,23 @@
 
 A modern code editor with deep AI integration as a core principle.
 
-## About
+## Documentation
 
-The AI-First TextEditor is designed from the ground up with AI capabilities integrated as first-class citizens, not merely add-ons. The editor leverages powerful language models to assist with code generation, refactoring, understanding, and more.
+For comprehensive documentation, please refer to:
 
-## Key Features
+- [Project Overview](docs/project_overview.md) - Complete introduction to the project
+- [Build Optimization Guide](docs/BUILD_OPTIMIZATION.md) - Guide to faster build times
+- [Rapid Debugging Workflow](docs/RAPID_DEBUGGING.md) - Lightning-fast debugging process
+- [Documentation Index](docs/index.md) - All documentation resources
 
-- Fast, responsive text editing with syntax highlighting
-- Deep AI integration with the OpenAI API
-- Asynchronous logging system for high performance
-- Command-based architecture with undo/redo support
-- Modern C++ (17) codebase with robust testing
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
 - C++17 compatible compiler (MSVC, GCC, Clang)
 - CMake 3.15+
 - OpenAI API key (for AI features)
+- [ccache](https://ccache.dev/) (optional, for faster builds)
 
 ### Building from Source
 
@@ -34,46 +32,39 @@ cd AI-First-TextEditor
 # Initialize submodules
 git submodule update --init --recursive
 
-# Configure with CMake
+# Option 1: Fast build with PowerShell script (Windows)
+.\scripts\fast_build.ps1
+
+# Option 2: Fast build with Batch file (Windows, easier)
+build_fast.bat
+
+# Option 3: Fast build with Shell script (Linux/macOS)
+chmod +x scripts/fast_build.sh  # Make executable (first time only)
+./scripts/fast_build.sh
+
+# Option 4: Manual CMake build
 mkdir build && cd build
 cmake ..
-
-# Build
-cmake --build .
-
-# Run the editor
-./src/TextEditor
+cmake --build . --parallel
 ```
 
-### Setting Up Git Hooks
-
-We use git hooks to ensure code quality. To install the pre-commit hook that runs tests automatically:
-
-```bash
-# For Linux/macOS users
-./hooks/install-hooks.sh
-
-# For Windows users
-powershell -ExecutionPolicy Bypass -File hooks/install-hooks.ps1
-```
-
-The pre-commit hook will build the project and run critical tests before allowing commits, ensuring code quality is maintained.
-
-## Testing
-
-### Testing Requirements
-
-All code must pass tests locally before being committed and pushed to the repository. This is enforced by:
-
-1. **Pre-commit Hook**: Runs critical tests before allowing commits
-2. **CI Smoke Tests**: Runs on GitHub Actions for every push and pull request
+For detailed build options and optimizations, see the [Build Optimization Guide](docs/BUILD_OPTIMIZATION.md).
 
 ### Running Tests
 
 ```bash
-# Configure and build in Debug mode
+# Option 1: Build with tests using PowerShell script (Windows)
+.\scripts\fast_build.ps1 -withTests
+
+# Option 2: Build with tests using Batch file (Windows)
+build_fast.bat -withTests
+
+# Option 3: Build with tests using Shell script (Linux/macOS)
+./scripts/fast_build.sh -withTests
+
+# Option 4: Manual CMake configuration with tests enabled
 mkdir -p build && cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON ..
 cmake --build .
 
 # Run all tests
@@ -82,67 +73,3 @@ ctest -C Debug
 # Run only critical tests (faster)
 ./tests/Debug/RunAllTests --gtest_filter=*_Critical*
 ```
-
-### Critical Tests
-
-Critical tests are a special subset of our test suite that:
-- Focus on core functionality
-- Run very quickly (< 5 seconds)
-- Run automatically before each commit
-
-These tests ensure basic functionality remains intact while minimizing wait time during development. To mark a test as critical, see the [Contributing Guide](docs/development/CONTRIBUTING.md#critical-tests).
-
-### CI Workflow
-
-Our CI workflow automatically runs on GitHub Actions and:
-- Builds the project on multiple platforms (Windows, Linux)
-- Runs the test suite
-- Reports test results
-
-Pull requests cannot be merged unless all tests pass in CI.
-
-## Documentation
-
-We've organized our documentation to make it easy to find what you need:
-
-### Project Overview
-
-- [Project Introduction](docs/project/README.md) - Overview of the project goals and structure
-- [Development Roadmap](docs/project/ROADMAP.md) - Our phased development plan
-- [Implementation Progress](docs/project/PROGRESS.md) - Current status and achievements
-
-### Developer Documentation
-
-- [Architecture Overview](docs/development/ARCHITECTURE.md) - System design and component interactions
-- [Codebase Structure](docs/development/CODEBASE_STRUCTURE.md) - Directory organization and key files
-- [Contributing Guide](docs/development/CONTRIBUTING.md) - How to contribute to the project
-
-### Feature Documentation
-
-- [AI Integration](docs/features/ai_integration.md) - OpenAI API integration details
-- [Async Logging](docs/features/async_logging.md) - Asynchronous logging system
-
-### Testing Documentation
-
-- [Test Plan](docs/testing/TEST_PLAN.md) - Test strategy and methodology
-- [Test Implementation](docs/testing/IMPLEMENTATION.md) - Test coverage details
-- [Stress Tests](docs/testing/stress_tests/file_logging.md) - File logging stress testing
-
-## Current Status
-
-The project is currently in **Phase 2: Comprehensive Testing & Validation**. We're focused on ensuring code quality and reliability through extensive testing before moving on to architectural refinements in Phase 3.
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](docs/development/CONTRIBUTING.md) for more information on how to get involved.
-
-### Important Code Quality Requirements
-
-- **All code must pass tests** before being committed or pushed
-- Pre-commit hooks will automatically verify this for you
-- CI checks must pass for pull requests to be merged
-- If you need to bypass the pre-commit hook in rare circumstances, use `git commit --no-verify` (use sparingly and with good reason)
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 

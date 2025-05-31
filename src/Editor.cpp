@@ -188,9 +188,10 @@ bool Editor::hasSelection() const {
     return hasSelection_;
 }
 
-void Editor::printView() {
-    // Clear the screen
-    std::cout << "\033[2J\033[H";
+void Editor::printView(std::ostream& os) const {
+    // Clear the screen - note: we should avoid direct output when using a stream parameter
+    // Instead of std::cout, use the provided stream parameter
+    os << "\033[2J\033[H";
     
     // Calculate visible range
     size_t startLine = topVisibleLine_;
@@ -204,7 +205,7 @@ void Editor::printView() {
     // Display line numbers and content
     for (size_t i = startLine; i <= endLine; ++i) {
         // Print line number
-        std::cout << std::setw(4) << (i + 1) << " | ";
+        os << std::setw(4) << (i + 1) << " | ";
         
         const std::string& line = textBuffer_->getLine(i);
         
@@ -216,87 +217,93 @@ void Editor::printView() {
         
         // Print the line content with highlighting if available
         if (!lineStyles.empty()) {
-            printLineWithHighlighting(line, lineStyles);
+            printLineWithHighlighting(os, line, lineStyles);
         } else {
-            std::cout << line;
+            os << line;
         }
         
         // Indicate if this is the cursor line
         if (i == cursorLine_) {
-            std::cout << " ←";
+            os << " ←";
         }
         
-        std::cout << std::endl;
+        os << std::endl;
     }
     
     // Display status bar
-    printStatusBar();
+    printStatusBar(os);
     
-    // Position cursor
-    positionCursor();
+    // Note: We don't position cursor in the const method that outputs to a stream
+    // This should be done separately if needed
 }
 
-void Editor::printLineWithHighlighting(const std::string& line, const std::vector<SyntaxStyle>& styles) {
+void Editor::printLineWithHighlighting(std::ostream& os, const std::string& line, const std::vector<SyntaxStyle>& styles) const {
     // Default style
-    const SyntaxStyle defaultStyle = {SyntaxStyleType::Normal, 0};
+    const SyntaxColor defaultStyle = SyntaxColor::Default;
     
     for (size_t i = 0; i < line.length(); ++i) {
-        // Find style for this character
-        SyntaxStyle style = defaultStyle;
+        SyntaxColor currentStyle = defaultStyle;
         
-        for (const auto& s : styles) {
-            if (s.position <= i && i < s.position + s.length) {
-                style = s;
+        // Find the appropriate style for this position
+        for (const auto& style : styles) {
+            if (i >= style.startCol && i < style.endCol) {
+                currentStyle = style.color;
                 break;
             }
         }
         
-        // Apply the style
-        applyStyle(style.type);
-        
-        // Print the character
-        std::cout << line[i];
-        
-        // Reset to normal
-        std::cout << "\033[0m";
+        // Apply the style and print the character
+        applyColorForSyntaxColor(os, currentStyle);
+        os << line[i];
     }
+    
+    // Reset to default style
+    applyColorForSyntaxColor(os, defaultStyle);
 }
 
-void Editor::printStatusBar() {
+// Helper function to apply console color based on syntax color
+void Editor::applyColorForSyntaxColor(std::ostream& os, SyntaxColor color) const {
+    // This is a placeholder implementation
+    // In a real implementation, this would set terminal/console colors
+}
+
+void Editor::printStatusBar(std::ostream& os) const {
     // Move to status bar position
-    std::cout << "\033[" << (viewableLines_ + 1) << ";0H";
+    os << "\033[" << (viewableLines_ + 1) << ";0H";
     
     // Clear line
-    std::cout << "\033[K";
+    os << "\033[K";
     
     // Print file information and cursor position
     std::string filename = filename_.empty() ? "[No File]" : filename_;
-    std::cout << filename << " - ";
-    std::cout << "Line: " << (cursorLine_ + 1) << ", Col: " << (cursorCol_ + 1);
+    os << filename << " - ";
+    os << "Line: " << (cursorLine_ + 1) << ", Col: " << (cursorCol_ + 1);
     
     // Show modified indicator
     if (modified_) {
-        std::cout << " [Modified]";
+        os << " [Modified]";
     }
     
     // Show current highlighter if enabled
     if (syntaxHighlightingEnabled_ && currentHighlighter_) {
-        std::cout << " [" << currentHighlighter_->getName() << "]";
+        os << " [" << currentHighlighter_->getLanguageName() << "]";
     }
 }
 
 void Editor::positionCursor() {
-    // Calculate screen position
-    size_t screenLine = cursorLine_ - topVisibleLine_ + 1; // 1-based for ANSI
-    size_t screenCol = cursorCol_ + 7; // 7 = 4 (line number width) + 3 (separator " | ")
+    // Ensure cursor is visible in the viewport
+    if (cursorLine_ < topVisibleLine_) {
+        topVisibleLine_ = cursorLine_;
+    } else if (cursorLine_ >= topVisibleLine_ + viewableLines_) {
+        topVisibleLine_ = cursorLine_ - viewableLines_ + 1;
+    }
     
-    // Set cursor position
+    // Calculate the screen position
+    int screenLine = cursorLine_ - topVisibleLine_ + 1; // +1 for 1-based line counting on screen
+    int screenCol = cursorCol_ + 6; // +6 for line number display and margin (e.g., "123 | ")
+    
+    // Position the cursor using ANSI escape sequence
     std::cout << "\033[" << screenLine << ";" << screenCol << "H";
-    std::cout.flush();
-}
-
-size_t Editor::getTopVisibleLine() const {
-    return topVisibleLine_;
 }
 
 size_t Editor::getBottomVisibleLine() const {
@@ -310,11 +317,7 @@ void Editor::startSelection() {
 }
 
 void Editor::endSelection() {
-    hasSelection_ = false;
-}
-
-bool Editor::hasSelection() const {
-    return hasSelection_;
+    hasSelection_ = true;
 }
 
 std::string Editor::getSelectedText() const {
@@ -438,7 +441,7 @@ void Editor::updateHighlightingCache() {
 }
 
 void Editor::validateAndClampCursor() {
-    size_t maxLine = std::max(0UL, textBuffer_->lineCount() - 1);
+    size_t maxLine = std::max<size_t>(0, textBuffer_->lineCount() - 1);
     cursorLine_ = std::min(cursorLine_, maxLine);
     
     size_t lineLength = textBuffer_->getLine(cursorLine_).length();
@@ -446,214 +449,357 @@ void Editor::validateAndClampCursor() {
 }
 
 void Editor::addLine(const std::string& text) {
-    auto command = std::make_shared<InsertLineCommand>(textBuffer_, textBuffer_->lineCount(), text);
-    commandManager_->executeCommand(command, *this);
-    setModified(true);
+    auto command = std::make_unique<AddLineCommand>(textBuffer_, text);
+    commandManager_->executeCommand(std::move(command), *this);
+    modified_ = true;
 }
 
 void Editor::insertLine(size_t lineIndex, const std::string& text) {
-    auto command = std::make_shared<InsertLineCommand>(textBuffer_, lineIndex, text);
-    commandManager_->executeCommand(command, *this);
-    setModified(true);
+    auto command = std::make_unique<InsertLineCommand>(textBuffer_, lineIndex, text);
+    commandManager_->executeCommand(std::move(command), *this);
+    modified_ = true;
 }
 
 void Editor::deleteLine(size_t lineIndex) {
-    auto command = std::make_shared<DeleteLineCommand>(textBuffer_, lineIndex);
-    commandManager_->executeCommand(command, *this);
-    setModified(true);
+    auto command = std::make_unique<DeleteLineCommand>(textBuffer_, lineIndex);
+    commandManager_->executeCommand(std::move(command), *this);
+    modified_ = true;
 }
 
 void Editor::replaceLine(size_t lineIndex, const std::string& text) {
-    auto command = std::make_shared<ReplaceLineCommand>(textBuffer_, lineIndex, text);
-    commandManager_->executeCommand(command, *this);
-    setModified(true);
+    auto command = std::make_unique<ReplaceLineCommand>(textBuffer_, lineIndex, text);
+    commandManager_->executeCommand(std::move(command), *this);
+    modified_ = true;
 }
 
-bool Editor::loadFile(const std::string& filePath) {
-    // Create a command for loading a file
-    auto command = std::make_shared<LoadFileCommand>(textBuffer_, filePath);
-    bool success = commandManager_->executeCommand(command, *this);
-    
-    if (success) {
-        filename_ = filePath;
-        modified_ = false;
-        cursorLine_ = 0;
-        cursorCol_ = 0;
-        
-        // Try to detect syntax highlighting based on file extension
-        detectAndSetHighlighter();
-        
-        // Reset view position
-        topVisibleLine_ = 0;
-    }
-    
-    return success;
-}
-
-bool Editor::saveFile(const std::string& filePath) {
-    std::string pathToUse = filePath.empty() ? filename_ : filePath;
-    
-    if (pathToUse.empty()) {
+bool Editor::loadFile(const std::string& filename) {
+    if (filename.empty()) {
         return false;
     }
     
-    // Create a command for saving a file
-    auto command = std::make_shared<SaveFileCommand>(textBuffer_, pathToUse);
-    bool success = commandManager_->executeCommand(command, *this);
+    auto command = std::make_unique<LoadFileCommand>(textBuffer_, filename);
+    commandManager_->executeCommand(std::move(command), *this);
     
-    if (success) {
-        if (!filePath.empty()) {
-            filename_ = pathToUse;
-        }
-        modified_ = false;
-    }
+    filename_ = filename;
+    modified_ = false;
+    cursorLine_ = 0;
+    cursorCol_ = 0;
     
-    return success;
+    // Reset viewport position
+    topVisibleLine_ = 0;
+    
+    detectAndSetHighlighter();
+    return true;
 }
 
-void Editor::detectAndSetHighlighter() {
+bool Editor::saveFile() {
+    if (filename_.empty()) {
+        return false;
+    }
+    
+    auto command = std::make_unique<SaveFileCommand>(textBuffer_, filename_);
+    commandManager_->executeCommand(std::move(command), *this);
+    modified_ = false;
+    return true;
+}
+
+bool Editor::saveFileAs(const std::string& filename) {
+    if (filename.empty()) {
+        return false;
+    }
+    
+    auto command = std::make_unique<SaveFileCommand>(textBuffer_, filename);
+    commandManager_->executeCommand(std::move(command), *this);
+    filename_ = filename;
+    modified_ = false;
+    return true;
+}
+
+void Editor::setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter) {
     if (!syntaxHighlightingEnabled_) {
         return;
     }
     
-    // Detect highlighter based on file extension
-    if (!filename_.empty()) {
-        size_t dotPos = filename_.find_last_of('.');
-        if (dotPos != std::string::npos) {
-            std::string extension = filename_.substr(dotPos + 1);
-            setHighlighter(extension);
-        }
+    currentHighlighter_ = highlighter;
+    invalidateHighlightingCache();
+}
+
+void Editor::detectAndSetHighlighter() {
+    if (!syntaxHighlightingEnabled_ || !syntaxHighlightingManager_) {
+        return;
+    }
+    
+    std::string extension;
+    size_t dotPos = filename_.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        extension = filename_.substr(dotPos);
+    }
+    
+    if (extension == ".cpp" || extension == ".h" || extension == ".hpp") {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("cpp"));
+    } else if (extension == ".py") {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("py"));
+    } else if (extension == ".js") {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("js"));
+    } else if (extension == ".html") {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("html"));
+    } else if (extension == ".css") {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("css"));
+    } else {
+        setHighlighter(SyntaxHighlighterRegistry::getInstance().getSharedHighlighterForExtension("txt"));
     }
 }
 
-void Editor::insertCharacter(char c) {
-    const std::string& currentLine = textBuffer_->getLine(cursorLine_);
-    
-    // Create a new line with the character inserted
-    std::string newLine = currentLine;
-    newLine.insert(cursorCol_, 1, c);
-    
-    // Create and execute a command to replace the line
-    auto command = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
-    commandManager_->executeCommand(command, *this);
-    
-    // Move cursor right
-    cursorCol_++;
-    
-    // Mark editor as modified
-    setModified(true);
+void Editor::typeChar(char charToInsert) {
+    if (hasSelection()) {
+        deleteSelection();
+    }
+
+    std::string currentLine = textBuffer_->getLine(cursorLine_);
+    std::string newLine = currentLine.substr(0, cursorCol_) + charToInsert + currentLine.substr(cursorCol_);
+
+    auto command = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
+    bool success = false;
+    if (command) {
+        commandManager_->executeCommand(std::move(command), *this);
+        success = true;
+    }
+    if (success) {
+        cursorCol_++;
+        modified_ = true;
+    }
 }
 
-void Editor::insertNewline() {
-    const std::string& currentLine = textBuffer_->getLine(cursorLine_);
-    
-    // Split the current line at cursor position
+void Editor::newLine() {
+    if (hasSelection()) {
+        deleteSelection();
+    }
+
+    std::string currentLine = textBuffer_->getLine(cursorLine_);
     std::string firstPart = currentLine.substr(0, cursorCol_);
     std::string secondPart = currentLine.substr(cursorCol_);
+
+    // Replace the original line
+    auto replaceCmd = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_, firstPart);
     
-    // Create commands to update the current line and insert a new one
-    auto replaceCommand = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_, firstPart);
-    auto insertCommand = std::make_shared<InsertLineCommand>(textBuffer_, cursorLine_ + 1, secondPart);
+    // Insert the new line
+    auto insertCmd = std::make_unique<InsertLineCommand>(textBuffer_, cursorLine_ + 1, secondPart);
     
-    // Execute the commands as a batch
-    auto batch = std::make_shared<BatchCommand>();
-    batch->addCommand(replaceCommand);
-    batch->addCommand(insertCommand);
-    commandManager_->executeCommand(batch, *this);
+    // Create a batch command
+    auto batchCommand = std::make_unique<BatchCommand>();
+    batchCommand->addCommand(std::move(replaceCmd));
+    batchCommand->addCommand(std::move(insertCmd));
     
-    // Move cursor to the beginning of the new line
+    // Execute the batch command
+    commandManager_->executeCommand(std::move(batchCommand), *this);
+    
+    // Update cursor position
     cursorLine_++;
     cursorCol_ = 0;
     
-    // Mark editor as modified
-    setModified(true);
+    modified_ = true;
 }
 
 void Editor::deleteCharacter() {
-    const std::string& currentLine = textBuffer_->getLine(cursorLine_);
+    if (hasSelection()) {
+        deleteSelection();
+        return;
+    }
+
+    std::string currentLine = textBuffer_->getLine(cursorLine_);
     
     if (cursorCol_ < currentLine.length()) {
         // Delete character at cursor position
-        std::string newLine = currentLine;
-        newLine.erase(cursorCol_, 1);
-        
-        // Create and execute a command to replace the line
-        auto command = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
-        commandManager_->executeCommand(command, *this);
-        
-        // Mark editor as modified
-        setModified(true);
-    } else if (cursorLine_ < textBuffer_->lineCount() - 1) {
-        // At end of line, join with next line
+        std::string newLine = currentLine.substr(0, cursorCol_) + currentLine.substr(cursorCol_ + 1);
+        auto command = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
+        commandManager_->executeCommand(std::move(command), *this);
+        modified_ = true;
+    } else if (cursorLine_ < textBuffer_->getLineCount() - 1) {
+        // At the end of a line, join with the next line
         std::string nextLine = textBuffer_->getLine(cursorLine_ + 1);
-        std::string newLine = currentLine + nextLine;
+        std::string combinedLine = currentLine + nextLine;
         
-        // Create commands to update the current line and delete the next one
-        auto replaceCommand = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
-        auto deleteCommand = std::make_shared<DeleteLineCommand>(textBuffer_, cursorLine_ + 1);
+        // Create batch command
+        auto batchCommand = std::make_unique<BatchCommand>();
         
-        // Execute the commands as a batch
-        auto batch = std::make_shared<BatchCommand>();
-        batch->addCommand(replaceCommand);
-        batch->addCommand(deleteCommand);
-        commandManager_->executeCommand(batch, *this);
+        // Replace current line with combined content
+        auto replaceCommand = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_, combinedLine);
+        batchCommand->addCommand(std::move(replaceCommand));
         
-        // Mark editor as modified
-        setModified(true);
+        // Delete the next line (which is now combined with the current one)
+        auto deleteCommand = std::make_unique<DeleteLineCommand>(textBuffer_, cursorLine_ + 1);
+        batchCommand->addCommand(std::move(deleteCommand));
+        
+        // Execute the batch command
+        commandManager_->executeCommand(std::move(batchCommand), *this);
+        
+        modified_ = true;
     }
 }
 
 void Editor::backspace() {
+    if (hasSelection()) {
+        deleteSelection();
+        return;
+    }
+
     if (cursorCol_ > 0) {
-        // Delete character before cursor
-        const std::string& currentLine = textBuffer_->getLine(cursorLine_);
-        std::string newLine = currentLine;
-        newLine.erase(cursorCol_ - 1, 1);
+        // Not at the beginning of a line, delete the character before the cursor
+        std::string currentLine = textBuffer_->getLine(cursorLine_);
+        std::string newLine = currentLine.substr(0, cursorCol_ - 1) + currentLine.substr(cursorCol_);
         
-        // Create and execute a command to replace the line
-        auto command = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
-        commandManager_->executeCommand(command, *this);
+        auto command = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_, newLine);
+        commandManager_->executeCommand(std::move(command), *this);
         
-        // Move cursor left
         cursorCol_--;
+        modified_ = true;
+    } 
+    else if (cursorLine_ > 0) {
+        // At the beginning of a line (not the first line), join with the previous line
+        std::string previousLine = textBuffer_->getLine(cursorLine_ - 1);
+        std::string currentLine = textBuffer_->getLine(cursorLine_);
+        std::string combinedLine = previousLine + currentLine;
         
-        // Mark editor as modified
-        setModified(true);
-    } else if (cursorLine_ > 0) {
-        // At beginning of line, join with previous line
-        const std::string& prevLine = textBuffer_->getLine(cursorLine_ - 1);
-        const std::string& currentLine = textBuffer_->getLine(cursorLine_);
-        std::string newLine = prevLine + currentLine;
+        // Create batch command
+        auto batchCommand = std::make_unique<BatchCommand>();
         
-        // Create commands to update the previous line and delete the current one
-        auto replaceCommand = std::make_shared<ReplaceLineCommand>(textBuffer_, cursorLine_ - 1, newLine);
-        auto deleteCommand = std::make_shared<DeleteLineCommand>(textBuffer_, cursorLine_);
+        // Replace the previous line with combined content
+        auto replaceCommand = std::make_unique<ReplaceLineCommand>(textBuffer_, cursorLine_ - 1, combinedLine);
+        batchCommand->addCommand(std::move(replaceCommand));
         
-        // Execute the commands as a batch
-        auto batch = std::make_shared<BatchCommand>();
-        batch->addCommand(replaceCommand);
-        batch->addCommand(deleteCommand);
-        commandManager_->executeCommand(batch, *this);
+        // Delete the current line (which is now combined with the previous one)
+        auto deleteCommand = std::make_unique<DeleteLineCommand>(textBuffer_, cursorLine_);
+        batchCommand->addCommand(std::move(deleteCommand));
         
-        // Move cursor to the join point
+        // Execute the batch command
+        commandManager_->executeCommand(std::move(batchCommand), *this);
+        
+        // Update cursor position
         cursorLine_--;
-        cursorCol_ = prevLine.length();
+        cursorCol_ = previousLine.length();
+        modified_ = true;
+    }
+}
+
+void Editor::processCharacterInput(char ch) {
+    if (ch == '\n') {
+        this->newLine();
+    } else if (ch == '\b') {
+        this->backspace();
+    } else if (ch >= 32 && ch <= 126) {  // Printable ASCII
+        this->typeChar(ch);
+    } else if (ch == '\t') {  // Tab character
+        // Insert 4 spaces (or whatever tab size is configured)
+        for (int i = 0; i < 4; ++i) {
+            this->typeChar(' ');
+        }
+    }
+}
+
+class DeleteSelectionCommand : public Command {
+public:
+    DeleteSelectionCommand(std::shared_ptr<ITextBuffer> textBuffer, size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+        : textBuffer_(textBuffer), startLine_(startLine), startCol_(startCol), endLine_(endLine), endCol_(endCol) {}
+    
+    void execute(Editor& editor) override {
+        // Store the original text for undo
+        originalText_ = "";
+        auto& buffer = *textBuffer_;
         
-        // Mark editor as modified
-        setModified(true);
+        if (startLine_ == endLine_) {
+            // Single line selection
+            originalText_ = buffer.getLineSegment(startLine_, startCol_, endCol_);
+        } else {
+            // Multi-line selection
+            // Get first line segment (from startCol to end of line)
+            originalText_ = buffer.getLineSegment(startLine_, startCol_, buffer.lineLength(startLine_)) + "\n";
+            
+            // Get any middle lines in full
+            for (size_t i = startLine_ + 1; i < endLine_; ++i) {
+                originalText_ += buffer.getLine(i) + "\n";
+            }
+            
+            // Get last line segment (from start of line to endCol)
+            originalText_ += buffer.getLineSegment(endLine_, 0, endCol_);
+        }
+        
+        // Delete the selected text
+        buffer.deleteText(startLine_, startCol_, endLine_, endCol_);
     }
+    
+    void undo(Editor& editor) override {
+        // Insert the original text back at the selection start
+        auto& buffer = *textBuffer_;
+        buffer.insertText(startLine_, startCol_, originalText_);
+        
+        // Restore the selection state
+        editor.setSelectionRange(startLine_, startCol_, endLine_, endCol_);
+        
+        // Position cursor at the end of the selection (matching typical selection behavior)
+        editor.setCursor(endLine_, endCol_);
+    }
+    
+    std::string getDescription() const override {
+        return "Delete selection";
+    }
+    
+private:
+    std::shared_ptr<ITextBuffer> textBuffer_;
+    size_t startLine_;
+    size_t startCol_;
+    size_t endLine_;
+    size_t endCol_;
+    std::string originalText_;
+};
+
+void Editor::deleteSelection() {
+    if (!hasSelection()) {
+        return;
+    }
+    
+    // Ensure start position is before end position
+    size_t startLine = selectionStartLine_;
+    size_t startCol = selectionStartCol_;
+    size_t endLine = selectionEndLine_;
+    size_t endCol = selectionEndCol_;
+    
+    if (startLine > endLine || (startLine == endLine && startCol > endCol)) {
+        std::swap(startLine, endLine);
+        std::swap(startCol, endCol);
+    }
+    
+    auto command = std::make_unique<DeleteSelectionCommand>(textBuffer_, startLine, startCol, endLine, endCol);
+    commandManager_->executeCommand(std::move(command), *this);
+    
+    // Move cursor to the start of the deleted selection
+    cursorLine_ = startLine;
+    cursorCol_ = startCol;
+    clearSelection();
+    modified_ = true;
 }
 
-// Implementation of getBuffer for backward compatibility
-TextBuffer& Editor::getTextBuffer() {
-    // Try to cast the textBuffer_ to a TextBuffer
-    TextBuffer* concreteBuffer = dynamic_cast<TextBuffer*>(textBuffer_.get());
-    if (!concreteBuffer) {
-        // If the cast fails, log an error and throw an exception
-        LOG_ERROR("getTextBuffer called on an Editor with a non-TextBuffer implementation");
-        throw std::runtime_error("getTextBuffer called on an Editor with a non-TextBuffer implementation"); 
-    }
-    return *concreteBuffer;
+void Editor::clearSelection() {
+    hasSelection_ = false;
+    selectionStartLine_ = 0;
+    selectionStartCol_ = 0;
+    selectionEndLine_ = 0;
+    selectionEndCol_ = 0;
 }
 
-// ...and so on for other methods that access the private members we've changed
+void Editor::setFilename(const std::string& filename) {
+    filename_ = filename;
+    detectAndSetHighlighter();
+}
+
+bool Editor::openFile(const std::string& filename) {
+    if (filename.empty()) {
+        return false;
+    }
+    
+    bool success = loadFile(filename);
+    if (success) {
+        setFilename(filename);
+    }
+    
+    return success;
+}

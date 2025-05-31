@@ -1,7 +1,11 @@
 #include "Application.h"
 #include "AppDebugLog.h"
+#include "di/CoreModule.hpp"
+#include "di/ModuleManager.hpp"
 #include "di/ApplicationModule.hpp"
 #include <iostream>
+
+using namespace di;
 
 Application::Application() : running_(false) {
     LOG_DEBUG("Application created");
@@ -76,8 +80,11 @@ void Application::shutdown() {
 void Application::configureContainer() {
     LOG_DEBUG("Configuring DI container");
     
-    // Register the ApplicationModule
-    moduleManager_.registerModule(ApplicationModule::configure);
+    // Register the CoreModule with high priority
+    moduleManager_.registerModule(CoreModule::configure, 100);
+    
+    // Register the ApplicationModule with normal priority
+    moduleManager_.registerModule(ApplicationModule::configure, 50);
     
     // Configure all registered modules
     moduleManager_.configureAll(injector_);
@@ -89,7 +96,7 @@ void Application::createEditor() {
     LOG_DEBUG("Creating editor");
     
     // Create the editor from the DI container
-    editor_ = injector_.resolve<IEditor>();
+    editor_ = injector_.get<IEditor>();
     
     LOG_DEBUG("Editor created successfully");
 }

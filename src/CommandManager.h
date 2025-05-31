@@ -2,6 +2,7 @@
 #define COMMAND_MANAGER_H
 
 #include "Command.h"
+#include "interfaces/ICommandManager.hpp"
 #include <vector>
 #include <memory>
 #include <stack>
@@ -9,12 +10,12 @@
 class Editor;
 
 // CommandManager class - Manages command execution and undo/redo history
-class CommandManager {
+class CommandManager : public ICommandManager {
 public:
     CommandManager() = default;
     
     // Execute a command and store it in the undo stack
-    void executeCommand(CommandPtr command, Editor& editor) {
+    void executeCommand(CommandPtr command, Editor& editor) override {
         command->execute(editor);
         undoStack_.push(std::move(command));
         
@@ -25,7 +26,7 @@ public:
     }
     
     // Add a command to the undo stack without executing it
-    void addCommand(CommandPtr command) {
+    void addCommand(CommandPtr command) override {
         undoStack_.push(std::move(command));
         
         // Clear the redo stack when a new command is added
@@ -35,7 +36,7 @@ public:
     }
     
     // Undo the most recent command
-    bool undo(Editor& editor) {
+    bool undo(Editor& editor) override {
         if (undoStack_.empty()) {
             return false;
         }
@@ -50,7 +51,7 @@ public:
     }
     
     // Redo the most recently undone command
-    bool redo(Editor& editor) {
+    bool redo(Editor& editor) override {
         if (redoStack_.empty()) {
             return false;
         }
@@ -65,27 +66,27 @@ public:
     }
     
     // Check if there are commands available to undo
-    bool canUndo() const {
+    bool canUndo() const override {
         return !undoStack_.empty();
     }
     
     // Check if there are commands available to redo
-    bool canRedo() const {
+    bool canRedo() const override {
         return !redoStack_.empty();
     }
     
     // Get the number of commands in the undo stack
-    size_t undoStackSize() const {
+    size_t undoStackSize() const override {
         return undoStack_.size();
     }
     
     // Get the number of commands in the redo stack
-    size_t redoStackSize() const {
+    size_t redoStackSize() const override {
         return redoStack_.size();
     }
     
     // Clear both undo and redo stacks
-    void clear() {
+    void clear() override {
         while (!undoStack_.empty()) {
             undoStack_.pop();
         }

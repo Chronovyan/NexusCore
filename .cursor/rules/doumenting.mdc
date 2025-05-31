@@ -1,0 +1,78 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+**Global Rule: Code Documentation & Commenting Style (Template)**
+
+**Purpose:** To ensure that all code comments and documentation generated or suggested by the AI are clear, consistent, useful, and adhere to the specified style and content guidelines.
+
+**Instructions for the AI:**
+"When generating, reviewing, or suggesting code comments and documentation, you **must** strictly follow the guidelines outlined below. If the current project has its own explicit documentation or commenting guidelines (e.g., in a `CONTRIBUTING.md` or style guide), those should take precedence if they conflict, and you should highlight that."
+
+**1. General Philosophy of Commenting:**
+    * "Comments should explain **why** something is done, or clarify **complex** or **non-obvious** logic. Do not comment on *what* the code is doing if the code itself is clear and self-explanatory."
+    * "Avoid over-commenting trivial code."
+    * "Ensure comments are kept up-to-date with code changes. Stale or misleading comments are worse than no comments."
+    * "Write comments in clear, concise, and grammatically correct English." (User to specify if another language is preferred)
+
+**2. When to Add Comments/Documentation:**
+    * **Public APIs:** All public functions, classes, methods, and interfaces must have documentation comments explaining their purpose, parameters, return values, and any exceptions thrown or error conditions.
+    * **Complex Logic:** Any block of code with intricate algorithms, non-obvious business rules, or tricky workarounds.
+    * **Important Decisions/Assumptions:** If a piece of code relies on specific assumptions or if a particular design choice was made for non-obvious reasons.
+    * **`TODO`/`FIXME` Markers:** Use these markers to flag areas that need future attention:
+        * `TODO:` For planned enhancements or incomplete features.
+        * `FIXME:` For known bugs or areas that need correction.
+        * "(User to specify format, e.g., `TODO (username/date): Description`)"
+
+**3. Commenting Style & Formatting:**
+    * **Single-line comments:** (User to specify preference, e.g., `// For C++/Java/C#/JS` or `# For Python/Ruby`)
+        * "Use for brief explanations on a single line or at the end of a line of code."
+    * **Multi-line comments:** (User to specify preference, e.g., `/* ... */` for C-style languages, or consecutive `#` for Python)
+        * "Use for more extensive explanations that span multiple lines."
+    * **Documentation Blocks (Doc Comments):** (This is key for AI generation)
+        * "(User to specify the documentation generator tool and its syntax. Examples:)
+            * **JSDoc (JavaScript/TypeScript):** 'Use JSDoc style (e.g., `/** ... */`) for all functions, classes, and methods. Include `@param`, `@returns`, `@throws`, `@description`, `@example` tags as appropriate.'
+            * **Doxygen (C++):** 'Use Doxygen style (e.g., `///` or `/** ... */` or `/*! ... */`). Use commands like `@brief`, `@param`, `@return`, `@note`, `@warning`.'
+            * **Python Docstrings:** 'Use PEP 257 compliant docstrings (e.g., `""" ... """` or `r""" ... """`). Specify preferred format (e.g., Google style, NumPy style, reStructuredText).'
+            * **JavaDoc (Java):** 'Use JavaDoc style (`/** ... */`) with appropriate tags (`@param`, `@return`, `@throws`, etc.).'
+            * **C# XML Documentation Comments:** 'Use XML documentation comments (`/// <summary>...</summary>`) with standard tags like `<param>`, `<returns>`, `<exception>`, etc.'
+        * "If no specific tool is mandated, follow a clear and consistent block comment style for public APIs."
+
+**4. Content of Documentation Comments:**
+    * **Summary/Brief:** A concise overview of the element's purpose.
+    * **Parameters (`@param`):** For each parameter: name, type (if not obvious from code), and a clear description of its purpose, expected values, and any constraints.
+    * **Return Values (`@returns`):** Description of the return value, its type (if not obvious), and what it represents. For void functions, this can be omitted or explicitly stated.
+    * **Exceptions/Errors (`@throws`, `@except`):** Document any exceptions that can be thrown or error conditions that can occur.
+    * **Assumptions/Preconditions:** Any conditions that must be true before calling the function/method.
+    * **Postconditions:** Any conditions that will be true after the function/method completes successfully.
+    * **Side Effects:** Any observable changes outside the function's direct return value.
+    * **Examples (`@example`):** Short, illustrative code snippets showing how to use the API element, if helpful.
+
+**5. What NOT to Comment:**
+    * "Do not use comments as a substitute for version control (e.g., commenting out old code; use Git for history)."
+    * "Do not comment obvious code (e.g., `// increment i` for `i++;`). Write self-documenting code instead."
+    * "Avoid large commented-out blocks of code. Remove them or explain why they are temporarily there with a `TODO` or `FIXME`."
+
+**Example (User to provide a language-specific example of their ideal documentation comment):**
+```cpp
+/// For Doxygen (C++)
+/**
+ * @brief Calculates the factorial of a given non-negative integer.
+ * @param n The non-negative integer whose factorial is to be calculated. Must be >= 0.
+ * @return The factorial of n.
+ * @throws std::invalid_argument if n is negative.
+ * @note This implementation uses a simple iterative approach.
+ */
+long long factorial(int n);
+"When asked to add documentation or when generating new code with public APIs, proactively apply these documentation guidelines. If existing code lacks documentation, you may suggest adding it according to this style."
+
+
+```text
+1.  Is "Code Documentation & Commenting Style" a rule you'd find useful to define next?
+2.  If so, take a look at the template. Key areas for your input would be:
+    * Your **general philosophy** on commenting.
+    * The specific **documentation tool/syntax** you prefer for different languages you use (e.g., JSDoc, Doxygen, Python Docstrings, C# XML). This is very important for the AI.
+    * Any specific preferences for **`TODO`/`FIXME`** markers.
+    * An **example** of a perfectly formatted documentation comment in your primary language.
+    * A short **name** for this rule (e.g., `Doc_Style`, `Commenting_Rules`, `Code_Docs`).

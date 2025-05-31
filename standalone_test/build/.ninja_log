@@ -1,0 +1,18 @@
+# ninja log v6
+68	4663	7703471846427411	CMakeFiles/ThreadSafeTextBufferStandalone.dir/C_/Users/HydraPony/dev/AI-First_TextEditor/src/ThreadSafeTextBuffer.cpp.obj	f2f3c1106350472
+24	6731	7703471845611525	CMakeFiles/ThreadSafeTextBufferStandalone.dir/ThreadSafeTextBufferStandalone.cpp.obj	b1f3e635d616f4c3
+143	10569	7703471851920759	CMakeFiles/ThreadSafeTextBufferStandalone.dir/C_/Users/HydraPony/dev/AI-First_TextEditor/src/TextBuffer.cpp.obj	7095d6a075e80a53
+104	5346	7703488945477186	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+5385	6094	7703488996812360	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+23	4781	7703497458567393	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+4808	5514	7703497506570209	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+23	4671	7703498725407735	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+4695	5410	7703498772264435	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+233	5108	7703499748761813	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+5132	6559	7703499796514085	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+90	5056	7703505407154052	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+5075	5980	7703505457537582	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+108	5403	7703505613015910	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+5426	6059	7703505666127272	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762
+140	5319	7703506622479641	CMakeFiles/SimpleTextBufferTest.dir/SimpleTextBufferTest.cpp.obj	1ff13ef84bb83768
+5337	6164	7703506674385676	bin/SimpleTextBufferTest.exe	7b3cce8e567d8762

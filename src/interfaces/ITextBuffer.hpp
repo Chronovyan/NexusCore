@@ -239,9 +239,9 @@ public:
     /**
      * @brief Clear the buffer
      * 
-     * @param keepEmptyLine Whether to keep an empty line
+     * @param keepEmptyLine Whether to keep an empty line (default: false)
      */
-    virtual void clear(bool keepEmptyLine) = 0;
+    virtual void clear(bool keepEmptyLine = false) = 0;
     
     // String manipulation
     /**
@@ -262,4 +262,62 @@ public:
      * @return The line segment
      */
     virtual std::string getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const = 0;
+
+    /**
+     * @brief Get the number of lines in the buffer
+     *
+     * @return The number of lines
+     */
+    virtual size_t getLineCount() const = 0;
+
+    /**
+     * @brief Get all lines in the buffer
+     *
+     * @return A vector of all lines
+     */
+    virtual std::vector<std::string> getLines() const = 0;
+
+    /**
+     * @brief Replace a range of text in the buffer
+     *
+     * @param startLine The starting line index
+     * @param startCol The starting column index
+     * @param endLine The ending line index
+     * @param endCol The ending column index
+     * @param text The new text to replace with
+     */
+    virtual void replaceText(size_t startLine, size_t startCol, size_t endLine, size_t endCol, const std::string& text) = 0;
+
+    /**
+     * @brief Insert text at a specific position
+     *
+     * @param line The line index to insert at
+     * @param col The column index to insert at
+     * @param text The text to insert
+     */
+    virtual void insertText(size_t line, size_t col, const std::string& text) = 0;
+
+    /**
+     * @brief Delete a range of text from the buffer
+     *
+     * @param startLine The starting line index
+     * @param startCol The starting column index
+     * @param endLine The ending line index
+     * @param endCol The ending column index
+     */
+    virtual void deleteText(size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+
+    /**
+     * @brief Check if the buffer has been modified
+     *
+     * @return True if the buffer has been modified
+     */
+    virtual bool isModified() const = 0;
+
+    /**
+     * @brief Set the modified state of the buffer
+     *
+     * @param modified The new modified state
+     */
+    virtual void setModified(bool modified) = 0;
 }; 

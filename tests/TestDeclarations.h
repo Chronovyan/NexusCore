@@ -26,4 +26,24 @@ TestResult testDeleteWord();
 TestResult testExitCommands();
 TestResult testExitWithUnsavedChanges();
 
+// Simple DI tests (SimpleDITest.cpp)
+TestResult testSimpleDI_GetInterface();
+TestResult testSimpleDI_ResolveInterface();
+TestResult testSimpleDI_DependencyChain();
+TestResult testSimpleDI_MixedRegistrationStyles();
+TestResult testSimpleDI_ErrorHandlingUnregisteredTypes();
+
+// Standalone DI tests (StandaloneDITest.cpp)
+TestResult testStandaloneDI_BasicResolution();
+TestResult testStandaloneDI_ModernInterface();
+TestResult testStandaloneDI_LegacyInterface();
+TestResult testStandaloneDI_MixedStyles();
+
+// Lifetime Manager tests (LifetimeManagerTest.cpp)
+TestResult testLifetimeManager_SingletonLifetime();
+TestResult testLifetimeManager_TransientLifetime();
+TestResult testLifetimeManager_ScopedLifetime();
+TestResult testLifetimeManager_ThreadSafety();
+TestResult testLifetimeManager_LifetimeInjector();
+
 #endif // TEST_DECLARATIONS_H 

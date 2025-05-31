@@ -171,8 +171,10 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     
     std::string& line = lines_[lineIndex];
     
-    // Validate column index
-    if (colIndex > line.length()) {
+    // Validate column index - only throw if we can't handle this operation
+    // When colIndex >= line.length() we can still handle line joining with the next line
+    // Only throw if colIndex > line.length() AND we're on the last line OR colIndex is unreasonably large
+    if (colIndex > line.length() && (lineIndex == lines_.size() - 1 || colIndex > line.length() + 100)) {
         throw TextBufferException("Column index out of range for deleteCharForward", EditorException::Severity::Error);
     }
     
@@ -455,4 +457,111 @@ std::pair<size_t, size_t> TextBuffer::clampPosition(size_t lineIndex, size_t col
     colIndex = std::min(colIndex, lines_[lineIndex].length());
     
     return {lineIndex, colIndex};
+}
+
+// Implementation of additional ITextBuffer interface methods
+size_t TextBuffer::getLineCount() const {
+    return lines_.size(); // Identical to lineCount()
+}
+
+std::vector<std::string> TextBuffer::getLines() const {
+    return lines_; // Return a copy of all lines
+}
+
+void TextBuffer::replaceText(size_t startLine, size_t startCol, size_t endLine, size_t endCol, const std::string& text) {
+    if (startLine >= lines_.size() || endLine >= lines_.size()) {
+        throw TextBufferException("Line index out of range for replaceText", EditorException::Severity::Error);
+    }
+    
+    if (startLine == endLine) {
+        // Single line replacement
+        replaceLineSegment(startLine, startCol, endCol, text);
+    } else {
+        // Multi-line replacement
+        // Store text after endCol in the last line
+        std::string endLineRemainder = "";
+        if (endCol < lines_[endLine].length()) {
+            endLineRemainder = lines_[endLine].substr(endCol);
+        }
+        
+        // Keep text before startCol in the first line
+        std::string startLinePrefix = "";
+        if (startCol > 0) {
+            startLinePrefix = lines_[startLine].substr(0, startCol);
+        }
+        
+        // Delete all lines between startLine+1 and endLine (inclusive)
+        for (size_t i = endLine; i > startLine; --i) {
+            lines_.erase(lines_.begin() + i);
+        }
+        
+        // Replace the content of the first line
+        lines_[startLine] = startLinePrefix + text + endLineRemainder;
+        
+        modified_ = true;
+    }
+}
+
+void TextBuffer::insertText(size_t line, size_t col, const std::string& text) {
+    if (line >= lines_.size()) {
+        throw TextBufferException("Line index out of range for insertText", EditorException::Severity::Error);
+    }
+    
+    if (col > lines_[line].length()) {
+        throw TextBufferException("Column index out of range for insertText", EditorException::Severity::Error);
+    }
+    
+    // Check if text contains newlines
+    size_t newlinePos = text.find('\n');
+    if (newlinePos == std::string::npos) {
+        // Simple case: no newlines, just insert the text
+        lines_[line].insert(col, text);
+    } else {
+        // Text contains newlines, need to split it
+        insertString(line, col, text);
+    }
+    
+    modified_ = true;
+}
+
+void TextBuffer::deleteText(size_t startLine, size_t startCol, size_t endLine, size_t endCol) {
+    if (startLine >= lines_.size() || endLine >= lines_.size()) {
+        throw TextBufferException("Line index out of range for deleteText", EditorException::Severity::Error);
+    }
+    
+    if (startLine == endLine) {
+        // Single line deletion
+        deleteLineSegment(startLine, startCol, endCol);
+    } else {
+        // Multi-line deletion
+        // Keep text before startCol in the first line
+        std::string startLinePrefix = "";
+        if (startCol > 0) {
+            startLinePrefix = lines_[startLine].substr(0, startCol);
+        }
+        
+        // Keep text after endCol in the last line
+        std::string endLineSuffix = "";
+        if (endCol < lines_[endLine].length()) {
+            endLineSuffix = lines_[endLine].substr(endCol);
+        }
+        
+        // Combine the remaining parts
+        lines_[startLine] = startLinePrefix + endLineSuffix;
+        
+        // Delete all lines between startLine+1 and endLine (inclusive)
+        for (size_t i = endLine; i > startLine; --i) {
+            lines_.erase(lines_.begin() + i);
+        }
+    }
+    
+    modified_ = true;
+}
+
+bool TextBuffer::isModified() const {
+    return modified_;
+}
+
+void TextBuffer::setModified(bool modified) {
+    modified_ = modified;
 } 

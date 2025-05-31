@@ -229,7 +229,7 @@ TEST_F(EditorFacadeTest, SaveFile) {
     tempFiles_.push_back(tempFilename);
     
     // Test saving to the file
-    ASSERT_TRUE(editor.saveFile(tempFilename));
+    ASSERT_TRUE(editor.saveFileAs(tempFilename));
     
     // Verify file was saved correctly by reading it back
     std::ifstream file(tempFilename);

@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.14) # Increased for FetchContent and modern CMake practices
 project(TextEditor VERSION 1.0 LANGUAGES CXX)
 
+# Enable ccache if available for faster builds
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Prefer not to use compiler-specific extensions
@@ -102,6 +110,11 @@ set(EDITOR_LIB_SOURCES
 
 add_library(EditorLib STATIC ${EDITOR_LIB_SOURCES})
 
+# Add precompiled header support
+target_precompile_headers(EditorLib PRIVATE
+  "src/TextEditorPCH.h"
+)
+
 # Public include directory for EditorLib, so targets linking against it can find headers.
 # This also applies to the library itself for its own internal includes.
 target_include_directories(EditorLib PUBLIC src)
@@ -168,6 +181,16 @@ target_link_libraries(DIFrameworkTest PRIVATE
     GTest::gtest_main
 )
 
+# --- DI Test Executable ---
+add_executable(di_test
+    src/di/di_test.cpp
+)
+target_link_libraries(di_test PRIVATE 
+    EditorLib
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
 # Link against pthreads if on a POSIX system
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
@@ -177,28 +200,44 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(EditorLib PUBLIC Threads::Threads) # Changed to PUBLIC if headers expose it
 endif()
 
-# --- GoogleTest Integration ---
-set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
-set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
-# Depending on GTest version, these might also be useful:
-set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
-set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
-
-# Force GoogleTest to use the same runtime library as the rest of the project
-set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib")
-
-add_subdirectory(${GTEST_DIR})
-
-# --- Testing ---
-enable_testing()
-# The add_subdirectory(tests) command will now find and process tests/CMakeLists.txt
-# which should define its own targets (e.g., runTests) and link them against GTest::gtest etc.
-add_subdirectory(tests) 
-
 # Optional: Print a message
 message(STATUS "Configured TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework.")
 
+# Enable unity builds for faster compilation
+set(CMAKE_UNITY_BUILD ON)
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 10) # Adjust based on your project size
+
+# Option to build tests (OFF by default for faster builds)
+option(BUILD_TESTS "Build the tests" OFF)
+
 # Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
 set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
-# Add the DI Framework test to the test suite
-add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest) 
+
+# Only build tests if the option is enabled
+if(BUILD_TESTS)
+  # --- GoogleTest Integration ---
+  set(GTEST_HAS_現地化 OFF CACHE INTERNAL "Disable gtest localization")
+  set(INSTALL_GTEST OFF CACHE INTERNAL "Disable installing gtest")
+  # Depending on GTest version, these might also be useful:
+  set(BUILD_GMOCK ON CACHE INTERNAL "Ensure GMock is built") # Explicitly ensure gmock is built
+  set(BUILD_GTEST ON CACHE INTERNAL "Ensure GTest is built") # Explicitly ensure gtest is built
+
+  # Force GoogleTest to use the same runtime library as the rest of the project
+  set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib")
+
+  add_subdirectory(${GTEST_DIR})
+  
+  # --- Testing ---
+  enable_testing()
+  # The add_subdirectory(tests) command will now find and process tests/CMakeLists.txt
+  # which should define its own targets (e.g., runTests) and link them against GTest::gtest etc.
+  add_subdirectory(tests) 
+  
+  # Add the DI Framework test to the test suite
+  add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest)
+endif()
+
+# The standalone DI test project is included conditionally
+if(NOT TARGET di)
+  add_subdirectory(src/di)
+endif() 

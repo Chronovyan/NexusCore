@@ -30,6 +30,10 @@ target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTe
 add_executable(DependencyInjectionTest DependencyInjectionTest.cpp)
 target_link_libraries(DependencyInjectionTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
+# Simple DI Test for our new implementation
+add_executable(SimpleDITest SimpleDITest.cpp)
+target_link_libraries(SimpleDITest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+
 # OpenAI API endpoints test
 add_executable(OpenAIApiEndpointsTest 
   OpenAIApiEndpointsTest.cpp
@@ -226,6 +230,38 @@ target_link_libraries(EditorDependencyInjectionTest PRIVATE
     GTest::gmock
 )
 
+# Standalone DI Test that doesn't depend on EditorLib
+add_executable(StandaloneDITest 
+  StandaloneDITest.cpp
+  ${CMAKE_SOURCE_DIR}/src/di/Injector.cpp
+  ${CMAKE_SOURCE_DIR}/src/di/CoreModule.cpp
+)
+target_include_directories(StandaloneDITest PRIVATE 
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_SOURCE_DIR}/src/di
+)
+target_link_libraries(StandaloneDITest PRIVATE 
+  GTest::gtest 
+  GTest::gtest_main
+)
+
+# LifetimeManager Test that doesn't depend on EditorLib
+add_executable(LifetimeManagerTest 
+  LifetimeManagerTest.cpp
+)
+target_include_directories(LifetimeManagerTest PRIVATE 
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_SOURCE_DIR}/src/di
+)
+target_link_libraries(LifetimeManagerTest PRIVATE 
+  di
+  GTest::gtest 
+  GTest::gtest_main
+)
+
+# Add test to CTest
+add_test(NAME LifetimeManagerTest COMMAND LifetimeManagerTest)
+
 # Main test executor with all tests
 add_executable(RunAllTests
     RunAllTests.cpp
@@ -262,6 +298,7 @@ add_executable(RunAllTests
     OpenAIApiExtendedMockTests.cpp
     ErrorReporterTest.cpp
     DependencyInjectionTest.cpp
+    SimpleDITest.cpp
     AutomatedUndoRedoTest.cpp
     AutomatedSearchTest.cpp
     AutomatedSyntaxHighlightingTest.cpp
@@ -277,6 +314,8 @@ add_executable(RunAllTests
     ${CMAKE_SOURCE_DIR}/src/AIAgentOrchestrator.h
     ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp
     ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.h
+    StandaloneDITest.cpp
+    LifetimeManagerTest.cpp
 )
 
 # Define the RUN_ALL_TESTS_INCLUDE macro for the RunAllTests target to avoid duplicate main functions
@@ -310,5 +349,8 @@ gtest_discover_tests(AutomatedSearchTest)
 gtest_discover_tests(AutomatedSyntaxHighlightingTest)
 gtest_discover_tests(AutomatedConcurrencyTest)
 gtest_discover_tests(EditorDependencyInjectionTest)
+gtest_discover_tests(SimpleDITest)
+gtest_discover_tests(StandaloneDITest)
+gtest_discover_tests(LifetimeManagerTest)
 
 message(STATUS "Configured test executables for TextEditor") 
