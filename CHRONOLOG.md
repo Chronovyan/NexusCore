@@ -134,3 +134,18 @@ Based on previous mending sessions, these paradoxes require our attention:
   - **Test-Specific Artifacts:** `tests/CMakeLists.txt.temp`, `tests/CMakeLists.txt.bak`, `tests/LifetimeManagerTest.temp.cpp`
 
 *"The Temporal Tapestry is stronger now, with all known dissonances mended. The code flows cleanly, free from the echoes of past iterations that once caused confusion. The fundamental commands have been repaired, and redundant files have been purified from the timeline. Our editor stands renewed, ready for the next phase of evolution."* 
+
+### 5. Dependency Injection Framework Stabilization - RESOLVED
+- **Symptoms:** Test hangs, deadlocks, and crashes in the DI Framework when resolving singleton services
+- **Affected timeline:** `src/di/LifetimeManager.hpp`, `src/di/Injector.hpp`, `src/di/DIFramework.hpp`
+- **Mending approach:** Enhanced thread safety, implemented specialized void pointer handling, and improved error handling
+- **Resolution details:** 
+  - Added proper mutex handling in `getSingletonInstance` and `getScopedInstance` to prevent deadlocks
+  - Implemented specialized `getInstance<void>` method for proper void pointer handling
+  - Fixed the `resolve` method in `DIFramework` to use local references and avoid recursive calls
+  - Added robust error handling and detailed logging throughout the codebase
+  - Created improved service registration methods with explicit return types
+  - Added safety checks to prevent circular dependencies
+  - Enhanced thread safety with proper mutex acquisition and release patterns
+
+*"The Dependency Injection Framework now stands as a stable foundation for our architecture, free from the temporal anomalies that once caused deadlocks and instability. The improved error handling and thread safety measures ensure reliable service resolution and proper lifetime management across all service types. With this critical component stabilized, we can now proceed to the next phase of architectural refinement with confidence."* 

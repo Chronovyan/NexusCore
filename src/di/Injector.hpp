@@ -175,6 +175,7 @@ public:
         auto factoryIt = factories_.find(type);
         if (factoryIt == factories_.end()) {
             std::cerr << "No factory registered for type index: " << type.name() << std::endl;
+            // Log registered types for debugging
             std::cerr << "Registered types: ";
             for (const auto& factory : factories_) {
                 std::cerr << factory.first.name() << ", ";
@@ -183,7 +184,16 @@ public:
             throw std::runtime_error("No factory registered for type index");
         }
         
-        auto instance = factoryIt->second();
+        // Create a local copy of the factory function to prevent potential issues
+        // with modifications during execution
+        auto factoryFunc = factoryIt->second;
+        if (!factoryFunc) {
+            std::cerr << "Factory function is null for type: " << type.name() << std::endl;
+            throw std::runtime_error("Factory function is null");
+        }
+        
+        // Execute the factory function
+        auto instance = factoryFunc();
         if (!instance) {
             std::cerr << "Failed to create instance from factory for type: " << type.name() << std::endl;
             throw std::runtime_error("Failed to create instance from factory");
