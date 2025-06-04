@@ -21,7 +21,7 @@ void TextBufferOperation::execute(TextBuffer& buffer) {
             markCompleted();
         }
     }
-    catch (const std::exception& e) {
+    catch (const std::exception&) {
         // Set the promise as an exception
         promise_.set_exception(std::current_exception());
         completed_ = true;

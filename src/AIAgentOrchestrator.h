@@ -1,13 +1,15 @@
-#ifndef AI_AGENT_ORCHESTRATOR_H
-#define AI_AGENT_ORCHESTRATOR_H
+#pragma once
 
 #include "UIModel.h"
-#include "IOpenAI_API_Client.h"
+#include "AIManager.h"
 #include "WorkspaceManager.h"
 #include <vector>
 #include <string>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include "interfaces/IAIProvider.hpp"
+#include "CodeContextProvider.hpp"
+#include <functional>
 
 namespace ai_editor {
 
@@ -15,40 +17,37 @@ namespace ai_editor {
  * @class AIAgentOrchestrator
  * @brief Orchestrates AI interactions for code generation and project management
  * 
- * This class bridges the UI and OpenAI API, managing the conversation workflow,
+ * This class bridges the UI and AI providers, managing the conversation workflow,
  * handling tool calls, and coordinating the AI's responses with user input.
  */
 class AIAgentOrchestrator {
 public:
     /**
-     * @enum OrchestratorState
+     * @enum State
      * @brief Represents the current state of the orchestrator in the conversation workflow
      */
-    enum class OrchestratorState {
+    enum class State {
         IDLE,
-        AWAITING_AI_PLAN,
-        PLAN_RECEIVED_AWAITING_PARSE,
-        AWAITING_USER_FEEDBACK_ON_PLAN,
-        AWAITING_USER_CLARIFICATION_BEFORE_PLAN,
-        AWAITING_USER_CLARIFICATION,
-        AWAITING_AI_ABSTRACT_PREVIEW,
-        AWAITING_USER_APPROVAL_OF_PREVIEW,
-        GENERATING_CODE_FILES,
-        AWAITING_AI_COMPILE_COMMANDS,
-        COMPILATION_IN_PROGRESS,
-        TESTING_IN_PROGRESS,
-        EXECUTION_IN_PROGRESS,
-        ERROR_STATE
+        AWAITING_AI_RESPONSE,
+        AWAITING_APPROVAL,
+        EXECUTING_TASK,
+        AI_ERROR
     };
 
     /**
      * @brief Constructor
      * 
-     * @param apiClient Reference to an IOpenAI_API_Client interface
+     * @param aiManager Reference to an AIManager for accessing AI providers
      * @param uiModel Reference to the UI model for updates
      * @param workspaceManager Reference to the workspace manager for file operations
+     * @param codeContextProvider The code context provider (optional)
      */
-    AIAgentOrchestrator(IOpenAI_API_Client& apiClient, UIModel& uiModel, WorkspaceManager& workspaceManager);
+    AIAgentOrchestrator(AIManager& aiManager, UIModel& uiModel, WorkspaceManager& workspaceManager, std::shared_ptr<CodeContextProvider> codeContextProvider = nullptr);
+
+    /**
+     * @brief Destructor
+     */
+    ~AIAgentOrchestrator();
 
     /**
      * @brief Handle a user prompt submission
@@ -60,133 +59,150 @@ public:
     void handleSubmitUserPrompt(const std::string& userInput);
     
     /**
-     * @brief Handle user feedback on the AI's plan or clarification questions
+     * @brief Handle user feedback on the AI's proposal
      * 
-     * Takes the user's feedback, updates the UI model, and requests an abstract preview from the AI
+     * Takes the user's feedback, updates the UI model, and sends it to the AI
      * 
-     * @param userFeedbackText The feedback text entered by the user
+     * @param userFeedback The feedback text entered by the user
      */
-    void handleSubmitUserFeedback(const std::string& userFeedbackText);
+    void handleUserFeedback(const std::string& userFeedback);
     
     /**
-     * @brief Handle user approval of the AI's abstract preview
+     * @brief Handle user feedback during task execution
      * 
-     * Takes the user's approval message, updates the UI model, and triggers the generation of the first file
+     * Takes the user's feedback during execution, updates the UI model, and sends it to the AI
      * 
-     * @param userApprovalText The approval message entered by the user
+     * @param userFeedback The feedback text entered by the user
      */
-    void handleSubmitUserApprovalOfPreview(const std::string& userApprovalText);
+    void handleUserFeedbackDuringExecution(const std::string& userFeedback);
     
     /**
      * @brief Get the current state of the orchestrator
      * 
-     * @return OrchestratorState The current state
+     * @return State The current state
      */
-    OrchestratorState getCurrentState() const { return orchestratorState_; }
-
+    State getState() const { return state_; }
+    
     /**
-     * @brief [TEST ONLY] Set the orchestrator state directly
+     * @brief Get the current AI provider type
      * 
-     * This method is intended to be used only by tests to initialize the orchestrator
-     * to a specific state without going through the entire conversation workflow.
-     * 
-     * @param state The state to set
+     * @return std::string The current AI provider type
      */
-    void test_setOrchestratorState(OrchestratorState state) { orchestratorState_ = state; }
-
+    std::string getCurrentProviderType() const;
+    
     /**
-     * @brief [TEST ONLY] Set the last plan JSON directly
+     * @brief Set the active AI provider
      * 
-     * This method is intended to be used only by tests to initialize the orchestrator
-     * with a specific plan without going through the conversation workflow.
-     * 
-     * @param planJson The plan JSON to set
+     * @param providerType The type of provider to set as active
+     * @return bool True if the provider was set as active
      */
-    void test_setLastPlanJson(const nlohmann::json& planJson) { lastPlanJson_ = planJson; }
-
+    bool setActiveProvider(const std::string& providerType);
+    
     /**
-     * @brief [TEST ONLY] Set the next planned file to generate
+     * @brief Get the current model info
      * 
-     * This method is intended to be used only by tests to initialize the orchestrator
-     * with a specific next file without going through the conversation workflow.
-     * 
-     * @param filename The filename to set
+     * @return ModelInfo Information about the current model
      */
-    void test_setNextPlannedFile(const std::string& filename) { nextPlannedFileToGenerate_ = filename; }
-
+    ModelInfo getCurrentModelInfo() const;
+    
     /**
-     * @brief [TEST ONLY] Add a file to the list of generated files
+     * @brief Set the current model
      * 
-     * This method is intended to be used only by tests to mark files as already generated.
-     * 
-     * @param filename The filename to add to the generated files list
+     * @param modelId The ID of the model to use
+     * @return bool True if successful
      */
-    void test_addGeneratedFile(const std::string& filename) { generatedFiles_.push_back(filename); }
+    bool setCurrentModel(const std::string& modelId);
 
     /**
      * @brief Reset the orchestrator state to IDLE
      * 
-     * This method allows recovery from ERROR_STATE by resetting the orchestrator to its
+     * This method allows recovery from ERROR state by resetting the orchestrator to its
      * initial state, clearing conversation history and other session data, and updating
      * the UI model to reflect the reset state.
      */
-    void resetOrchestratorState();
+    void resetState();
 
     /**
-     * @brief Request the generation of the next file from the AI
+     * @brief Configure and activate the local LLama provider
      * 
-     * @param previousToolCallId The ID of the previous tool call
-     * @param previousToolName The name of the previous tool call
-     * @param successResult Whether the previous file was generated successfully
-     * @param filename The name of the file that was generated or attempted
-     * @param errorMessage Error message if the file generation failed
+     * This method initializes the LLama provider with the specified model path,
+     * sets it as the active provider, and clears the conversation history.
+     * 
+     * @param modelPath Path to the model file or directory containing model files
+     * @return true if configuration was successful, false otherwise
      */
-    void requestNextFileOrCompilation(const std::string& previousToolCallId, const std::string& previousToolName, 
-                                      bool successResult, const std::string& filename, 
-                                      const std::string& errorMessage = "");
+    bool configureLocalLlamaProvider(const std::string& modelPath);
 
     /**
-     * @brief Process a write_file_content tool call from the AI
+     * @brief Set the code context provider
      * 
-     * @param toolCall The write_file_content tool call
-     * @return bool True if the tool call was processed successfully
+     * @param contextProvider The code context provider
      */
-    bool processWriteFileContentToolCall(const ApiToolCall& toolCall);
+    void setCodeContextProvider(std::shared_ptr<CodeContextProvider> contextProvider);
+    
+    /**
+     * @brief Enable or disable context-aware prompts
+     * 
+     * @param enabled Whether to enable context-aware prompts
+     */
+    void setContextAwarePromptsEnabled(bool enabled) {
+        contextAwarePromptsEnabled_ = enabled;
+    }
+    
+    /**
+     * @brief Check if context-aware prompts are enabled
+     * 
+     * @return bool Whether context-aware prompts are enabled
+     */
+    bool areContextAwarePromptsEnabled() const {
+        return contextAwarePromptsEnabled_ && codeContextProvider_ != nullptr;
+    }
+    
+    /**
+     * @brief Update the current editing context
+     * 
+     * @param filePath The current file path
+     * @param line The current line number
+     * @param column The current column number
+     * @param selectedText The currently selected text
+     * @param visibleFiles List of currently visible files
+     */
+    void updateEditingContext(
+        const std::string& filePath,
+        size_t line,
+        size_t column,
+        const std::string& selectedText = "",
+        const std::vector<std::string>& visibleFiles = {});
+
+    // Context management
+    void enableContextAwarePrompts(bool enable);
+    void updateEditingContext(const std::string& filePath, int line, int column, 
+                             const std::string& selectedText, 
+                             const std::vector<std::string>& visibleFiles);
+    
+    // Enhanced context options
+    void setContextOptions(const ContextOptions& options);
+    ContextOptions getContextOptions() const;
+    void setMaxTokens(int maxTokens);
+    void setMinRelevanceScore(float minScore);
+    void setMaxRelatedSymbols(int maxSymbols);
+    void setMaxRelatedFiles(int maxFiles);
+    void setMaxCodeSnippets(int maxSnippets);
+    void setScopeDepth(int depth);
+    void setIncludeDefinitions(bool include);
+    void setIncludeReferences(bool include);
+    void setIncludeRelationships(bool include);
+    
+    // Custom relevance scorers
+    void registerSymbolRelevanceScorer(const std::string& name, ai_editor::SymbolRelevanceScorer scorer);
+    void registerFileRelevanceScorer(const std::string& name, ai_editor::FileRelevanceScorer scorer);
+    
+    // AI provider management
+    void setAIProvider(std::shared_ptr<IAIProvider> aiProvider);
 
 private:
-    /**
-     * @brief Process a propose_plan tool call from the AI
-     * 
-     * @param toolCall The propose_plan tool call
-     * @return bool True if the tool call was processed successfully
-     */
-    bool processProposePlanToolCall(const ApiToolCall& toolCall);
-    
-    /**
-     * @brief Process an ask_user_for_clarification tool call from the AI
-     * 
-     * @param toolCall The ask_user_for_clarification tool call
-     * @return bool True if the tool call was processed successfully
-     */
-    bool processAskForClarificationToolCall(const ApiToolCall& toolCall);
-
-    /**
-     * @brief Process a provide_abstract_preview tool call from the AI
-     * 
-     * @param toolCall The provide_abstract_preview tool call
-     * @return bool True if the tool call was processed successfully
-     */
-    bool processProvideAbstractPreviewToolCall(const ApiToolCall& toolCall);
-    
-    /**
-     * @brief Determine the next file to generate based on the plan
-     * 
-     * @return std::string The name of the next file to generate, or empty string if all files are generated
-     */
-    std::string determineNextFileToGenerate() const;
-    
-    // Reference to the OpenAI API client interface
-    IOpenAI_API_Client& apiClient_;
+    // Reference to the AIManager for accessing AI providers
+    AIManager& aiManager_;
     
     // Reference to the UI model for updates
     UIModel& uiModel_;
@@ -194,47 +210,36 @@ private:
     // Reference to the workspace manager for file operations
     WorkspaceManager& workspaceManager_;
     
-    // Conversation history for the AI
-    std::vector<ApiChatMessage> conversationHistory_;
-    
     // Current state of the orchestrator
-    OrchestratorState orchestratorState_;
+    State state_ = State::IDLE;
     
-    // Last used tool call ID (for tracking API responses)
-    std::string lastToolCallId_;
+    // Conversation history
+    std::vector<Message> messages_;
     
-    // Last used tool name (for constructing tool responses)
-    std::string lastToolName_;
+    // Process and handle AI responses
+    void processAIResponse(const CompletionResponse& response);
     
-    // Store the last plan JSON for reference
-    nlohmann::json lastPlanJson_;
+    // Process tool calls in AI responses
+    bool processToolCalls(const std::vector<ToolCall>& toolCalls);
+
+    // Generate contextual prompt
+    std::string enrichPromptWithContext(const std::string& userPrompt);
+
+    // Member variables
+    std::shared_ptr<CodeContextProvider> codeContextProvider_;
     
-    // Store the last clarification questions JSON for reference
-    nlohmann::json lastClarificationJson_;
+    // Current editing context
+    std::string currentFilePath_;
+    size_t currentLine_ = 0;
+    size_t currentColumn_ = 0;
+    std::string currentSelectedText_;
+    std::vector<std::string> currentVisibleFiles_;
     
-    // Store the next file to generate after abstract preview approval
-    std::string nextPlannedFileToGenerate_;
+    // Configuration
+    bool contextAwarePromptsEnabled_ = true;
     
-    // List of files that have been generated
-    std::vector<std::string> generatedFiles_;
-    
-    // System message for AI that defines its role and instructions
-    const std::string systemMessage_ = 
-        "You are an AI-powered coding assistant that helps generate C++ projects based on user requests. "
-        "Your task is to guide the user through a step-by-step process of building a functional C++ application. "
-        "Follow these steps when responding to the user:"
-        "\n\n1. PLAN: Understand the user's request and outline the project structure, files needed, and approach."
-        "\n2. CLARIFY: If the requirements are unclear, ask specific questions to refine the plan."
-        "\n3. PREVIEW: Show the user what files will be created and their purpose."
-        "\n4. GENERATE: Create the necessary code files with proper structure and comments."
-        "\n5. COMPILE: Prepare compilation instructions."
-        "\n6. TEST: Suggest ways to test the application."
-        "\n7. EXECUTE: Provide commands to run the application."
-        "\n\nUse the provided tools to accomplish these tasks. DO NOT simulate tool outputs or invent "
-        "file contents that haven't been generated yet. If you're unsure about something, "
-        "use the ask_user_for_clarification tool.";
+    // Context options
+    ContextOptions contextOptions_;
 };
 
-} // namespace ai_editor
-
-#endif // AI_AGENT_ORCHESTRATOR_H 
+} // namespace ai_editor 

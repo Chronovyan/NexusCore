@@ -7,6 +7,9 @@
 #include "../TextBuffer.h"
 #include "../SyntaxHighlighter.h"
 #include "ICommandManager.hpp"
+#include "IDiffEngine.hpp"
+#include "IMergeEngine.hpp"
+#include "IMultiCursor.hpp"
 
 // Forward declarations
 class SyntaxHighlighter;
@@ -411,6 +414,78 @@ public:
      */
     virtual bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true) = 0;
     
+    // Diff and Merge Operations
+    /**
+     * @brief Compare two texts and show differences
+     * 
+     * @param text1 First text to compare
+     * @param text2 Second text to compare
+     * @return True if the diff was successfully created and displayed
+     */
+    virtual bool showDiff(const std::vector<std::string>& text1, const std::vector<std::string>& text2) = 0;
+    
+    /**
+     * @brief Compare the current buffer with another text and show differences
+     * 
+     * @param otherText Text to compare with the current buffer
+     * @return True if the diff was successfully created and displayed
+     */
+    virtual bool diffWithCurrent(const std::vector<std::string>& otherText) = 0;
+    
+    /**
+     * @brief Compare with a file and show differences
+     * 
+     * @param filename Path to the file to compare with
+     * @return True if the diff was successfully created and displayed
+     */
+    virtual bool diffWithFile(const std::string& filename) = 0;
+    
+    /**
+     * @brief Perform a three-way merge
+     * 
+     * @param base Base version (common ancestor)
+     * @param ours Our version
+     * @param theirs Their version
+     * @return True if the merge was successful
+     */
+    virtual bool mergeTexts(
+        const std::vector<std::string>& base,
+        const std::vector<std::string>& ours,
+        const std::vector<std::string>& theirs) = 0;
+    
+    /**
+     * @brief Merge current buffer with another file
+     * 
+     * @param theirFile Path to their file
+     * @param baseFile Path to the base file (common ancestor)
+     * @return True if the merge was successful
+     */
+    virtual bool mergeWithFile(const std::string& theirFile, const std::string& baseFile) = 0;
+    
+    /**
+     * @brief Apply changes from a diff
+     * 
+     * @param changes The diff changes to apply
+     * @param sourceText The source text where the changes come from
+     * @return True if the changes were successfully applied
+     */
+    virtual bool applyDiffChanges(
+        const std::vector<DiffChange>& changes,
+        const std::vector<std::string>& sourceText) = 0;
+    
+    /**
+     * @brief Resolve a merge conflict
+     * 
+     * @param conflictIndex Index of the conflict to resolve
+     * @param resolution Resolution strategy to apply
+     * @param customResolution Custom resolution lines (used if resolution is CUSTOM)
+     * @return True if the conflict was resolved successfully
+     */
+    virtual bool resolveConflict(
+        size_t conflictIndex,
+        MergeConflictResolution resolution,
+        const std::vector<std::string>& customResolution = {}) = 0;
+    
     // Syntax Highlighting
     /**
      * @brief Enable or disable syntax highlighting
@@ -453,4 +528,82 @@ public:
      * @return Vector of syntax highlighting styles
      */
     virtual std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const = 0;
+
+    // Multiple cursor operations
+    /**
+     * @brief Check if multiple cursor mode is enabled
+     * 
+     * @return True if multiple cursor mode is enabled
+     */
+    virtual bool isMultiCursorEnabled() const = 0;
+    
+    /**
+     * @brief Enable or disable multiple cursor mode
+     * 
+     * @param enable True to enable, false to disable
+     */
+    virtual void setMultiCursorEnabled(bool enable) = 0;
+    
+    /**
+     * @brief Get the number of active cursors
+     * 
+     * @return The number of cursors
+     */
+    virtual size_t getCursorCount() const = 0;
+    
+    /**
+     * @brief Add a new cursor at the specified position
+     * 
+     * @param line Line number (0-based)
+     * @param col Column number (0-based)
+     * @return True if the cursor was added successfully
+     */
+    virtual bool addCursor(size_t line, size_t col) = 0;
+    
+    /**
+     * @brief Remove a cursor at the specified position
+     * 
+     * @param line Line number (0-based)
+     * @param col Column number (0-based)
+     * @return True if a cursor was removed
+     */
+    virtual bool removeCursor(size_t line, size_t col) = 0;
+    
+    /**
+     * @brief Remove all secondary cursors
+     */
+    virtual void removeAllSecondaryCursors() = 0;
+    
+    /**
+     * @brief Add cursors at all occurrences of the specified text
+     * 
+     * @param text Text to search for
+     * @param caseSensitive Whether the search should be case-sensitive
+     * @return Number of new cursors added
+     */
+    virtual size_t addCursorsAtAllOccurrences(const std::string& text, bool caseSensitive = true) = 0;
+    
+    /**
+     * @brief Add cursors at the same column position on multiple lines
+     * 
+     * @param startLine Start line for column selection
+     * @param endLine End line for column selection
+     * @param column Column position for all cursors
+     * @return Number of new cursors added
+     */
+    virtual size_t addCursorsAtColumn(size_t startLine, size_t endLine, size_t column) = 0;
+    
+    /**
+     * @brief Get the multi-cursor manager
+     * 
+     * @return Reference to the multi-cursor manager
+     */
+    virtual IMultiCursor& getMultiCursor() = 0;
+    
+    /**
+     * @brief Get the multi-cursor manager (const version)
+     * 
+     * @return Const reference to the multi-cursor manager
+     */
+    virtual const IMultiCursor& getMultiCursor() const = 0;
 }; 

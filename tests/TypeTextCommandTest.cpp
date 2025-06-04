@@ -23,7 +23,7 @@ protected:
 TEST_F(TypeTextCommandTest, Execute) {
     // Setup
     Editor editor;
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.clear(true);
     buffer.replaceLine(0, "Hello World");
     editor.setCursor(0, 5);
@@ -45,7 +45,7 @@ TEST_F(TypeTextCommandTest, Execute) {
 TEST_F(TypeTextCommandTest, Undo) {
     // Setup
     Editor editor;
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.clear(true);
     buffer.replaceLine(0, "Hello World");
     editor.setCursor(0, 5);
@@ -128,7 +128,7 @@ TEST_F(TypeTextCommandTest, TypeChar) {
 TEST_F(TypeTextCommandTest, ExecuteInsertCharacter) {
     // Setup
     Editor editor;
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.clear(true);
     buffer.replaceLine(0, "Hello World");
     editor.setCursor(0, 5);
@@ -149,7 +149,7 @@ TEST_F(TypeTextCommandTest, ExecuteInsertCharacter) {
 TEST_F(TypeTextCommandTest, UndoInsertCharacter) {
     // Setup
     Editor editor;
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.clear(true);
     buffer.replaceLine(0, "Hello World");
     editor.setCursor(0, 5);

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include "interfaces/IAIProvider.hpp"  // For ModelInfo
 
 namespace ai_editor {
 
@@ -23,7 +24,7 @@ struct ChatMessage {
 
 // Represents a file in the project
 struct ProjectFile {
-    enum class Status { PLANNED, GENERATING, GENERATED, MODIFIED, ERROR };
+    enum class Status { PLANNED, GENERATING, GENERATED, MODIFIED, FILE_ERROR };
     
     std::string filename;
     std::string status;  // e.g., "Modified", "Planned", "New", etc.
@@ -40,10 +41,21 @@ struct ProjectFile {
             case Status::GENERATING: return "Generating...";
             case Status::GENERATED: return "Generated";
             case Status::MODIFIED: return "Modified";
-            case Status::ERROR: return "Error";
+            case Status::FILE_ERROR: return "Error";
             default: return "Unknown";
         }
     }
+};
+
+// Represents a tutorial in the tutorial browser
+struct TutorialListItem {
+    std::string id;
+    std::string title;
+    std::string description;
+    bool isCompleted;
+    int difficulty;
+    std::string estimatedTime;
+    int type;
 };
 
 // The central data model for the UI
@@ -63,11 +75,30 @@ struct UIModel {
     char apiKeyBuffer[1024] = {0};
     bool showApiKeyDialog = false; // Flag to control API key dialog visibility
     
+    // Model selection
+    std::string currentProviderType;
+    std::string currentModelId;
+    std::vector<ModelInfo> availableModels;
+    bool showModelSelectionDialog = false; // Flag to control model selection dialog visibility
+    int selectedModelIndex = -1; // Selected index in the model list
+    int selectedProviderIndex = -1; // Selected index in the provider list
+    
     // Buffer for user input text (for ImGui)
     char userInputBuffer[4096] = {0};
     
     // Flag to indicate if AI is currently processing
     bool aiIsProcessing = false;
+    
+    // Tutorial-related fields
+    bool isTutorialVisible = false; // Flag to control tutorial UI visibility
+    bool isTutorialBrowserVisible = false; // Flag to control tutorial browser visibility
+    std::string tutorialTitle; // Title of the current tutorial
+    std::string tutorialDescription; // Description of the current tutorial
+    std::string tutorialStepTitle; // Title of the current tutorial step
+    std::string tutorialStepDescription; // Description of the current tutorial step
+    std::string tutorialProgress; // Progress text (e.g., "Step 2 of 5")
+    std::vector<TutorialListItem> tutorialsList; // List of available tutorials
+    char tutorialSearchBuffer[256] = {0}; // Buffer for tutorial search text
     
     // Constructor with default initialization
     UIModel() : currentGlobalStatus("Idle") {
@@ -135,6 +166,61 @@ struct UIModel {
         AddSystemMessage("Invalid API key format. Please check your key and try again.");
         apiKeyValid = false;
         return false;
+    }
+    
+    // Update available models from AIManager
+    void UpdateAvailableModels(const std::vector<ModelInfo>& models) {
+        availableModels = models;
+    }
+    
+    // Set current model
+    void SetCurrentModel(const std::string& providerType, const std::string& modelId) {
+        currentProviderType = providerType;
+        currentModelId = modelId;
+        AddSystemMessage("Model changed to: " + modelId + " (Provider: " + providerType + ")");
+    }
+    
+    // Get a display name for the current model
+    std::string GetCurrentModelDisplayName() const {
+        if (currentModelId.empty()) {
+            return "No model selected";
+        }
+        
+        // Find the model in availableModels
+        for (const auto& model : availableModels) {
+            if (model.id == currentModelId) {
+                return model.name;
+            }
+        }
+        
+        return currentModelId; // Fallback to ID if name not found
+    }
+    
+    // Show tutorial
+    void ShowTutorial(const std::string& title, const std::string& description,
+                      const std::string& stepTitle, const std::string& stepDescription,
+                      const std::string& progress) {
+        tutorialTitle = title;
+        tutorialDescription = description;
+        tutorialStepTitle = stepTitle;
+        tutorialStepDescription = stepDescription;
+        tutorialProgress = progress;
+        isTutorialVisible = true;
+    }
+    
+    // Hide tutorial
+    void HideTutorial() {
+        isTutorialVisible = false;
+    }
+    
+    // Show tutorial browser
+    void ShowTutorialBrowser() {
+        isTutorialBrowserVisible = true;
+    }
+    
+    // Hide tutorial browser
+    void HideTutorialBrowser() {
+        isTutorialBrowserVisible = false;
     }
 };
 

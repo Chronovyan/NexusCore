@@ -93,7 +93,7 @@ void testSearchAndReplace() {
                     assert(selectedText == "test");
                     
                     // Replace the selected text with "example"
-                    editor.deleteSelectedText();
+                    editor.deleteSelection();
                     editor.typeText("example");
                 }
             }}
@@ -135,7 +135,7 @@ void testReplaceAll() {
     // Add a custom checkpoint to handle replaceAll manually
     auto performReplaceAll = [](TestEditor& editor) {
         // Verify we have two lines with "test"
-        const TextBuffer& buffer = editor.getBuffer();
+        const ITextBuffer& buffer = editor.getBuffer();
         std::cout << "DEBUG: Buffer contents:" << std::endl;
         for (size_t i = 0; i < buffer.lineCount(); i++) {
             std::cout << "  Line " << i << ": " << buffer.getLine(i) << std::endl;
@@ -156,7 +156,7 @@ void testReplaceAll() {
         {4, performReplaceAll}, // After view command, perform replace all
         {4, [](TestEditor& editor) { // Add a view after replace all
             // Verify replacements worked
-            const TextBuffer& buffer = editor.getBuffer();
+            const ITextBuffer& buffer = editor.getBuffer();
             bool foundExample = false;
             
             std::cout << "DEBUG: Buffer after replaceAll:" << std::endl;
@@ -173,7 +173,7 @@ void testReplaceAll() {
         {4, performUndo},
         {4, [](TestEditor& editor) { // Check after undo
             // Verify original text is back
-            const TextBuffer& buffer = editor.getBuffer();
+            const ITextBuffer& buffer = editor.getBuffer();
             bool foundTest = false;
             
             std::cout << "DEBUG: Buffer after undo:" << std::endl;

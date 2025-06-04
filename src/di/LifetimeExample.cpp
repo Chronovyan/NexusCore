@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
-#include <string>\n#include <unordered_map>
+#include <string>
+#include <unordered_map>
 #include "LifetimeManager.hpp"
 #include "CoreModule.hpp"
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <stack>
+#include <string>
 
 class Editor;
 
@@ -96,7 +97,39 @@ public:
         }
     }
     
-private:
+    // Transaction methods (no-op implementations for basic CommandManager)
+    
+    // Begin a new transaction (no-op in base class)
+    bool beginTransaction([[maybe_unused]] const std::string& name = "") override {
+        // Not supported in basic CommandManager
+        return false;
+    }
+    
+    // End the current transaction (no-op in base class)
+    bool endTransaction() override {
+        // Not supported in basic CommandManager
+        return false;
+    }
+    
+    // Cancel the current transaction (no-op in base class)
+    bool cancelTransaction() override {
+        // Not supported in basic CommandManager
+        return false;
+    }
+    
+    // Check if a transaction is active (always false in base class)
+    bool isInTransaction() const override {
+        // Not supported in basic CommandManager
+        return false;
+    }
+    
+    // Get transaction depth (always 0 in base class)
+    size_t getTransactionDepth() const override {
+        // Not supported in basic CommandManager
+        return 0;
+    }
+
+protected:
     std::stack<CommandPtr> undoStack_;
     std::stack<CommandPtr> redoStack_;
 };

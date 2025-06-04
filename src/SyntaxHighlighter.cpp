@@ -1,5 +1,6 @@
 #include "SyntaxHighlighter.h"
 #include "TextBuffer.h"
+#include "interfaces/ITextBuffer.hpp"
 #include <vector> // Required for std::vector
 #include <string> // Required for std::string
 #include <iostream> // For THREAD_DEBUG, remove if not used or defined elsewhere
@@ -38,7 +39,7 @@ static std::string trimTrailingWhitespace(const std::string& str) {
 
 // Implementation of PatternBasedHighlighter::highlightBuffer
 std::vector<std::vector<SyntaxStyle>> PatternBasedHighlighter::highlightBuffer(
-    const TextBuffer& buffer) const {
+    const ITextBuffer& buffer) const {
     
     std::vector<std::vector<SyntaxStyle>> result;
     
@@ -65,7 +66,7 @@ std::vector<std::vector<SyntaxStyle>> PatternBasedHighlighter::highlightBuffer(
                 ErrorReporter::logException(SyntaxHighlightingException(
                     std::string("PatternBasedHighlighter::highlightBuffer line ") + 
                     std::to_string(i) + ": " + ex.what(), 
-                    EditorException::Severity::Error));
+                    EditorException::Severity::EDITOR_ERROR));
                 result.push_back(std::vector<SyntaxStyle>()); // Add empty styles for this line
             } catch (...) {
                 ErrorReporter::logUnknownException(
@@ -79,7 +80,7 @@ std::vector<std::vector<SyntaxStyle>> PatternBasedHighlighter::highlightBuffer(
     } catch (const std::exception& ex) {
         ErrorReporter::logException(SyntaxHighlightingException(
             std::string("PatternBasedHighlighter::highlightBuffer: ") + ex.what(), 
-            EditorException::Severity::Error));
+            EditorException::Severity::EDITOR_ERROR));
     } catch (...) {
         ErrorReporter::logUnknownException("PatternBasedHighlighter::highlightBuffer");
     }
@@ -419,12 +420,12 @@ std::unique_ptr<std::vector<SyntaxStyle>> CppHighlighter::highlightLine(const st
     styles.clear(); 
 
     // Check if this is the first line of a preprocessor directive
-    bool isPreprocessorDirective = false;
+    // bool isPreprocessorDirective = false;  // Remove this line if it's not used or defined elsewhere
     if (!isInMacroContinuation_ && line.length() > 0) {
         // Find the first non-whitespace character
         size_t nonWhitespacePos = line.find_first_not_of(" \t");
         if (nonWhitespacePos != std::string::npos && line[nonWhitespacePos] == '#') {
-            isPreprocessorDirective = true;
+            // isPreprocessorDirective = true;
             // Add style for the preprocessor directive
             size_t directiveEnd = line.find_first_of(" \t", nonWhitespacePos + 1);
             if (directiveEnd == std::string::npos) directiveEnd = line.length();
@@ -618,7 +619,7 @@ std::unique_ptr<std::vector<SyntaxStyle>> CppHighlighter::highlightLine(const st
     return std::make_unique<std::vector<SyntaxStyle>>(mergedStyles);
 }
 
-std::vector<std::vector<SyntaxStyle>> CppHighlighter::highlightBuffer(const TextBuffer& buffer) const {
+std::vector<std::vector<SyntaxStyle>> CppHighlighter::highlightBuffer(const ITextBuffer& buffer) const {
     std::vector<std::vector<SyntaxStyle>> result;
     if (buffer.isEmpty()) {
         return result;

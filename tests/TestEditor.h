@@ -81,7 +81,7 @@ public:
     }
     
     // Access methods for testing selection
-    bool hasSelection() const {
+    bool hasSelection() const override {
         return Editor::hasSelection();
     }
 
@@ -99,68 +99,26 @@ public:
         }
     }
     
-    // Add deleteSelectedText method for AutomatedSearchTest
+    // Maintain compatibility with the tests that used deleteSelectedText
     void deleteSelectedText() {
-        if (!hasSelection_) {
-            return;
-        }
-        
-        try {
-            // Simple implementation to delete the selected text
-            if (selectionStartLine_ == selectionEndLine_) {
-                // Single line selection
-                std::string line = getBuffer().getLine(selectionStartLine_);
-                std::string newLine = line.substr(0, selectionStartCol_) + 
-                                      line.substr(selectionEndCol_);
-                getBuffer().setLine(selectionStartLine_, newLine);
-                
-                // Position cursor at start of deleted text
-                setCursor(selectionStartLine_, selectionStartCol_);
-            } else {
-                // Multi-line selection - more complex case
-                // Start with first line
-                std::string firstLine = getBuffer().getLine(selectionStartLine_);
-                std::string lastLine = getBuffer().getLine(selectionEndLine_);
-                
-                // Create a combined line from parts before and after selection
-                std::string newFirstLine = firstLine.substr(0, selectionStartCol_) + 
-                                          lastLine.substr(selectionEndCol_);
-                
-                // Set the first line to the combined content
-                getBuffer().setLine(selectionStartLine_, newFirstLine);
-                
-                // Delete the lines in between (in reverse to maintain indices)
-                for (size_t i = selectionEndLine_; i > selectionStartLine_; --i) {
-                    getBuffer().deleteLine(i);
-                }
-                
-                // Position cursor at start of deleted text
-                setCursor(selectionStartLine_, selectionStartCol_);
-            }
-            
-            // Clear the selection after deleting
-            clearSelection();
-            setModified(true);
-        } catch (const std::exception&) {
-            // If an exception occurs, simply clear the selection
-            clearSelection();
-        }
+        // Simply delegate to the standard deleteSelection method
+        deleteSelection();
     }
     
     // Access methods for syntax highlighting
-    bool isSyntaxHighlightingEnabled() const {
+    bool isSyntaxHighlightingEnabled() const override {
         return Editor::isSyntaxHighlightingEnabled();
     }
     
-    void setFilename(const std::string& filename) {
+    void setFilename(const std::string& filename) override {
         Editor::setFilename(filename);
     }
     
-    std::string getFilename() const {
+    std::string getFilename() const override {
         return Editor::getFilename();
     }
     
-    std::shared_ptr<SyntaxHighlighter> getCurrentHighlighter() const {
+    std::shared_ptr<SyntaxHighlighter> getCurrentHighlighter() const override {
         return Editor::getCurrentHighlighter();
     }
 

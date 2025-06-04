@@ -17,16 +17,22 @@ enum class LogLevel {
     DEBUG,
     INFO,
     WARNING,
-    ERROR
+    ErrorValue
 };
 
 // Internal implementation for logging
 inline void logImpl(LogLevel level, const char* file, int line, const char* format, ...) {
     // Get current time
     time_t now = time(nullptr);
-    tm* timeinfo = localtime(&now);
+    tm timeinfo;
+    #ifdef _WIN32
+    localtime_s(&timeinfo, &now);
+    #else
+    // Use localtime_r for POSIX systems
+    localtime_r(&now, &timeinfo);
+    #endif
     char timeBuffer[80];
-    strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+    strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
     
     // Convert level to string
     const char* levelStr = "";
@@ -34,7 +40,7 @@ inline void logImpl(LogLevel level, const char* file, int line, const char* form
         case LogLevel::DEBUG:   levelStr = "DEBUG"; break;
         case LogLevel::INFO:    levelStr = "INFO"; break;
         case LogLevel::WARNING: levelStr = "WARNING"; break;
-        case LogLevel::ERROR:   levelStr = "ERROR"; break;
+        case LogLevel::ErrorValue: levelStr = "ERROR"; break;
     }
     
     // Extract filename from path
@@ -72,8 +78,24 @@ inline void logImpl(LogLevel level, const char* file, int line, const std::strin
 }
 
 // Macros for easy logging
-#define LOG_INIT(component) initAppDebugLog(); LOG_INFO("Initializing %s", component)
-#define LOG_DEBUG(format, ...) logImpl(LogLevel::DEBUG, __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define LOG_INFO(format, ...) logImpl(LogLevel::INFO, __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define LOG_WARNING(format, ...) logImpl(LogLevel::WARNING, __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define LOG_ERROR(format, ...) logImpl(LogLevel::ERROR, __FILE__, __LINE__, format, ##__VA_ARGS__)
+#ifndef LOG_INIT
+  #define LOG_INIT(component) initAppDebugLog(); LOG_INFO("Initializing %s", component)
+#endif
+
+// Fix for the broken macros: ensure proper handling of variadic arguments with correct syntax
+// Using double parentheses to ensure proper expansion of the arguments
+#ifndef LOG_DEBUG
+  #define LOG_DEBUG(...) logImpl(LogLevel::DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
+#ifndef LOG_INFO
+  #define LOG_INFO(...) logImpl(LogLevel::INFO, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
+#ifndef LOG_WARNING
+  #define LOG_WARNING(...) logImpl(LogLevel::WARNING, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
+#ifndef LOG_ERROR
+  #define LOG_ERROR(...) logImpl(LogLevel::ErrorValue, __FILE__, __LINE__, __VA_ARGS__)
+#endif

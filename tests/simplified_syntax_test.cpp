@@ -5,20 +5,19 @@
 #include <vector>
 #include "gtest/gtest.h" // Include for Google Test macros
 #include "../src/SyntaxHighlighter.h" // Provides SyntaxColor, SyntaxStyle
-#include "../src/TextBuffer.h"
+#include "../src/interfaces/ITextBuffer.hpp"
 #include "../src/EditorError.h" // Includes SyntaxHighlighter.h
 
-// Simple syntax highlighter interface (could be moved to a shared test utility header if used elsewhere)
+// Interface-based test version with minimal functionality
 class SimplifiedSyntaxHighlighterInterfaceTestVersion : public SyntaxHighlighter {
 public:
     virtual ~SimplifiedSyntaxHighlighterInterfaceTestVersion() = default;
-    // Using SyntaxStyle and SyntaxColor from SyntaxHighlighter.h (from ../src/SyntaxHighlighter.h)
+    
+    // Abstract method - implementing classes must provide this
     virtual std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t lineIndex) const override = 0;
-    // getLanguageName is already in SyntaxHighlighter base class
-    // virtual std::string getLanguageName() const = 0; 
-
+    
     // Provide empty implementations for other pure virtuals from SyntaxHighlighter base if not testing them here
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override {
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer& buffer) const override {
         std::vector<std::vector<SyntaxStyle>> allStyles;
         for (size_t i = 0; i < buffer.lineCount(); ++i) {
             auto lineStyles = highlightLine(buffer.getLine(i), i);
@@ -32,6 +31,10 @@ public:
     }
     std::vector<std::string> getSupportedExtensions() const override {
         return { ".simpl" }; // Example
+    }
+    
+    virtual std::string getLanguageName() const override {
+        return "SimplifiedBase";
     }
 };
 

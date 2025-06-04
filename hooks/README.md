@@ -15,7 +15,7 @@ We offer two versions of pre-commit hooks:
 
 ```bash
 # Copy the hook to the Git hooks directory
-cp hooks/pre-commit .git/hooks/pre-commit
+cp hooks/sh/pre-commit .git/hooks/pre-commit
 # Make it executable
 chmod +x .git/hooks/pre-commit
 ```
@@ -23,10 +23,10 @@ chmod +x .git/hooks/pre-commit
 Or use the installer script:
 ```bash
 # On Linux/macOS
-./hooks/install-hooks.sh
+./hooks/sh/install-hooks.sh
 
 # On Windows (PowerShell)
-powershell -File hooks/install-hooks.ps1
+powershell -File hooks/ps1/install-hooks.ps1
 ```
 
 #### Option 2: Advanced Cross-platform Pre-commit Hook
@@ -35,17 +35,17 @@ Use the dedicated installer scripts:
 
 ```bash
 # On Linux/macOS
-./hooks/install-advanced-hooks.sh
+./hooks/sh/install-advanced-hooks.sh
 
 # On Windows (PowerShell)
-powershell -File hooks/install-advanced-hooks.ps1
+powershell -File hooks/ps1/install-advanced-hooks.ps1
 ```
 
 Alternatively, manual installation:
 ```bash
 # For Windows, Linux, and macOS
 # Step 1: Copy the scripts to the Git hooks directory
-cp hooks/advanced-pre-commit.ps1 hooks/advanced-pre-commit.sh hooks/advanced-pre-commit-wrapper .git/hooks/
+cp hooks/ps1/advanced-pre-commit.ps1 hooks/sh/advanced-pre-commit.sh hooks/sh/advanced-pre-commit-wrapper .git/hooks/
 # Step 2: Make them executable (Linux/macOS)
 chmod +x .git/hooks/advanced-pre-commit.sh .git/hooks/advanced-pre-commit-wrapper
 # Step 3: Set the wrapper as the pre-commit hook

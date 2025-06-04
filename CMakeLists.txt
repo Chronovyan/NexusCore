@@ -83,6 +83,27 @@ target_link_libraries(imgui_lib PUBLIC glfw)
 find_package(OpenGL REQUIRED)
 target_link_libraries(imgui_lib PRIVATE OpenGL::GL)
 
+# Find GLEW package
+find_package(GLEW QUIET)
+if(NOT GLEW_FOUND)
+  message(STATUS "GLEW not found via find_package, looking for it in external directory")
+  # Check if GLEW is in external directory
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include/GL/glew.h")
+    message(STATUS "Using GLEW from external directory")
+    set(GLEW_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include")
+    if(WIN32)
+      set(GLEW_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/Release/x64/glew32.lib")
+    else()
+      set(GLEW_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/libGLEW.a")
+    endif()
+    set(GLEW_FOUND TRUE)
+  else()
+    message(WARNING "GLEW not found. Some targets may fail to build.")
+    set(GLEW_INCLUDE_DIRS "")
+    set(GLEW_LIBRARIES "")
+  endif()
+endif()
+
 # --- Editor Library (EditorLib) ---
 # Source files for the static library (all .cpp from src/ except main.cpp)
 set(EDITOR_LIB_SOURCES
@@ -144,7 +165,32 @@ endif()
 # --- Main Editor Executable (TextEditor) ---
 # Now only includes main.cpp and links against EditorLib
 add_executable(TextEditor src/main.cpp)
-target_link_libraries(TextEditor PRIVATE EditorLib)
+
+# On Windows, set the WIN32_EXECUTABLE property to false to create a console application
+if(WIN32)
+  set_target_properties(TextEditor PROPERTIES
+    WIN32_EXECUTABLE FALSE
+  )
+  
+  # Add post-build command to copy GLEW DLL to the output directory
+  add_custom_command(TARGET TextEditor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/bin/Release/x64/glew32.dll"
+    $<TARGET_FILE_DIR:TextEditor>
+    COMMENT "Copying GLEW DLL to output directory"
+  )
+endif()
+
+target_link_libraries(TextEditor PRIVATE EditorLib imgui_lib glfw OpenGL::GL)
+target_include_directories(TextEditor PRIVATE
+  ${IMGUI_DIR} # For imgui.h
+  ${IMGUI_DIR}/backends # For imgui_impl_glfw.h, imgui_impl_opengl3.h
+  src # To find its own headers
+)
+if(GLEW_FOUND)
+  target_include_directories(TextEditor PRIVATE ${GLEW_INCLUDE_DIRS}) # For GL/glew.h
+  target_link_libraries(TextEditor PRIVATE ${GLEW_LIBRARIES})
+endif()
 
 # --- AI-First TextEditor Executable ---
 add_executable(AITextEditor
@@ -161,6 +207,16 @@ add_executable(AITextEditor
     src/WorkspaceManager.cpp
     src/WorkspaceManager.h
 )
+target_include_directories(AITextEditor PRIVATE
+  ${IMGUI_DIR} # For imgui.h
+  ${IMGUI_DIR}/backends # For imgui_impl_glfw.h, imgui_impl_opengl3.h
+  src # To find its own headers like UIModel.h
+  ${JSON_DIR}/include # For nlohmann/json.hpp
+  ${CPR_DIR}/include # For CPR
+)
+if(GLEW_FOUND)
+  target_include_directories(AITextEditor PRIVATE ${GLEW_INCLUDE_DIRS}) # For GL/glew.h
+endif()
 # Link against imgui_lib instead of compiling ImGui sources directly
 target_link_libraries(AITextEditor PRIVATE 
     EditorLib 
@@ -169,6 +225,9 @@ target_link_libraries(AITextEditor PRIVATE
     nlohmann_json::nlohmann_json
     OpenGL::GL
 )
+if(GLEW_FOUND)
+  target_link_libraries(AITextEditor PRIVATE ${GLEW_LIBRARIES})
+endif()
 
 # --- OpenAI API Client Test Executable ---
 add_executable(OpenAIClientTest
@@ -213,8 +272,24 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(EditorLib PUBLIC Threads::Threads) # Changed to PUBLIC if headers expose it
 endif()
 
-# Optional: Print a message
+# Configure TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework
 message(STATUS "Configured TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework.")
+
+# Set includes for the EditorLib target
+target_include_directories(EditorLib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/json/include
+)
+
+# Set includes for the TextEditor target
+target_include_directories(TextEditor PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glfw/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/json/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include
+)
 
 # Enable unity builds for faster compilation
 set(CMAKE_UNITY_BUILD ON)

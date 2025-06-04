@@ -1829,7 +1829,7 @@ TEST_F(EditorFacadeTest, DirectWordDeletion) {
     setBufferContent("The quick brown fox jumps over the lazy dog.");
     
     // Get direct access to the buffer
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     
     // Get the current line
     std::string line = buffer.getLine(0);

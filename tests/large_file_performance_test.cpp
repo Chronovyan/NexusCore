@@ -168,7 +168,7 @@ TEST_F(LargeFileTest, MeasureFileOpenTime) {
                   << openTimeMs << " ms" << std::endl;
         
         // Verify file was opened successfully by checking line count
-        const TextBuffer& buffer = editor->getBuffer();
+        const ITextBuffer& buffer = editor->getBuffer();
         ASSERT_GT(buffer.lineCount(), 0) << "File doesn't appear to be loaded: " << fileSizeLabel;
         
         // Measure memory usage while file is open
@@ -284,7 +284,7 @@ TEST_F(LargeFileTest, MeasureFileSaveTime) {
         
         // Measure save time
         double saveTimeMs = MeasureExecutionTimeMs([&]() {
-            ASSERT_TRUE(editor->saveFile(savePath)) << "Failed to save " << fileSizeLabel << " test file";
+            ASSERT_TRUE(editor->saveFileAs(savePath)) << "Failed to save " << fileSizeLabel << " test file";
         });
         
         std::cout << "Time to save " << fileSizeLabel << " (" 
@@ -415,14 +415,14 @@ TEST_F(LargeFileTest, VerifyLargeFileContentIntegrity) {
     editor->typeText("\n" + endMarker);
     
     // Save the file
-    ASSERT_TRUE(editor->saveFile(savePath)) << "Failed to save modified file";
+    ASSERT_TRUE(editor->saveFileAs(savePath)) << "Failed to save modified file";
     
     // Close and reopen to verify persistence
     closeCurrentFile();
     ASSERT_TRUE(editor->openFile(savePath)) << "Failed to reopen saved file";
     
     // Verify content at beginning
-    const TextBuffer& buffer = editor->getBuffer();
+    const ITextBuffer& buffer = editor->getBuffer();
     std::string firstLine = buffer.getLine(0);
     ASSERT_EQ(firstLine, beginMarker) << "Beginning content not preserved";
     
@@ -472,7 +472,7 @@ TEST_F(LargeFileTest, MeasureSearchReplacePerformance) {
     // Save file to ensure patterns are stored
     std::string searchTestPath = testOutputDir + "search_test.txt";
     generatedTestFiles.push_back(searchTestPath);
-    ASSERT_TRUE(editor->saveFile(searchTestPath)) << "Failed to save file with search patterns";
+    ASSERT_TRUE(editor->saveFileAs(searchTestPath)) << "Failed to save file with search patterns";
     
     // Simply verify we have 3 patterns in the file
     int searchCount = 0;

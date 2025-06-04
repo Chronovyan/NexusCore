@@ -3,6 +3,7 @@
 #include "di/CoreModule.hpp"
 #include "di/ModuleManager.hpp"
 #include "di/ApplicationModule.hpp"
+#include "di/DiffMergeModule.hpp"
 #include <iostream>
 
 using namespace di;
@@ -85,6 +86,9 @@ void Application::configureContainer() {
     
     // Register the ApplicationModule with normal priority
     moduleManager_.registerModule(ApplicationModule::configure, 50);
+    
+    // Register the DiffMergeModule with normal priority
+    moduleManager_.registerModule(DiffMergeModule::configure, 40);
     
     // Configure all registered modules
     moduleManager_.configureAll(injector_);

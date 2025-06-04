@@ -217,8 +217,8 @@ private:
 class ReplaceSelectionCommand : public Command {
 public:
     ReplaceSelectionCommand(const std::string& newText)
-        : newText_(newText), executed_(false), selStartLine_(0), selStartCol_(0), 
-          selEndLine_(0), selEndCol_(0), cursorAfterDeleteLine_(0), cursorAfterDeleteCol_(0) {}
+        : newText_(newText), originalSelectedText_(""), selStartLine_(0), selStartCol_(0), 
+          selEndLine_(0), selEndCol_(0), cursorAfterDeleteLine_(0), cursorAfterDeleteCol_(0), executed_(false) {}
 
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
@@ -455,7 +455,7 @@ class PasteCommand : public Command {
 public:
     PasteCommand() : pastedTextLength_(0), pastedNumLines_(0), 
                    originalCursorLine_(0), originalCursorCol_(0),
-                   lastNewlinePos_(std::string::npos) {}
+                   lastNewlinePos_(std::string::npos), wasSelectionActive_(false), selStartLine_(0), selStartCol_(0) {}
 
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
@@ -468,14 +468,24 @@ private:
     size_t originalCursorLine_;
     size_t originalCursorCol_;
     size_t lastNewlinePos_; // Position of the last newline in the pasted text
+    bool wasSelectionActive_;
+    size_t selStartLine_;
+    size_t selStartCol_;
 };
 
 // CutCommand - Cuts selected text to clipboard
 class CutCommand : public Command {
 public:
-    CutCommand() : executedSuccessfully_(false), 
-                 originalStartLine_(0), originalStartCol_(0), 
-                 originalEndLine_(0), originalEndCol_(0) {}
+    CutCommand() : 
+                 originalClipboard_(""),
+                 cutText_(""),
+                 originalStartLine_(0), 
+                 originalStartCol_(0), 
+                 originalEndLine_(0), 
+                 originalEndCol_(0),
+                 executedSuccessfully_(false),
+                 textToCut_(""),
+                 wasSelection_(false) {}
 
     void execute(Editor& editor) override;
     void undo(Editor& editor) override;
@@ -604,7 +614,7 @@ private:
             }
             
             return true;
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             return false;
         }
     }
@@ -677,7 +687,7 @@ private:
             }
             
             return true;
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             return false;
         }
     }

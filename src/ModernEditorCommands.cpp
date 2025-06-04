@@ -1,7 +1,10 @@
 #include "EditorCommands.h"
 #include "AppDebugLog.h"
+#include <fstream>
+#include <sstream>
 
-// Implementation for DeleteLineCommand
+// Implementation for DeleteLineCommand - Commented out due to duplicate definition in EditorCommands.cpp
+/*
 void DeleteLineCommand::execute(Editor& editor) {
     if (textBuffer_) {
         // Use the direct interface if available
@@ -26,8 +29,10 @@ void DeleteLineCommand::undo(Editor& editor) {
         wasDeleted_ = false;
     }
 }
+*/
 
-// Implementation for ReplaceLineCommand
+// Implementation for ReplaceLineCommand - Commented out due to duplicate definition in EditorCommands.cpp
+/*
 void ReplaceLineCommand::execute(Editor& editor) {
     if (textBuffer_) {
         // Use the direct interface if available
@@ -52,8 +57,10 @@ void ReplaceLineCommand::undo(Editor& editor) {
         wasExecuted_ = false;
     }
 }
+*/
 
-// Implementation for InsertLineCommand
+// Implementation for InsertLineCommand - Commented out due to duplicate definition in EditorCommands.cpp
+/*
 void InsertLineCommand::execute(Editor& editor) {
     if (textBuffer_) {
         // Use the direct interface if available
@@ -75,6 +82,7 @@ void InsertLineCommand::undo(Editor& editor) {
         wasExecuted_ = false;
     }
 }
+*/
 
 // Implementation for LoadFileCommand
 void LoadFileCommand::execute(Editor& editor) {
@@ -89,8 +97,32 @@ void LoadFileCommand::execute(Editor& editor) {
             originalBufferContent_.push_back(buffer.getLine(i));
         }
         
-        // Load the file - use openFile() from IEditor interface
-        bool success = editor.openFile(filePath_);
+        // Directly load the file contents into buffer
+        bool success = false;
+        
+        // Clear the buffer first
+        while (buffer.lineCount() > 0) {
+            buffer.deleteLine(0);
+        }
+        
+        try {
+            std::ifstream file(filePath_);
+            if (file.is_open()) {
+                std::string line;
+                while (std::getline(file, line)) {
+                    buffer.addLine(line);
+                }
+                
+                // Don't set cursor, filename, or modified state here
+                // Those will be set by Editor::loadFile after this command completes
+                
+                success = true;
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("Error loading file: " + std::string(e.what()));
+            success = false;
+        }
+        
         wasExecuted_ = success;
     }
 }
@@ -105,12 +137,12 @@ void LoadFileCommand::undo(Editor& editor) {
         
         // Clear existing buffer
         while (buffer.lineCount() > 0) {
-            editor.deleteLine(0);
+            buffer.deleteLine(0);
         }
         
         // Restore saved content
         for (const auto& line : originalBufferContent_) {
-            editor.addLine(line);
+            buffer.addLine(line);
         }
         
         wasExecuted_ = false;
@@ -123,17 +155,38 @@ void SaveFileCommand::execute(Editor& editor) {
         // Use the direct interface if available
         execute();
     } else {
-        // Save the file using the appropriate interface method
-        bool success;
-        if (filePath_.empty()) {
-            success = editor.saveFile(); // Use current filename
-        } else {
-            success = editor.saveFileAs(filePath_); // Use specified filename
+        // FIXED: Directly save the file instead of calling back to editor methods
+        // to avoid infinite recursion
+        bool success = false;
+        
+        try {
+            std::ofstream file(filePath_.empty() ? editor.getFilename() : filePath_);
+            if (file.is_open()) {
+                ITextBuffer& buffer = editor.getBuffer();
+                
+                // Write each line to the file
+                for (size_t i = 0; i < buffer.lineCount(); ++i) {
+                    file << buffer.getLine(i);
+                    
+                    // Add newline if it's not the last line or the line doesn't end with newline
+                    if (i < buffer.lineCount() - 1 || 
+                        (buffer.getLine(i).length() > 0 && 
+                         buffer.getLine(i).back() != '\n')) {
+                        file << std::endl;
+                    }
+                }
+                
+                success = true;
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("Error saving file: " + std::string(e.what()));
+            success = false;
         }
+        
         wasExecuted_ = success;
     }
 }
 
-void SaveFileCommand::undo(Editor& editor) {
+void SaveFileCommand::undo(Editor& /*editor*/) {
     // Saving a file doesn't change the buffer state, so undo is a no-op
 } 

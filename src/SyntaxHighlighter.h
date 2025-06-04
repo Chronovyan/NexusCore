@@ -15,6 +15,7 @@
 
 // Forward declaration
 class TextBuffer;
+class ITextBuffer;
 
 // Define color codes for syntax highlighting
 enum class SyntaxColor {
@@ -61,7 +62,7 @@ public:
     virtual std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t lineIndex) const = 0;
     
     // Highlight a full buffer
-    virtual std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const = 0;
+    virtual std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer& buffer) const = 0;
     
     // Get the file extensions this highlighter supports
     virtual std::vector<std::string> getSupportedExtensions() const = 0;
@@ -163,7 +164,7 @@ public:
         } catch (const std::exception& ex) {
             ErrorReporter::logException(SyntaxHighlightingException(
                 std::string("PatternBasedHighlighter::highlightLine: ") + ex.what(), 
-                EditorException::Severity::Error));
+                EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("PatternBasedHighlighter::highlightLine");
         }
@@ -179,7 +180,7 @@ public:
     }
     
     // Highlight a full buffer
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override;
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer& buffer) const override;
     
     std::vector<std::string> getSupportedExtensions() const override {
         READ_LOCK(patterns_mutex_);
@@ -192,7 +193,7 @@ public:
     
 protected:
     // Add a pattern with its associated color and category
-    void addPattern(const std::string& patternStr, SyntaxColor color, HighlightCategory category = HighlightCategory::UNKNOWN) {
+    void addPattern(const std::string& patternStr, SyntaxColor color, [[maybe_unused]] HighlightCategory category = HighlightCategory::UNKNOWN) {
         logDebug("PatternBasedHighlighter::addPattern for '" + languageName_ + "' with pattern: \"" + 
                 patternStr.substr(0, std::min(size_t(50), patternStr.length())) + 
                 (patternStr.length() > 50 ? "..." : "") + "\"");
@@ -205,13 +206,13 @@ protected:
             ErrorReporter::logException(SyntaxHighlightingException(
                 std::string("PatternBasedHighlighter::addPattern: Invalid regex '") + 
                 patternStr + "': " + regex_ex.what(), 
-                EditorException::Severity::Error));
+                EditorException::Severity::EDITOR_ERROR));
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
             ErrorReporter::logException(SyntaxHighlightingException(
                 std::string("PatternBasedHighlighter::addPattern: ") + ex.what(), 
-                EditorException::Severity::Error));
+                EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("PatternBasedHighlighter::addPattern");
         }
@@ -255,7 +256,7 @@ public:
     }
 
     std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t lineIndex) const override;
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override;
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer& buffer) const override;
     
     // Helper method to reset mutable state variables
     void mutable_reset() const;
@@ -291,7 +292,7 @@ public:
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::clearRegistry: ") + ex.what(), EditorException::Severity::Error));
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::clearRegistry: ") + ex.what(), EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::clearRegistry");
         }
@@ -311,7 +312,7 @@ public:
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::registerHighlighter: ") + ex.what(), EditorException::Severity::Error));
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::registerHighlighter: ") + ex.what(), EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::registerHighlighter");
         }
@@ -331,7 +332,7 @@ public:
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getHighlighterForExtension: ") + ex.what(), EditorException::Severity::Error));
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getHighlighterForExtension: ") + ex.what(), EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::getHighlighterForExtension");
         }
@@ -353,7 +354,7 @@ public:
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getSharedHighlighterForExtension: ") + ex.what(), EditorException::Severity::Error));
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry::getSharedHighlighterForExtension: ") + ex.what(), EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry::getSharedHighlighterForExtension");
         }
@@ -367,7 +368,7 @@ private:
         } catch (const EditorException& ed_ex) {
             ErrorReporter::logException(ed_ex);
         } catch (const std::exception& ex) {
-            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry Constructor: ") + ex.what(), EditorException::Severity::Error));
+            ErrorReporter::logException(SyntaxHighlightingException(std::string("SyntaxHighlighterRegistry Constructor: ") + ex.what(), EditorException::Severity::EDITOR_ERROR));
         } catch (...) {
             ErrorReporter::logUnknownException("SyntaxHighlighterRegistry Constructor");
         }

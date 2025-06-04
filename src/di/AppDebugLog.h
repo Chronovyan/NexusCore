@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <cstdarg>  // Required for va_start, va_end, va_list
 
 namespace di {
 namespace log {
@@ -40,14 +41,42 @@ inline std::string getTimestamp() {
 }
 
 /**
+ * @brief Internal implementation for variadic logging
+ * 
+ * This function formats a log message with the provided format string and arguments.
+ * 
+ * @param level The log level (DEBUG, INFO, ERROR)
+ * @param format The format string
+ * @param ... The variadic arguments for format
+ */
+inline void logImplFormatted(const char* level, const char* format, ...) {
+    // Format buffer
+    char buffer[2048];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    
+    // Output the formatted message
+    std::cout << "[" << getTimestamp() << "] [" << level << "] " << buffer << std::endl;
+}
+
+/**
  * @brief Log a debug message to the console
  * 
  * Outputs a debug message with timestamp to standard output.
  * 
- * @param msg The message to log
+ * @param format The format string
+ * @param ... The variadic arguments for format
  */
-inline void debug(const std::string& msg) {
-    std::cout << "[" << getTimestamp() << "] [DEBUG] " << msg << std::endl;
+inline void debug(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    char buffer[2048];
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    
+    std::cout << "[" << getTimestamp() << "] [DEBUG] " << buffer << std::endl;
 }
 
 /**
@@ -55,10 +84,17 @@ inline void debug(const std::string& msg) {
  * 
  * Outputs an info message with timestamp to standard output.
  * 
- * @param msg The message to log
+ * @param format The format string
+ * @param ... The variadic arguments for format
  */
-inline void info(const std::string& msg) {
-    std::cout << "[" << getTimestamp() << "] [INFO] " << msg << std::endl;
+inline void info(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    char buffer[2048];
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    
+    std::cout << "[" << getTimestamp() << "] [INFO] " << buffer << std::endl;
 }
 
 /**
@@ -66,10 +102,30 @@ inline void info(const std::string& msg) {
  * 
  * Outputs an error message with timestamp to standard error.
  * 
- * @param msg The message to log
+ * @param format The format string
+ * @param ... The variadic arguments for format
  */
+inline void error(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    char buffer[2048];
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    
+    std::cerr << "[" << getTimestamp() << "] [ERROR] " << buffer << std::endl;
+}
+
+// Overloads for std::string messages
+inline void debug(const std::string& msg) {
+    debug("%s", msg.c_str());
+}
+
+inline void info(const std::string& msg) {
+    info("%s", msg.c_str());
+}
+
 inline void error(const std::string& msg) {
-    std::cerr << "[" << getTimestamp() << "] [ERROR] " << msg << std::endl;
+    error("%s", msg.c_str());
 }
 
 } // namespace log
@@ -79,11 +135,18 @@ inline void error(const std::string& msg) {
 // These macros make it easy to include logging in the DI framework
 // while allowing for the possibility of disabling debug logs in production
 
-#ifndef NDEBUG
-#define LOG_DEBUG(msg) di::log::debug(msg)
-#else
-#define LOG_DEBUG(msg) ((void)0)
+#ifndef LOG_DEBUG
+  #ifndef NDEBUG
+    #define LOG_DEBUG(...) di::log::debug(__VA_ARGS__)
+  #else
+    #define LOG_DEBUG(...) ((void)0)
+  #endif
 #endif
 
-#define LOG_INFO(msg) di::log::info(msg)
-#define LOG_ERROR(msg) di::log::error(msg) 
+#ifndef LOG_INFO
+  #define LOG_INFO(...) di::log::info(__VA_ARGS__)
+#endif
+
+#ifndef LOG_ERROR
+  #define LOG_ERROR(...) di::log::error(__VA_ARGS__)
+#endif 

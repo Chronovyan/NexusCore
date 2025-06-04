@@ -11,6 +11,7 @@ using json = nlohmann::json;
 using namespace ai_editor;
 
 // Mock CPR response for testing OpenAI API client error handling
+/* // Intentionally commented out to avoid redefinition
 namespace cpr {
     class Response {
     public:
@@ -19,6 +20,7 @@ namespace cpr {
         std::string error_message;
     };
 }
+*/
 
 // Mock the implementation to inject failures
 class MockOpenAIClientImpl {

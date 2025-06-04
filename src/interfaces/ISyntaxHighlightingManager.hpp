@@ -6,6 +6,7 @@
 #include "SyntaxHighlighter.h"
 
 // Forward declarations
+class ITextBuffer;
 class TextBuffer;
 class SyntaxHighlighter;
 struct SyntaxStyle;
@@ -57,7 +58,7 @@ public:
      * 
      * @param buffer The buffer to highlight
      */
-    virtual void setBuffer(const TextBuffer* buffer) = 0;
+    virtual void setBuffer(const ITextBuffer* buffer) = 0;
     
     /**
      * @brief Get highlighting styles for a range of lines (const version)

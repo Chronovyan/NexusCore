@@ -2,46 +2,15 @@
 #include "gmock/gmock.h"
 #include "SyntaxHighlighter.h"
 #include "TextBuffer.h"
+#include "SyntaxHighlightingTestUtils.h"
 #include <memory>
 #include <string>
 #include <vector>
 #include <iostream>
 
-// Helper function to check if a specific style is applied to a range
-static bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, SyntaxColor color) {
-    for (const auto& style : styles) {
-        // For strings, allow a little flexibility in the exact positions
-        if (color == SyntaxColor::String) {
-            // Check if the style is a string and substantially overlaps with the expected range
-            if (style.color == color && 
-                ((style.startCol == start || style.startCol == start - 1 || style.startCol == start + 1) &&
-                 (style.endCol == end || style.endCol == end - 1 || style.endCol == end + 1 || 
-                  style.endCol == end + 2))) { // Allow quotes to be included or excluded
-                return true;
-            }
-        } else {
-            // For non-string styles, require exact match
-            if (style.startCol == start && style.endCol == end && style.color == color) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-// Helper function to verify if a line is completely highlighted as a comment
-static bool isFullLineCommented(const std::vector<SyntaxStyle>& styles, const std::string& line) {
-    if (styles.empty()) return false;
-    
-    for (const auto& style : styles) {
-        if (style.color == SyntaxColor::Comment && 
-            style.startCol == 0 && 
-            style.endCol == line.length()) {
-            return true;
-        }
-    }
-    return false;
-}
+// Use the functions from the shared header
+using ::SyntaxHighlightingTestUtils::hasStyle;
+using ::SyntaxHighlightingTestUtils::isFullLineCommented;
 
 class CppHighlighterMultilineTest : public ::testing::Test {
 protected:
@@ -58,17 +27,25 @@ protected:
     
     // Helper function to highlight multiple lines and collect results
     std::vector<std::vector<SyntaxStyle>> highlightLines(const std::vector<std::string>& lines) {
+        // Clear buffer first to ensure it's empty
+        buffer->clear(true);
+        
+        // Add each line to the buffer
+        for (const auto& line : lines) {
+            buffer->addLine(line);
+        }
+        
+        // Highlight each line and store the results
         std::vector<std::vector<SyntaxStyle>> results;
-        results.reserve(lines.size()); // Pre-allocate memory
         for (size_t i = 0; i < lines.size(); ++i) {
-            auto lineStylesPtr = highlighter.highlightLine(lines[i], i);
-            if (lineStylesPtr) {
-                results.push_back(std::move(*lineStylesPtr));
+            auto stylePtr = highlighter.highlightLine(lines[i], i);
+            if (stylePtr) {
+                results.push_back(*stylePtr);
             } else {
-                // This case should ideally not happen if highlightLine always returns a valid (empty or not) unique_ptr
-                results.push_back({}); 
+                results.push_back(std::vector<SyntaxStyle>());
             }
         }
+        
         return results;
     }
 };
@@ -206,13 +183,13 @@ TEST_F(CppHighlighterMultilineTest, MultiLinePreprocessorDirectives) {
     
     // Line 3: "        temp += 42; \\"
     // Let's check specific parts if not empty
-    // EXPECT_TRUE(hasStyle(results[3], 8, 12, SyntaxColor::Identifier)); // "temp"
-    // EXPECT_TRUE(hasStyle(results[3], 16, 18, SyntaxColor::Number)); // "42"
+    // EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(results[3], 8, 12, SyntaxColor::Identifier)); // "temp"
+    // EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(results[3], 16, 18, SyntaxColor::Number)); // "42"
 
     // Line 4: "    } while(0)"
-    // EXPECT_TRUE(hasStyle(results[4], 4, 5, SyntaxColor::Default)); // "}" (or Keyword if part of control structures)
-    // EXPECT_TRUE(hasStyle(results[4], 6, 11, SyntaxColor::Keyword)); // "while"
-    // EXPECT_TRUE(hasStyle(results[4], 12, 13, SyntaxColor::Number)); // "0"
+    // EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(results[4], 4, 5, SyntaxColor::Default)); // "}" (or Keyword if part of control structures)
+    // EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(results[4], 6, 11, SyntaxColor::Keyword)); // "while"
+    // EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(results[4], 12, 13, SyntaxColor::Number)); // "0"
 }
 
 // Test for multi-line string literals

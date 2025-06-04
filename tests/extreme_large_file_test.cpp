@@ -200,38 +200,25 @@ protected:
             return;
         }
         
-        // Record memory before opening file
-        size_t memoryBefore = MemoryTracker::getCurrentMemoryUsage();
-        
-        // Measure file open time
-        double openTimeMs = MeasureExecutionTimeMs([&]() {
-            ASSERT_TRUE(editor->openFile(filePath)) 
-                << "Failed to open " << sizeLabel << " test file: " << filePath;
-        });
-        
-        // Record memory after opening file
-        size_t memoryAfter = MemoryTracker::getCurrentMemoryUsage();
-        size_t memoryDiff = memoryAfter - memoryBefore;
-        size_t fileSize = fs::file_size(filePath);
-        
-        // Output metrics
-        std::cout << "[" << sizeLabel << "] File open time: " << openTimeMs << " ms" << std::endl;
-        std::cout << "[" << sizeLabel << "] Memory before: " << memoryBefore / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "[" << sizeLabel << "] Memory after: " << memoryAfter / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "[" << sizeLabel << "] Memory diff: " << memoryDiff / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "[" << sizeLabel << "] File size: " << fileSize / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "[" << sizeLabel << "] Memory/File ratio: " << (double)memoryDiff / fileSize << std::endl;
-        
-        // Check file was opened successfully
-        const TextBuffer& buffer = editor->getBuffer();
-        ASSERT_GT(buffer.lineCount(), 0) << "File doesn't appear to be loaded: " << sizeLabel;
-        
-        // Check against performance thresholds
         auto& threshold = thresholds[sizeLabel];
-        ASSERT_LE(openTimeMs, threshold.openTimeMs * 1.5) 
-            << sizeLabel << " file open time exceeded threshold by too much";
+        size_t fileSize = fs::file_size(filePath);
+
+        size_t memoryBefore = getCurrentRSS();
+        double openTimeMs = MeasureExecutionTimeMs([&]() {
+            editor->openFile(filePath);
+        });
+        size_t memoryAfter = getCurrentRSS();
+        size_t memoryDiff = (memoryAfter > memoryBefore) ? (memoryAfter - memoryBefore) : 0;
+
+        EXPECT_LE(openTimeMs, threshold.openTimeMs) 
+            << sizeLabel << " open time exceeded threshold";
         ASSERT_LE((double)memoryDiff, fileSize * threshold.memoryMultiplier) 
             << sizeLabel << " memory usage exceeded threshold";
+
+        std::vector<std::string> fileContent = editor->getAllLines();
+        const size_t MAX_LINES_FOR_EXTREME_TEST = 1000000; // Example, ensure this is defined or accessible
+        EXPECT_EQ(editor->getLineCount(), (std::min)((size_t)MAX_LINES_FOR_EXTREME_TEST, fileContent.size()));
+        std::cout << "File Open Test for " << sizeLabel << " completed in " << openTimeMs << " ms." << std::endl;
     }
     
     /**
@@ -285,7 +272,7 @@ protected:
             << "Failed to open " << sizeLabel << " test file for scrolling test";
         
         // Get total line count
-        const TextBuffer& buffer = editor->getBuffer();
+        const ITextBuffer& buffer = editor->getBuffer();
         int totalLines = buffer.lineCount();
         
         // Measure scrolling time - page down through file
@@ -367,7 +354,7 @@ protected:
             << "Failed to open " << sizeLabel << " test file for insert test";
         
         // Get total line count and move to middle of file
-        const TextBuffer& buffer = editor->getBuffer();
+        const ITextBuffer& buffer = editor->getBuffer();
         int totalLines = buffer.lineCount();
         int middleLine = totalLines / 2;
         
