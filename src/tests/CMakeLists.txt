@@ -1,0 +1,7 @@
+# Add the CodeContextProviderTest executable
+add_executable(CodeContextProviderTest CodeContextProviderTest.cpp)
+target_link_libraries(CodeContextProviderTest PRIVATE EditorCore)
+
+# Add the ContextGatheringTest executable
+add_executable(ContextGatheringTest ContextGatheringTest.cpp)
+target_link_libraries(ContextGatheringTest PRIVATE EditorCore) 

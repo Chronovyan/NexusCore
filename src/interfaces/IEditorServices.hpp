@@ -9,12 +9,14 @@
 #include "ISyntaxHighlightingManager.hpp"
 #include "IErrorReporter.hpp"
 #include "IEditorCoreThreadPool.hpp"
+#include "IDiffEngine.hpp"
+#include "IMergeEngine.hpp"
 
 // Forward declare plugin-related interfaces
 namespace di { class Injector; }
 class ICommandRegistry;
 class IUIExtensionRegistry;
-class ISyntaxHighlightingRegistry;
+namespace ai_editor { class ISyntaxHighlightingRegistry; }
 class IEventRegistry;
 class IWorkspaceExtension;
 
@@ -100,7 +102,7 @@ public:
      * 
      * @return Shared pointer to the syntax highlighting registry interface
      */
-    virtual std::shared_ptr<ISyntaxHighlightingRegistry> getSyntaxHighlightingRegistry() const = 0;
+    virtual std::shared_ptr<ai_editor::ISyntaxHighlightingRegistry> getSyntaxHighlightingRegistry() const = 0;
     
     /**
      * @brief Get the event registry service
@@ -128,4 +130,22 @@ public:
      * @return Shared pointer to the editor core thread pool interface
      */
     virtual std::shared_ptr<IEditorCoreThreadPool> getEditorCoreThreadPool() const = 0;
+    
+    /**
+     * @brief Get the diff engine service
+     * 
+     * This service provides functionality for computing differences between texts.
+     * 
+     * @return Shared pointer to the diff engine interface
+     */
+    virtual std::shared_ptr<IDiffEngine> getDiffEngine() const = 0;
+    
+    /**
+     * @brief Get the merge engine service
+     * 
+     * This service provides functionality for merging different versions of text.
+     * 
+     * @return Shared pointer to the merge engine interface
+     */
+    virtual std::shared_ptr<IMergeEngine> getMergeEngine() const = 0;
 }; 

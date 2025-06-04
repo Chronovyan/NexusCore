@@ -2,6 +2,7 @@
 #define NOMINMAX  // Prevent Windows min/max macros from conflicting with std::min/std::max
 #endif
 
+#include "LoggingCompatibility.h"
 #include "SyntaxHighlightingManager.h"
 #include <iostream>
 #include <thread>
@@ -11,16 +12,25 @@
 #include "EditorError.h"
 #include <queue>
 #include <sstream>
+#include "AppDebugLog.h"
+#include "EditorErrorReporter.h"
+#include <cstdarg>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include "EditContext.h"
+#include "TextUtils.h"
+
+// Define the time constants
+constexpr size_t RECENT_PROCESSED_TTL_SECONDS = 60; // 1 minute
 
 // Initialize static members
-bool SyntaxHighlightingManager::debugLoggingEnabled_{false};
+bool SyntaxHighlightingManager::globalDebugLoggingEnabled_ = false;
 
 // Global variable for test-mode logging control
 // This is defined as extern in test headers and set by the test framework
 bool DISABLE_ALL_LOGGING_FOR_TESTS = false;
 
-namespace {
-    // Improved logger function using ErrorReporter with cleaner logic
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
@@ -28,127 +38,116 @@ namespace {
 #pragma warning(push)
 #pragma warning(disable: 4996) // Disable warnings about potentially unsafe format strings
 #endif
-    template<typename... Args>
-    void logManagerMessage(EditorException::Severity severity, const char* location, const char* format, Args... args) {
-        // Early exit conditions - check all suppressions first
-        // 1. Check global test flag (defined at file level)
-        if (DISABLE_ALL_LOGGING_FOR_TESTS) {
-            return;
-        }
-        
-        // 2. Check if warnings should be suppressed
-        if (ErrorReporter::suppressAllWarnings && 
-            (severity == EditorException::Severity::Warning || severity == EditorException::Severity::Debug)) {
-            return;
-        }
-        
-        // 3. Check if debug messages are enabled
-        if (!SyntaxHighlightingManager::isDebugLoggingEnabled_static() && 
-            (severity == EditorException::Severity::Warning || severity == EditorException::Severity::Debug)) {
-            return;
-        }
-
-        try {
-            // Format the thread ID and location prefix
-            std::stringstream ss_prefix;
-            ss_prefix << "[Thread " << GetCurrentThreadId() << "] ";
-            ss_prefix << location << ": ";
-            
-            // Format the message content
-            int needed = std::snprintf(nullptr, 0, format, args...);
-            if (needed < 0) {
-                ErrorReporter::logError("logManagerMessage: Error in snprintf determining size.");
-                return;
-            }
-
-            std::string msg_content;
-            msg_content.resize(needed + 1); // +1 for null terminator
-            std::snprintf(&msg_content[0], msg_content.size(), format, args...);
-            msg_content.resize(needed); // Remove null terminator for string operations
-
-            std::string full_message = ss_prefix.str() + msg_content;
-
-            // Route to appropriate logging method based on severity
-            switch (severity) {
-                case EditorException::Severity::Warning:
-                    ErrorReporter::logWarning(full_message);
-                    break;
-                case EditorException::Severity::Debug:
-                    // For Debug messages, use logWarning but with "Debug:" prefix
-                    ErrorReporter::logWarning("Debug: " + full_message);
-                    break;
-                case EditorException::Severity::Error:
-                case EditorException::Severity::Critical:
-                default:
-                    // All other severities go to error log
-                    ErrorReporter::logError(full_message);
-                    break;
-            }
-        } catch (const std::exception& log_ex) {
-            // Fallback to cerr if ErrorReporter itself fails
-            std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: " << log_ex.what() << std::endl;
-        } catch (...) {
-            std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: Unknown exception." << std::endl;
-        }
+template<typename... Args>
+void SyntaxHighlightingManager::logManagerMessage(EditorException::Severity severity, const char* location, const char* format, Args... args) const {
+    // Early exit conditions - check all suppressions first
+    // 1. Check global test flag (defined at file level)
+    if (DISABLE_ALL_LOGGING_FOR_TESTS) {
+        return;
     }
+    
+    // 2. Check if warnings should be suppressed
+    if (ErrorReporter::suppressAllWarnings && 
+        (severity == EditorException::Severity::Warning || severity == EditorException::Severity::Debug)) {
+        return;
+    }
+    
+    // 3. Check if debug messages are enabled
+    if (!SyntaxHighlightingManager::getGlobalDebugLoggingState() && 
+        (severity == EditorException::Severity::Warning || severity == EditorException::Severity::Debug)) {
+        return;
+    }
+
+    try {
+        // Format the thread ID and location prefix
+        std::stringstream ss_prefix;
+        ss_prefix << "[Thread " << GetCurrentThreadId() << "] ";
+        ss_prefix << location << ": ";
+        
+        // Format the message content
+        int needed = std::snprintf(nullptr, 0, format, args...);
+        if (needed < 0) {
+            ErrorReporter::logError("logManagerMessage: Error in snprintf determining size.");
+            return;
+        }
+
+        std::string msg_content;
+        msg_content.resize(needed + 1); // +1 for null terminator
+        std::snprintf(&msg_content[0], msg_content.size(), format, args...);
+        msg_content.resize(needed); // Remove null terminator for string operations
+
+        std::string full_message = ss_prefix.str() + msg_content;
+
+        // Route to appropriate logging method based on severity
+        switch (severity) {
+            case EditorException::Severity::Warning:
+                ErrorReporter::logWarning(full_message);
+                break;
+            case EditorException::Severity::Debug:
+                // For Debug messages, use logWarning but with "Debug:" prefix
+                ErrorReporter::logWarning("Debug: " + full_message);
+                break;
+            case EditorException::Severity::EDITOR_ERROR:
+            case EditorException::Severity::Critical:
+            default:
+                // All other severities go to error log
+                ErrorReporter::logError(full_message);
+                break;
+        }
+    } catch (const std::exception& log_ex) {
+        // Fallback to cerr if ErrorReporter itself fails
+        std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: " << log_ex.what() << std::endl;
+    } catch (...) {
+        std::cerr << "CRITICAL LOGGING FAILURE in logManagerMessage: Unknown exception." << std::endl;
+    }
+}
 #ifdef __clang__
 #pragma clang diagnostic pop
 #elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
-}
 
-SyntaxHighlightingManager::SyntaxHighlightingManager() {
-    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::Constructor", "Instance created.");
+SyntaxHighlightingManager::SyntaxHighlightingManager()
+    : buffer_(nullptr)
+    , enabled_(true)
+    , highlightingTimeoutMs_(DEFAULT_HIGHLIGHTING_TIMEOUT_MS)
+    , contextLines_(DEFAULT_CONTEXT_LINES)
+    , debugLoggingEnabled_(globalDebugLoggingEnabled_)
+    , threadPool_(std::make_unique<ThreadPool>(DEFAULT_THREAD_POOL_SIZE))
+{
+    LOG_DEBUG("SyntaxHighlightingManager created");
 }
 
 SyntaxHighlightingManager::~SyntaxHighlightingManager() {
-    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "[ENTRY] Destructor called.");
-
-    if (highlighter_) {
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "highlighter_ initial use_count: %ld", highlighter_.use_count());
-    } else {
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "highlighter_ is initially null.");
-    }
-
-    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Attempting to acquire mutex in destructor...");
     try {
-        std::unique_lock lock(mutex_); 
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Mutex acquired successfully in destructor.");
-
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "cachedStyles_ size: %zu, capacity: %zu", cachedStyles_.size(), cachedStyles_.capacity());
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "invalidatedLines_ size: %zu", invalidatedLines_.size());
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "lineTimestamps_ size: %zu", lineTimestamps_.size());
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "lineAccessTimes_ size: %zu", lineAccessTimes_.size());
-
-        if (highlighter_) {
-            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Resetting highlighter_ manually. Current use_count: %ld", highlighter_.use_count());
-            highlighter_.reset();
-            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "highlighter_ has been reset.");
-        } else {
-            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "highlighter_ was already null before explicit reset attempt.");
+        // Clear any pending tasks
+        if (threadPool_) {
+            threadPool_->shutdown();
         }
         
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Clearing cachedStyles_ manually.");
-        cachedStyles_.clear(); 
-        cachedStyles_.shrink_to_fit(); // Explicitly return memory
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "cachedStyles_ cleared. New size: %zu, capacity: %zu", cachedStyles_.size(), cachedStyles_.capacity());
-
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Clearing all containers manually.");
-        invalidatedLines_.clear();
-        lineTimestamps_.clear();
-        lineAccessTimes_.clear();
-        recentlyProcessedLines_.clear();
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "All containers cleared.");
-    } catch (const std::system_error& e) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "std::system_error acquiring mutex in destructor: %s (code: %d)", e.what(), e.code().value());
-    } catch (const std::exception& e) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "std::exception during cleanup in destructor: %s", e.what());
+        // Clear all data structures to ensure clean release
+        {
+            std::unique_lock<std::shared_mutex> lock(mutex_);
+            cachedStyles_.clear();
+            invalidatedLines_.clear();
+            lineTimestamps_.clear();
+            lineAccessTimes_.clear();
+            processedRanges_.clear();
+            recentlyProcessedLines_.clear();
+            activeLineTasks_.clear();
+            activeRangeTasks_.clear();
+        }
+        
+        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager",
+                         "SyntaxHighlightingManager destroyed");
+    } catch (const std::exception& ex) {
+        // Log but don't throw from destructor
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::~SyntaxHighlightingManager",
+                         "Exception in destructor: %s", ex.what());
     } catch (...) {
-        logManagerMessage(EditorException::Severity::Critical, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "Unknown exception during cleanup in destructor.");
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::~SyntaxHighlightingManager",
+                         "Unknown exception in destructor");
     }
-    
-    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::~SyntaxHighlightingManager", "[EXIT] Destructor finished.");
 }
 
 // Helper function to format duration for logging
@@ -161,7 +160,7 @@ std::string formatDuration(const std::chrono::steady_clock::time_point& start) {
 // Fix the logVectorAccess method to handle location and index correctly
 void SyntaxHighlightingManager::logVectorAccess(const char* location, size_t index, size_t vectorSize) const {
     if (index >= vectorSize) {
-        logManagerMessage(EditorException::Severity::Error,
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR,
                         "SyntaxHighlightingManager::logVectorAccess",
                         "INVALID VECTOR ACCESS in %s: index %zu >= size %zu",
                      location, index, vectorSize);
@@ -169,7 +168,7 @@ void SyntaxHighlightingManager::logVectorAccess(const char* location, size_t ind
 }
 
 // Thread-safe access to buffer_
-const TextBuffer* SyntaxHighlightingManager::getBuffer() const {
+const ITextBuffer* SyntaxHighlightingManager::getBuffer() const {
     return buffer_.load(std::memory_order_acquire);
 }
 
@@ -180,16 +179,19 @@ SyntaxHighlighter* SyntaxHighlightingManager::getHighlighterPtr_nolock() const {
 
 void SyntaxHighlightingManager::setHighlighter(std::shared_ptr<SyntaxHighlighter> highlighter) {
     try {
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setHighlighter", "Attempting to set highlighter. Pointer: %p", static_cast<void*>(highlighter.get()));
-        std::unique_lock lock(mutex_);
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setHighlighter", "Mutex acquired. Immediately invalidating all lines.");
-        invalidateAllLines_nolock(); // Aggressive invalidation
-        highlighter_ = highlighter; // Simple assignment
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setHighlighter", "Highlighter set and lines invalidated.");
-    } catch (const EditorException& ed_ex) {
-        ErrorReporter::logException(ed_ex);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+        
+        // Set the new highlighter
+        highlighter_ = highlighter;
+        
+        // Invalidate all cached styles
+        invalidateAllLines_nolock();
+        
+        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setHighlighter", 
+                          "Highlighter set to %p", static_cast<void*>(highlighter.get()));
     } catch (const std::exception& ex) {
-        ErrorReporter::logException(SyntaxHighlightingException(std::string("setHighlighter: ") + ex.what(), EditorException::Severity::Error));
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::setHighlighter",
+                         "Exception setting highlighter: %s", ex.what());
     }
 }
 
@@ -198,7 +200,8 @@ std::shared_ptr<SyntaxHighlighter> SyntaxHighlightingManager::getHighlighter() c
         std::shared_lock lock(mutex_); // Using shared lock for read-only access
         return highlighter_;
     } catch (const std::exception& ex) {
-        ErrorReporter::logException(SyntaxHighlightingException(std::string("getHighlighter: ") + ex.what(), EditorException::Severity::Error));
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::getHighlighter",
+                         "Exception getting highlighter: %s", ex.what());
         return nullptr;
     }
 }
@@ -209,7 +212,8 @@ void SyntaxHighlightingManager::setEnabled(bool enabled) {
         logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setEnabled", 
                           "Syntax highlighting %s", enabled ? "enabled" : "disabled");
     } catch (const std::exception& ex) {
-        ErrorReporter::logException(SyntaxHighlightingException(std::string("setEnabled: ") + ex.what(), EditorException::Severity::Error));
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::setEnabled",
+                         "Exception setting enabled state: %s", ex.what());
     }
 }
 
@@ -217,8 +221,15 @@ bool SyntaxHighlightingManager::isEnabled() const {
     return enabled_.load(std::memory_order_acquire);
 }
 
-void SyntaxHighlightingManager::setBuffer(const TextBuffer* buffer) {
+void SyntaxHighlightingManager::setBuffer(const ITextBuffer* buffer) {
     try {
+        // Cancel any pending tasks first
+        {
+            std::unique_lock<std::shared_mutex> lock(mutex_);
+            activeLineTasks_.clear();
+            activeRangeTasks_.clear();
+        }
+        
         // Atomically update the buffer pointer
         buffer_.store(buffer, std::memory_order_release);
         
@@ -231,7 +242,8 @@ void SyntaxHighlightingManager::setBuffer(const TextBuffer* buffer) {
         logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setBuffer", 
                           "Buffer set to %p", static_cast<const void*>(buffer));
     } catch (const std::exception& ex) {
-        ErrorReporter::logException(SyntaxHighlightingException(std::string("setBuffer: ") + ex.what(), EditorException::Severity::Error));
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::setBuffer",
+                         "Exception setting buffer: %s", ex.what());
     }
 }
 
@@ -247,7 +259,7 @@ std::unique_ptr<std::vector<SyntaxStyle>> SyntaxHighlightingManager::highlightLi
     }
     
     // Get the buffer safely (this is thread-safe because it uses atomics internally)
-    const TextBuffer* buffer = getBuffer();
+    const ITextBuffer* buffer = getBuffer();
     if (!buffer) {
         return nullptr;
     }
@@ -286,7 +298,7 @@ std::unique_ptr<std::vector<SyntaxStyle>> SyntaxHighlightingManager::highlightLi
         
         return styles;
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine_nolock", 
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::highlightLine_nolock", 
                           "Exception highlighting line %zu: %s", line, ex.what());
         return nullptr;
     }
@@ -330,153 +342,225 @@ void SyntaxHighlightingManager::highlightLine(size_t line) {
                               "Total line %zu highlighting operation took %lld μs", line, duration.count());
         }
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::highlightLine", 
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::highlightLine", 
                           "Exception highlighting line %zu: %s", line, ex.what());
     }
 }
 
-bool SyntaxHighlightingManager::highlightLines_nolock(size_t startLine, size_t endLine, 
-                                                    const std::chrono::milliseconds& timeout) {
-    // This method assumes the caller already holds a unique (write) lock
-    
-    auto startTime = std::chrono::steady_clock::now();
-    auto timeoutPoint = startTime + timeout;
-    
-    // Get the buffer safely
-    const TextBuffer* buffer = getBuffer();
-    if (!buffer) {
-        return false;
-    }
-    
-    // Clamp endLine to buffer size
-    size_t bufferLineCount = buffer->lineCount();
-    if (bufferLineCount == 0) {
-        return true; // Nothing to do for empty buffer
-    }
-    
-    size_t effectiveEndLine = std::min(endLine, bufferLineCount - 1);
-    if (startLine > effectiveEndLine) {
-        return true; // Invalid range, nothing to do
-    }
-    
-    // Prepare for highlighting
-    size_t totalLinesRequested = effectiveEndLine - startLine + 1;
-    size_t linesProcessed = 0;
-    size_t validLineCount = 0;
-    
-    // Ensure cache has enough space
-    if (cachedStyles_.size() <= effectiveEndLine) {
-        cachedStyles_.resize(effectiveEndLine + 1);
-    }
-    
-    // Get highlighter
-    SyntaxHighlighter* highlighter = getHighlighterPtr_nolock();
-    if (!highlighter) {
-        return false;
-    }
-    
-    // Process lines in priority order:
-    // 1. Visible lines
-    // 2. Lines around visible area
-    // 3. Other requested lines
-    
-    // Track lines that need highlighting
-    std::vector<size_t> linesToHighlight;
-    linesToHighlight.reserve(totalLinesRequested);
-    
-    // First collect all invalid lines in the range
-    for (size_t line = startLine; line <= effectiveEndLine; ++line) {
-        bool isInvalidated = invalidatedLines_.count(line) > 0;
-        bool isCached = line < cachedStyles_.size() && 
-                      cachedStyles_[line] && 
-                      cachedStyles_[line]->valid.load(std::memory_order_acquire);
+bool SyntaxHighlightingManager::highlightLines_nolock(
+    size_t startLine, size_t endLine, const std::chrono::milliseconds& timeout) {
+    try {
+        // Record the start time to enforce the timeout
+        auto startTime = std::chrono::steady_clock::now();
         
-        if (isInvalidated || !isCached) {
-            linesToHighlight.push_back(line);
+        // Get buffer and highlighter
+        const ITextBuffer* buffer = getBuffer();
+        SyntaxHighlighter* highlighter = getHighlighterPtr_nolock();
+        
+        if (!buffer || !highlighter) {
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                         "Cannot highlight: buffer or highlighter is null");
+            return false;
+        }
+        
+        // Ensure the cache is large enough
+        if (cachedStyles_.size() <= endLine) {
+            cachedStyles_.resize(endLine + 1);
+        }
+        
+        // Determine if this range includes the visible area
+        bool containsVisibleArea = false;
+        {
+            size_t visibleStart = visibleStartLine_.load(std::memory_order_acquire);
+            size_t visibleEnd = visibleEndLine_.load(std::memory_order_acquire);
+            
+            if (startLine <= visibleEnd && endLine >= visibleStart) {
+                containsVisibleArea = true;
+            }
+        }
+        
+        // Process lines, prioritizing visible ones if this range contains the visible area
+        if (containsVisibleArea) {
+            // Get visible range
+            size_t visibleStart = visibleStartLine_.load(std::memory_order_acquire);
+            size_t visibleEnd = visibleEndLine_.load(std::memory_order_acquire);
+            
+            // Process visible lines first
+            size_t visibleStartProcessing = std::max(startLine, visibleStart);
+            size_t visibleEndProcessing = std::min(endLine, visibleEnd);
+            
+            // Process the visible range first (higher priority)
+            for (size_t line = visibleStartProcessing; line <= visibleEndProcessing; ++line) {
+                // Check timeout
+                auto elapsed = std::chrono::steady_clock::now() - startTime;
+                if (elapsed > timeout) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Timeout reached after processing visible lines %zu-%zu (elapsed: %lld ms)",
+                                     visibleStartProcessing, line - 1,
+                                     std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+                    return false; // Timeout reached
+                }
+                
+                // Check if the line needs highlighting
+                if (line >= cachedStyles_.size() || 
+                    !cachedStyles_[line] || 
+                    !cachedStyles_[line]->valid.load(std::memory_order_acquire) ||
+                    invalidatedLines_.count(line) > 0) {
+                    
+                    // Highlight the line
+                    auto styles = highlightLine_nolock(line);
+                    
+                    if (styles) {
+                        // Create cache entry with the new styles
+                        cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+                        
+                        // Update timestamps
+                        auto now = std::chrono::steady_clock::now();
+                        lineTimestamps_[line] = now;
+                        lineAccessTimes_[line] = now;
+                        
+                        // Remove from invalidated lines set
+                        invalidatedLines_.erase(line);
+                    }
+                }
+            }
+            
+            // Process lines before visible area
+            for (size_t line = startLine; line < visibleStartProcessing; ++line) {
+                // Check timeout
+                auto elapsed = std::chrono::steady_clock::now() - startTime;
+                if (elapsed > timeout) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Timeout reached after processing before-visible lines %zu-%zu (elapsed: %lld ms)",
+                                     startLine, line - 1,
+                                     std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+                    return false; // Timeout reached
+                }
+                
+                // Check if the line needs highlighting
+                if (line >= cachedStyles_.size() || 
+                    !cachedStyles_[line] || 
+                    !cachedStyles_[line]->valid.load(std::memory_order_acquire) ||
+                    invalidatedLines_.count(line) > 0) {
+                    
+                    // Highlight the line
+                    auto styles = highlightLine_nolock(line);
+                    
+                    if (styles) {
+                        // Create cache entry with the new styles
+                        cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+                        
+                        // Update timestamps
+                        auto now = std::chrono::steady_clock::now();
+                        lineTimestamps_[line] = now;
+                        lineAccessTimes_[line] = now;
+                        
+                        // Remove from invalidated lines set
+                        invalidatedLines_.erase(line);
+                    }
+                }
+            }
+            
+            // Process lines after visible area
+            for (size_t line = visibleEndProcessing + 1; line <= endLine; ++line) {
+                // Check timeout
+                auto elapsed = std::chrono::steady_clock::now() - startTime;
+                if (elapsed > timeout) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Timeout reached after processing after-visible lines %zu-%zu (elapsed: %lld ms)",
+                                     visibleEndProcessing + 1, line - 1,
+                                     std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+                    return false; // Timeout reached
+                }
+                
+                // Check if the line needs highlighting
+                if (line >= cachedStyles_.size() || 
+                    !cachedStyles_[line] || 
+                    !cachedStyles_[line]->valid.load(std::memory_order_acquire) ||
+                    invalidatedLines_.count(line) > 0) {
+                    
+                    // Highlight the line
+                    auto styles = highlightLine_nolock(line);
+                    
+                    if (styles) {
+                        // Create cache entry with the new styles
+                        cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+                        
+                        // Update timestamps
+                        auto now = std::chrono::steady_clock::now();
+                        lineTimestamps_[line] = now;
+                        lineAccessTimes_[line] = now;
+                        
+                        // Remove from invalidated lines set
+                        invalidatedLines_.erase(line);
+                    }
+                }
+            }
         } else {
-            validLineCount++;
-        }
-    }
-    
-    // Sort lines by priority (visible first, then by distance from visible area)
-    size_t visibleStart = visibleStartLine_.load(std::memory_order_acquire);
-    size_t visibleEnd = visibleEndLine_.load(std::memory_order_acquire);
-    
-    auto lineComparator = [visibleStart, visibleEnd](size_t a, size_t b) {
-        bool aVisible = (a >= visibleStart && a <= visibleEnd);
-        bool bVisible = (b >= visibleStart && b <= visibleEnd);
-        
-        if (aVisible && !bVisible) return true;
-        if (!aVisible && bVisible) return false;
-        if (aVisible && bVisible) return a < b; // In visible area, process in order
-        
-        // Both outside visible area, process by distance from visible area
-        size_t aDist = std::min(a < visibleStart ? visibleStart - a : a - visibleEnd, 
-                               a > visibleEnd ? a - visibleEnd : visibleStart - a);
-        size_t bDist = std::min(b < visibleStart ? visibleStart - b : b - visibleEnd,
-                               b > visibleEnd ? b - visibleEnd : visibleStart - b);
-        
-        return aDist < bDist;
-    };
-    
-    std::sort(linesToHighlight.begin(), linesToHighlight.end(), lineComparator);
-    
-    // Process lines until timeout
-    size_t processedInBatch = 0;
-    bool timeoutReached = false;
-    
-    for (size_t line : linesToHighlight) {
-        // Process at least MIN_LINES_PER_BATCH lines before checking timeout
-        if (processedInBatch >= MIN_LINES_PER_BATCH && 
-            std::chrono::steady_clock::now() > timeoutPoint) {
-            timeoutReached = true;
-            break;
+            // Process lines sequentially
+            for (size_t line = startLine; line <= endLine; ++line) {
+                // Check timeout
+                auto elapsed = std::chrono::steady_clock::now() - startTime;
+                if (elapsed > timeout) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                                     "Timeout reached after processing lines %zu-%zu (elapsed: %lld ms)",
+                                     startLine, line - 1,
+                                     std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+                    return false; // Timeout reached
+                }
+                
+                // Check if the line needs highlighting
+                if (line >= cachedStyles_.size() || 
+                    !cachedStyles_[line] || 
+                    !cachedStyles_[line]->valid.load(std::memory_order_acquire) ||
+                    invalidatedLines_.count(line) > 0) {
+                    
+                    // Highlight the line
+                    auto styles = highlightLine_nolock(line);
+                    
+                    if (styles) {
+                        // Create cache entry with the new styles
+                        cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+                        
+                        // Update timestamps
+                        auto now = std::chrono::steady_clock::now();
+                        lineTimestamps_[line] = now;
+                        lineAccessTimes_[line] = now;
+                        
+                        // Remove from invalidated lines set
+                        invalidatedLines_.erase(line);
+                    }
+                }
+            }
         }
         
-        // Highlight the line
-        auto styles = highlightLine_nolock(line);
-        if (styles) {
-            // Create cache entry with the new styles
-            cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+        if (debugLoggingEnabled_) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime);
             
-            // Update timestamps
-            auto now = std::chrono::steady_clock::now();
-            lineTimestamps_[line] = now;
-            lineAccessTimes_[line] = now;
-            
-            // Remove from invalidated lines set
-            invalidatedLines_.erase(line);
-            
-            // Update tracking
-            linesProcessed++;
-            processedInBatch++;
-            validLineCount++;
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
+                             "Processed lines %zu-%zu in %lld ms (all lines processed)",
+                             startLine, endLine, elapsed.count());
         }
-    }
-    
-    // Update the last processed range for optimization
-    if (linesProcessed > 0) {
-        lastProcessedRange_.update(startLine, effectiveEndLine);
-    }
-    
-    // Check if we should clean up the cache
-    if (cachedStyles_.size() > MAX_CACHE_LINES) {
-        evictLRUEntries_nolock(static_cast<size_t>(MAX_CACHE_LINES * CACHE_CLEANUP_RATIO));
-    }
-    
-    // Log performance metrics if debug logging is enabled
-    if (debugLoggingEnabled_) {
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime);
         
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::highlightLines_nolock",
-                         "Processed %zu/%zu lines in %lld ms (%zu valid, %s)",
-                         linesProcessed, totalLinesRequested, duration.count(), validLineCount,
-                         timeoutReached ? "timeout reached" : "completed");
+        // Update processed range tracking
+        ProcessedRange range;
+        range.startLine = startLine;
+        range.endLine = endLine;
+        range.timestamp = std::chrono::steady_clock::now();
+        processedRanges_.push_back(range);
+        
+        // Limit the size of the processed ranges queue
+        while (processedRanges_.size() > MAX_PROCESSED_RANGES) {
+            processedRanges_.pop_front();
+        }
+        
+        return true; // All lines processed
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::highlightLines_nolock",
+                         "Exception highlighting lines: %s", ex.what());
+        return false; // Error occurred
     }
-    
-    // Return true if all requested lines were processed
-    return linesProcessed == linesToHighlight.size();
 }
 
 std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(
@@ -494,7 +578,7 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         std::shared_lock sharedLock(mutex_);
         
         // Get the buffer safely
-        const TextBuffer* buffer = getBuffer();
+        const ITextBuffer* buffer = getBuffer();
         if (!buffer) {
             return {};
         }
@@ -523,8 +607,9 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
             }
         }
         
+        // If all lines are valid, we can return them without upgrading the lock
         if (allLinesValid) {
-            // All lines are valid, just return them
+            // Collect results with shared lock
             std::vector<std::vector<SyntaxStyle>> result;
             result.reserve(effectiveEndLine - startLine + 1);
             
@@ -533,29 +618,42 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
             }
             
             if (debugLoggingEnabled_) {
-                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - startTime);
                 logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::getHighlightingStyles",
-                                 "Fast path: returned %zu cached lines in %lld μs",
+                                 "Fast path: returned %zu lines in %lld ms",
                                  result.size(), duration.count());
+            }
+            
+            // Schedule background processing for the context area around this range
+            if (threadPool_ && shouldQueueTask(TaskType::CONTEXT_RANGE)) {
+                // Release shared lock before spawning async task
+                sharedLock.unlock();
+                
+                // Calculate optimal processing range including context
+                auto optimalRange = calculateOptimalProcessingRange(startLine, effectiveEndLine);
+                
+                // Process asynchronously if range is larger than the requested range
+                if (optimalRange.first < startLine || optimalRange.second > effectiveEndLine) {
+                    const_cast<SyntaxHighlightingManager*>(this)->
+                        processVisibleRangeAsync(optimalRange.first, optimalRange.second);
+                }
             }
             
             return result;
         }
-        
-        // We need to update some lines, release shared lock and acquire unique lock
-        sharedLock.unlock();
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::getHighlightingStyles",
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::getHighlightingStyles",
                          "Exception in shared lock section: %s", ex.what());
+        return {};
     }
     
-    // Slow path: acquire unique lock and update cache as needed
+    // If we got here, some lines need highlighting, so we need to upgrade to a unique lock
     try {
         std::unique_lock uniqueLock(mutex_);
         
         // Get the buffer safely
-        const TextBuffer* buffer = getBuffer();
+        const ITextBuffer* buffer = getBuffer();
         if (!buffer) {
             return {};
         }
@@ -578,6 +676,8 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         
         // Highlight lines as needed with timeout
         auto timeout = std::chrono::milliseconds(highlightingTimeoutMs_.load(std::memory_order_acquire));
+        
+        // Process immediately with the current thread (we already have the lock)
         const_cast<SyntaxHighlightingManager*>(this)->highlightLines_nolock(startLine, effectiveEndLine, timeout);
         
         // Collect results
@@ -599,6 +699,35 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
             lineAccessTimes_[line] = std::chrono::steady_clock::now();
         }
         
+        // Check if there are lines that still need highlighting
+        bool needsBackgroundProcessing = false;
+        for (size_t line = startLine; line <= effectiveEndLine; ++line) {
+            if (line >= cachedStyles_.size() || 
+                !cachedStyles_[line] || 
+                !cachedStyles_[line]->valid.load(std::memory_order_acquire) ||
+                invalidatedLines_.count(line) > 0) {
+                needsBackgroundProcessing = true;
+                break;
+            }
+        }
+        
+        // If we couldn't process all lines in time, schedule background processing
+        if (needsBackgroundProcessing && threadPool_ && shouldQueueTask(TaskType::VISIBLE_RANGE)) {
+            // Schedule the visible range for background processing
+            processVisibleRangeAsync(startLine, effectiveEndLine);
+        }
+        
+        // Also process the context area in the background
+        if (threadPool_ && shouldQueueTask(TaskType::CONTEXT_RANGE)) {
+            // Calculate optimal processing range including context
+            auto optimalRange = calculateOptimalProcessingRange(startLine, effectiveEndLine);
+            
+            // Process asynchronously if range is larger than the requested range
+            if (optimalRange.first < startLine || optimalRange.second > effectiveEndLine) {
+                processVisibleRangeAsync(optimalRange.first, optimalRange.second);
+            }
+        }
+        
         if (debugLoggingEnabled_) {
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - startTime);
@@ -609,13 +738,13 @@ std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlighting
         
         return result;
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::getHighlightingStyles",
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::getHighlightingStyles",
                          "Exception in unique lock section: %s", ex.what());
         return {};
     }
 }
 
-// Implementation for non-const getHighlightingStyles
+// Get highlighting styles for a range of lines (non-const version)
 std::vector<std::vector<SyntaxStyle>> SyntaxHighlightingManager::getHighlightingStyles(size_t startLine, size_t endLine) {
     // Same implementation as const version, but will update cache as needed
     return const_cast<const SyntaxHighlightingManager*>(this)->getHighlightingStyles(startLine, endLine);
@@ -649,7 +778,7 @@ void SyntaxHighlightingManager::invalidateLine(size_t line) {
                              "Invalidated line %zu", line);
         }
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::invalidateLine",
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::invalidateLine",
                          "Exception invalidating line %zu: %s", line, ex.what());
     }
 }
@@ -663,7 +792,7 @@ void SyntaxHighlightingManager::invalidateLines(size_t startLine, size_t endLine
         std::unique_lock lock(mutex_);
         
         // Get maximum line count safely
-        const TextBuffer* buffer = getBuffer();
+        const ITextBuffer* buffer = getBuffer();
         if (buffer) {
             size_t bufferLineCount = buffer->lineCount();
             if (bufferLineCount > 0) {
@@ -695,7 +824,7 @@ void SyntaxHighlightingManager::invalidateLines(size_t startLine, size_t endLine
                              "Invalidated lines %zu-%zu", startLine, endLine);
         }
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::invalidateLines",
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::invalidateLines",
                          "Exception invalidating lines %zu-%zu: %s", startLine, endLine, ex.what());
     }
 }
@@ -709,7 +838,7 @@ void SyntaxHighlightingManager::invalidateAllLines() {
         std::unique_lock lock(mutex_);
         invalidateAllLines_nolock();
     } catch (const std::exception& ex) {
-        logManagerMessage(EditorException::Severity::Error, "SyntaxHighlightingManager::invalidateAllLines",
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::invalidateAllLines",
                          "Exception invalidating all lines: %s", ex.what());
     }
 }
@@ -718,7 +847,7 @@ void SyntaxHighlightingManager::invalidateAllLines_nolock() {
     // This method assumes the caller already holds a unique (write) lock
     
     // Get maximum line count safely
-    const TextBuffer* buffer = getBuffer();
+    const ITextBuffer* buffer = getBuffer();
     if (buffer) {
         size_t bufferLineCount = buffer->lineCount();
         
@@ -745,12 +874,28 @@ void SyntaxHighlightingManager::invalidateAllLines_nolock() {
 }
 
 void SyntaxHighlightingManager::setVisibleRange(size_t startLine, size_t endLine) const {
+    // Update atomic values - no need for locking
     visibleStartLine_.store(startLine, std::memory_order_release);
     visibleEndLine_.store(endLine, std::memory_order_release);
     
-    // Update last processed range if needed
-    if (lastProcessedRange_.valid) {
-        const_cast<SyntaxHighlightingManager*>(this)->lastProcessedRange_.update(startLine, endLine);
+    if (debugLoggingEnabled_) {
+        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setVisibleRange", 
+                         "Visible range set to %zu-%zu", startLine, endLine);
+    }
+    
+    // Process the visible range in the background using the thread pool
+    if (threadPool_ && isEnabled()) {
+        // Calculate optimal processing range to include context
+        auto optimalRange = calculateOptimalProcessingRange(startLine, endLine);
+        
+        // Schedule background processing of the visible range with high priority
+        processVisibleRangeAsync(optimalRange.first, optimalRange.second);
+        
+        if (debugLoggingEnabled_) {
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setVisibleRange",
+                             "Scheduled background processing for visible range %zu-%zu (expanded to %zu-%zu)",
+                             startLine, endLine, optimalRange.first, optimalRange.second);
+        }
     }
 }
 
@@ -783,89 +928,75 @@ size_t SyntaxHighlightingManager::getContextLines() const {
 }
 
 bool SyntaxHighlightingManager::isLineInCache(size_t line) const {
-    std::shared_lock lock(mutex_);
-    return line < cachedStyles_.size() && cachedStyles_[line] != nullptr;
+    std::shared_lock lock(this->mutex_);
+    return line < this->cachedStyles_.size() && 
+           this->cachedStyles_[line] != nullptr;
 }
 
 bool SyntaxHighlightingManager::isLineValid(size_t line) const {
-    std::shared_lock lock(mutex_);
+    std::shared_lock lock(this->mutex_);
     
-    if (line < cachedStyles_.size() && cachedStyles_[line]) {
-        return cachedStyles_[line]->valid.load(std::memory_order_acquire) && 
-               invalidatedLines_.count(line) == 0;
+    if (line >= this->cachedStyles_.size() || 
+        !this->cachedStyles_[line]) {
+        return false;
     }
     
-    return false;
+    return this->cachedStyles_[line]->valid.load(std::memory_order_acquire) && 
+           this->invalidatedLines_.count(line) == 0;
 }
 
+// Calculate the optimal processing range based on a given visible range
 std::pair<size_t, size_t> SyntaxHighlightingManager::calculateOptimalProcessingRange(
-    size_t requestedStart, size_t requestedEnd) const {
+    size_t startLine, size_t endLine) const {
     
-    // Get buffer line count
-    const TextBuffer* buffer = getBuffer();
-    if (!buffer) {
-        return {requestedStart, requestedEnd};
+    try {
+        // Get context lines size
+        size_t contextSize = contextLines_.load(std::memory_order_acquire);
+        
+        // Get buffer safely
+        const ITextBuffer* buffer = getBuffer();
+        if (!buffer) {
+            return {startLine, endLine}; // No buffer, just return original range
+        }
+        
+        // Get buffer size
+        size_t bufferLineCount = buffer->lineCount();
+        if (bufferLineCount == 0) {
+            return {0, 0}; // Empty buffer
+        }
+        
+        // Calculate optimal start line (include context before)
+        size_t optimalStart = (startLine > contextSize) ? (startLine - contextSize) : 0;
+        
+        // Calculate optimal end line (include context after)
+        size_t optimalEnd = std::min(endLine + contextSize, bufferLineCount - 1);
+        
+        return {optimalStart, optimalEnd};
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::calculateOptimalProcessingRange",
+                         "Exception calculating optimal range: %s", ex.what());
+        return {startLine, endLine}; // Fall back to original range
     }
-    
-    size_t bufferLineCount = buffer->lineCount();
-    if (bufferLineCount == 0) {
-        return {0, 0}; // Empty buffer
-    }
-    
-    // Clamp requested range to buffer size
-    size_t clampedStart = std::min(requestedStart, bufferLineCount - 1);
-    size_t clampedEnd = std::min(requestedEnd, bufferLineCount - 1);
-    
-    // If requested range is empty, return as-is
-    if (clampedStart > clampedEnd) {
-        return {clampedStart, clampedEnd};
-    }
-    
-    // Get visible range
-    size_t visibleStart = visibleStartLine_.load(std::memory_order_acquire);
-    size_t visibleEnd = visibleEndLine_.load(std::memory_order_acquire);
-    
-    // Clamp visible range to buffer size
-    visibleStart = std::min(visibleStart, bufferLineCount - 1);
-    visibleEnd = std::min(visibleEnd, bufferLineCount - 1);
-    
-    // Calculate context range around visible area
-    size_t contextSize = contextLines_.load(std::memory_order_acquire);
-    size_t contextStart = (visibleStart > contextSize) ? (visibleStart - contextSize) : 0;
-    size_t contextEnd = std::min(visibleEnd + contextSize, bufferLineCount - 1);
-    
-    // If requested range overlaps with context range, expand to cover both
-    if (clampedStart <= contextEnd && clampedEnd >= contextStart) {
-        return {std::min(clampedStart, contextStart), std::max(clampedEnd, contextEnd)};
-    }
-    
-    // Otherwise, return requested range as-is
-    return {clampedStart, clampedEnd};
 }
 
 bool SyntaxHighlightingManager::isEntryExpired_nolock(size_t line) const {
-    // This method assumes the caller already holds a lock
-    
-    if (line >= cachedStyles_.size() || !cachedStyles_[line]) {
-        return true;
-    }
-    
-    // Check if the line is in the invalidated set
+    // Check if it's in the invalidated set
     if (invalidatedLines_.count(line) > 0) {
-        return true;
+        return true;  // Explicitly invalidated
     }
     
-    // Check if the cache entry is marked as invalid
-    if (!cachedStyles_[line]->valid.load(std::memory_order_acquire)) {
-        return true;
+    // Check if the timestamp exists for this line
+    auto timestampIt = lineTimestamps_.find(line);
+    if (timestampIt == lineTimestamps_.end()) {
+        return true;  // No timestamp, consider expired
     }
     
-    // Check if the cache entry has expired
+    // Calculate how old the entry is
     auto now = std::chrono::steady_clock::now();
-    auto timestamp = cachedStyles_[line]->timestamp;
-    auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp).count();
+    auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestampIt->second).count();
     
-    return age > CACHE_ENTRY_LIFETIME_MS;
+    // Return true if older than cache lifetime (cast to unsigned for comparison)
+    return static_cast<size_t>(age) > 60000; // 1 minute lifetime
 }
 
 void SyntaxHighlightingManager::evictLRUEntries_nolock(size_t targetSize) const {
@@ -976,78 +1107,383 @@ bool SyntaxHighlightingManager::wasRecentlyProcessed(size_t line) const {
     auto now = std::chrono::steady_clock::now();
     auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count();
     
-    return age <= RECENTLY_PROCESSED_WINDOW_MS;
+    // Cast to unsigned for comparison
+    return static_cast<size_t>(age) <= 5000; // 5 seconds window
 }
 
 void SyntaxHighlightingManager::markAsRecentlyProcessed(size_t line) {
-    auto now = std::chrono::steady_clock::now();
-    recentlyProcessedLines_[line] = now;
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     
-    // Clean up old entries (no lock needed as this is called within a locked context)
-    if (recentlyProcessedLines_.size() > MAX_CACHE_LINES) {
-        std::vector<size_t> linesToRemove;
-        
-        for (const auto& [l, timestamp] : recentlyProcessedLines_) {
-            auto age = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp).count();
-            if (age > RECENTLY_PROCESSED_WINDOW_MS) {
-                linesToRemove.push_back(l);
+    // Add timestamp for the processed line
+    recentlyProcessedLines_[line] = std::chrono::steady_clock::now();
+    
+    // If we have too many entries, remove old ones
+    if (recentlyProcessedLines_.size() > 1000) {
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = recentlyProcessedLines_.begin(); it != recentlyProcessedLines_.end();) {
+            auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
+            if (static_cast<size_t>(elapsedSeconds) > RECENT_PROCESSED_TTL_SECONDS) {
+                it = recentlyProcessedLines_.erase(it);
+            } else {
+                ++it;
             }
-        }
-        
-        for (size_t l : linesToRemove) {
-            recentlyProcessedLines_.erase(l);
         }
     }
 }
 
 void SyntaxHighlightingManager::logCacheMetrics(const char* context, size_t visibleLines, size_t totalProcessed) const {
-    if (!debugLoggingEnabled_) {
+    logManagerMessage(EditorException::Severity::Debug, context,
+                     "Cache metrics: visible=%zu, processed=%zu, timestamps=%zu, access=%zu",
+                     visibleLines, totalProcessed, lineTimestamps_.size(), lineAccessTimes_.size());
+}
+
+// Process a visible range asynchronously
+void SyntaxHighlightingManager::processVisibleRangeAsync(size_t startLine, size_t endLine) const {
+    // Skip processing if highlighting is disabled
+    if (!isEnabled()) {
         return;
     }
     
-    // This method assumes the caller already holds a lock
-    
-    size_t cacheSize = 0;
-    size_t validEntries = 0;
-    size_t invalidEntries = 0;
-    
-    for (size_t i = 0; i < cachedStyles_.size(); ++i) {
-        if (cachedStyles_[i]) {
-            cacheSize++;
-            if (cachedStyles_[i]->valid.load(std::memory_order_acquire)) {
-                validEntries++;
-            } else {
-                invalidEntries++;
+    try {
+        // Check if we have a thread pool
+        if (!threadPool_) {
+            if (debugLoggingEnabled_) {
+                logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::processVisibleRangeAsync",
+                                 "No thread pool available for async processing");
+            }
+            return;
+        }
+        
+        // Take a shared lock to check if we already have an active task for this range
+        std::shared_lock lock(mutex_);
+        
+        // Create a unique key for this range
+        std::string rangeKey = std::to_string(startLine) + "-" + std::to_string(endLine);
+        
+        // Check if we already have a task for this range
+        auto taskIt = activeRangeTasks_.find(rangeKey);
+        if (taskIt != activeRangeTasks_.end()) {
+            // Task already exists
+            auto& future = taskIt->second;
+            
+            // Check if it's still running
+            if (future.valid() && future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+                if (debugLoggingEnabled_) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::processVisibleRangeAsync",
+                                     "Task already running for range %zu-%zu", startLine, endLine);
+                }
+                return;  // Let the existing task complete
             }
         }
+        
+        // Convert to unique lock for modifying the task map
+        lock.unlock();
+        std::unique_lock uniqueLock(mutex_);
+        
+        // Determine task type - visible range gets highest priority
+        TaskType taskType = TaskType::VISIBLE_RANGE;
+        
+        // Submit task to thread pool using the submit method
+        auto future = threadPool_->submit(
+            getTaskPriority(taskType),
+            &SyntaxHighlightingManager::taskHighlightLines,
+            const_cast<SyntaxHighlightingManager*>(this), // Required because taskHighlightLines is const but threadPool->submit expects non-const
+            startLine, 
+            endLine, 
+            taskType
+        );
+        
+        // Store the future in the active tasks map
+        activeRangeTasks_[rangeKey] = std::move(future);
+        
+        if (debugLoggingEnabled_) {
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::processVisibleRangeAsync",
+                             "Submitted task for range %zu-%zu with priority %d", 
+                             startLine, endLine, static_cast<int>(getTaskPriority(taskType)));
+        }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::processVisibleRangeAsync",
+                         "Exception submitting task: %s", ex.what());
+    }
+}
+
+// Task function for highlighting a range of lines
+void SyntaxHighlightingManager::taskHighlightLines(size_t startLine, size_t endLine, TaskType taskType) const {
+    if (!isEnabled()) {
+        return;
     }
     
-    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::logCacheMetrics",
-                    "%s: cache stats - size: %zu, valid: %zu, invalid: %zu, invalidated set: %zu, "
-                    "visible lines: %zu, processed: %zu, timestamps: %zu, access times: %zu",
-                    context, cacheSize, validEntries, invalidEntries, invalidatedLines_.size(),
-                    visibleLines, totalProcessed, lineTimestamps_.size(), lineAccessTimes_.size());
-}
-
-void SyntaxHighlightingManager::setDebugLoggingEnabled(bool enabled) {
-    setDebugLoggingEnabled_static(enabled);
-}
-
-bool SyntaxHighlightingManager::isDebugLoggingEnabled() const {
-    return isDebugLoggingEnabled_static();
-}
-
-void SyntaxHighlightingManager::setDebugLoggingEnabled_static(bool enabled) {
-    debugLoggingEnabled_ = enabled;
-    
-    // Log state change - but only if we're enabling (to avoid paradox when disabling)
-    if (enabled) {
-        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setDebugLoggingEnabled_static",
-                        "Debug logging %s", enabled ? "enabled" : "disabled");
+    try {
+        auto startTime = std::chrono::steady_clock::now();
+        
+        // Get timeout based on task type
+        size_t timeoutMs = highlightingTimeoutMs_.load(std::memory_order_acquire);
+        if (taskType == TaskType::BACKGROUND_RANGE) {
+            // Use longer timeout for background tasks
+            timeoutMs *= 2;
+        } else if (taskType == TaskType::CONTEXT_RANGE) {
+            // Use medium timeout for context tasks
+            timeoutMs = static_cast<size_t>(timeoutMs * 1.5);
+        }
+        
+        // Acquire lock and process lines
+        std::unique_lock lock(mutex_);
+        
+        // Highlight the lines with appropriate timeout
+        auto timeout = std::chrono::milliseconds(timeoutMs);
+        
+        // Use a non-const version of this to call highlightLines_nolock
+        SyntaxHighlightingManager* nonConstThis = const_cast<SyntaxHighlightingManager*>(this);
+        bool allProcessed = nonConstThis->highlightLines_nolock(startLine, endLine, timeout);
+        
+        if (debugLoggingEnabled_) {
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime);
+            
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::taskHighlightLines",
+                             "Background processing for lines %zu-%zu completed in %lld ms (%s)",
+                             startLine, endLine, duration.count(),
+                             allProcessed ? "all processed" : "timeout reached");
+        }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::taskHighlightLines",
+                         "Exception in background task: %s", ex.what());
+    } catch (...) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::taskHighlightLines",
+                         "Unknown exception in background task");
     }
 }
 
-bool SyntaxHighlightingManager::isDebugLoggingEnabled_static() {
-    return debugLoggingEnabled_;
+// Thread pool management methods
+void SyntaxHighlightingManager::setThreadPoolSize(size_t numThreads) {
+    try {
+        // Create a new thread pool with the specified size
+        auto newThreadPool = std::make_unique<ThreadPool>(numThreads);
+        
+        // Replace the old thread pool
+        std::unique_lock lock(mutex_);
+        threadPool_ = std::move(newThreadPool);
+        
+        // Clear active tasks
+        activeLineTasks_.clear();
+        activeRangeTasks_.clear();
+        
+        logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::setThreadPoolSize",
+                         "Thread pool size set to %zu", numThreads);
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::setThreadPoolSize",
+                         "Exception setting thread pool size: %s", ex.what());
+    }
+}
+
+size_t SyntaxHighlightingManager::getThreadPoolSize() const {
+    if (!threadPool_) {
+        return 0;
+    }
+    return threadPool_->getThreadCount();
+}
+
+size_t SyntaxHighlightingManager::getActiveThreadCount() const {
+    if (!threadPool_) {
+        return 0;
+    }
+    return threadPool_->getActiveThreadCount();
+}
+
+size_t SyntaxHighlightingManager::getQueuedTaskCount() const {
+    if (!threadPool_) {
+        return 0;
+    }
+    return threadPool_->getQueueSize();
+}
+
+// Get the current cache size
+size_t SyntaxHighlightingManager::getCacheSize() const {
+    std::shared_lock lock(mutex_);
+    size_t validCount = 0;
+    for (const auto& entry : cachedStyles_) {
+        if (entry && entry->valid.load(std::memory_order_acquire)) {
+            validCount++;
+        }
+    }
+    return validCount;
+}
+
+// Get task priority based on task type
+ThreadPool::Priority SyntaxHighlightingManager::getTaskPriority(TaskType taskType) const {
+    switch (taskType) {
+        case TaskType::VISIBLE_RANGE:
+            return ThreadPool::Priority::HIGH;
+        case TaskType::SINGLE_LINE:
+            return ThreadPool::Priority::HIGH;
+        case TaskType::CONTEXT_RANGE:
+            return ThreadPool::Priority::NORMAL;
+        case TaskType::BACKGROUND_RANGE:
+            return ThreadPool::Priority::LOW;
+        default:
+            return ThreadPool::Priority::NORMAL;
+    }
+}
+
+// Determine if a task should be queued based on current load
+bool SyntaxHighlightingManager::shouldQueueTask(TaskType taskType) const {
+    if (!threadPool_) {
+        return false;
+    }
+    
+    // Get the current queue size
+    size_t queueSize = threadPool_->getQueueSize();
+    
+    // Apply throttling based on task type and current load
+    switch (taskType) {
+        case TaskType::VISIBLE_RANGE:
+            // Always process visible range tasks, but limit to a reasonable number
+            return queueSize < MAX_WORK_QUEUE_SIZE / 2;
+        
+        case TaskType::SINGLE_LINE:
+            // Process single line tasks if queue isn't too large
+            return queueSize < MAX_WORK_QUEUE_SIZE / 2;
+        
+        case TaskType::CONTEXT_RANGE:
+            // Only process context range tasks if queue is relatively small
+            return queueSize < MAX_WORK_QUEUE_SIZE / 4;
+        
+        case TaskType::BACKGROUND_RANGE:
+            // Only process background tasks if queue is nearly empty
+            return queueSize < MAX_WORK_QUEUE_SIZE / 8;
+        
+        default:
+            return queueSize < MAX_WORK_QUEUE_SIZE / 4;
+    }
+}
+
+// Process a single line asynchronously
+void SyntaxHighlightingManager::processSingleLineAsync(size_t line) {
+    // Skip processing if highlighting is disabled
+    if (!isEnabled()) {
+        return;
+    }
+    
+    try {
+        // Check if we have a thread pool
+        if (!threadPool_) {
+            if (debugLoggingEnabled_) {
+                logManagerMessage(EditorException::Severity::Warning, "SyntaxHighlightingManager::processSingleLineAsync",
+                                 "No thread pool available for async processing");
+            }
+            return;
+        }
+        
+        // Check if we should queue the task based on current load
+        if (!shouldQueueTask(TaskType::SINGLE_LINE)) {
+            if (debugLoggingEnabled_) {
+                logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::processSingleLineAsync",
+                                 "Task throttled due to high load");
+            }
+            return;
+        }
+        
+        // Take a shared lock to check if we already have an active task for this line
+        std::shared_lock lock(mutex_);
+        
+        // Check if we already have a task for this line
+        auto taskIt = activeLineTasks_.find(line);
+        if (taskIt != activeLineTasks_.end()) {
+            // Task already exists
+            auto& future = taskIt->second;
+            
+            // Check if it's still running
+            if (future.valid() && future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+                if (debugLoggingEnabled_) {
+                    logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::processSingleLineAsync",
+                                     "Task already running for line %zu", line);
+                }
+                return;  // Let the existing task complete
+            }
+        }
+        
+        // Convert to unique lock for modifying the task map
+        lock.unlock();
+        std::unique_lock uniqueLock(mutex_);
+        
+        // Submit task to thread pool
+        auto future = threadPool_->submit(
+            getTaskPriority(TaskType::SINGLE_LINE),
+            &SyntaxHighlightingManager::taskHighlightLine,
+            this,
+            line
+        );
+        
+        // Store the future in the active tasks map
+        activeLineTasks_[line] = std::move(future);
+        
+        if (debugLoggingEnabled_) {
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::processSingleLineAsync",
+                             "Submitted task for line %zu with priority %d",
+                             line, static_cast<int>(getTaskPriority(TaskType::SINGLE_LINE)));
+        }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::processSingleLineAsync",
+                         "Exception submitting task: %s", ex.what());
+    }
+}
+
+// Task function for highlighting a single line
+void SyntaxHighlightingManager::taskHighlightLine(size_t line) {
+    if (!isEnabled()) {
+        return;
+    }
+    
+    try {
+        auto startTime = std::chrono::steady_clock::now();
+        
+        // Acquire lock and process the line
+        std::unique_lock lock(mutex_);
+        
+        // Check if the line is still invalid or needs processing
+        if (line < cachedStyles_.size() && 
+            cachedStyles_[line] && 
+            cachedStyles_[line]->valid.load(std::memory_order_acquire) &&
+            invalidatedLines_.count(line) == 0) {
+            // Line is already valid, nothing to do
+            return;
+        }
+        
+        // Highlight the line
+        auto styles = highlightLine_nolock(line);
+        
+        if (styles) {
+            // Ensure cache has enough space
+            if (cachedStyles_.size() <= line) {
+                cachedStyles_.resize(line + 1);
+            }
+            
+            // Create cache entry with the new styles
+            cachedStyles_[line] = std::make_unique<CacheEntry>(std::move(*styles));
+            
+            // Update timestamps
+            auto now = std::chrono::steady_clock::now();
+            lineTimestamps_[line] = now;
+            lineAccessTimes_[line] = now;
+            
+            // Remove from invalidated lines set
+            invalidatedLines_.erase(line);
+        }
+        
+        if (debugLoggingEnabled_) {
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - startTime);
+            
+            logManagerMessage(EditorException::Severity::Debug, "SyntaxHighlightingManager::taskHighlightLine",
+                             "Background processing for line %zu completed in %lld μs",
+                             line, duration.count());
+        }
+    } catch (const std::exception& ex) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::taskHighlightLine",
+                         "Exception in background task: %s", ex.what());
+    } catch (...) {
+        logManagerMessage(EditorException::Severity::EDITOR_ERROR, "SyntaxHighlightingManager::taskHighlightLine",
+                         "Unknown exception in background task");
+    }
 }
 

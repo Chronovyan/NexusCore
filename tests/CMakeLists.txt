@@ -25,10 +25,16 @@ target_link_libraries(TextBufferTest PRIVATE EditorLib GTest::gtest GTest::gtest
 
 add_executable(EditorApiExtensionsTest EditorApiExtensionsTest.cpp)
 target_link_libraries(EditorApiExtensionsTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+target_include_directories(EditorApiExtensionsTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME EditorApiExtensionsTest COMMAND EditorApiExtensionsTest)
 
 # Dependency Injection Framework Test
 add_executable(DependencyInjectionTest DependencyInjectionTest.cpp)
 target_link_libraries(DependencyInjectionTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+
+# Fixed version of Dependency Injection Framework Test
+add_executable(DIFrameworkFixedTest DependencyInjectionFixedTest.cpp)
+target_link_libraries(DIFrameworkFixedTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
 # Simple DI Test for our new implementation
 add_executable(SimpleDITest SimpleDITest.cpp)
@@ -147,6 +153,20 @@ target_link_libraries(AIAgentOrchestratorTest PRIVATE
     cpr::cpr
 )
 
+# Model selection tests
+add_executable(ModelSelectionTest
+    ModelSelectionTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AIManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/AIManager.h
+    ${CMAKE_SOURCE_DIR}/src/interfaces/IAIProvider.hpp
+)
+target_link_libraries(ModelSelectionTest PRIVATE
+    EditorLib
+    GTest::gtest
+    GTest::gtest_main
+    nlohmann_json::nlohmann_json
+)
+
 # Other test files for individual running
 add_executable(FutureFeatureTests FutureFeatureTests.cpp)
 target_link_libraries(FutureFeatureTests PRIVATE EditorLib GTest::gtest GTest::gtest_main)
@@ -157,8 +177,8 @@ target_link_libraries(UndoRedoTest PRIVATE EditorLib GTest::gtest GTest::gtest_m
 add_executable(ExitTest ExitTest.cpp)
 target_link_libraries(ExitTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
-add_executable(ManualUndoRedoTest ManualUndoRedoTest.cpp)
-target_link_libraries(ManualUndoRedoTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
+# add_executable(ManualUndoRedoTest ManualUndoRedoTest.cpp)
+# target_link_libraries(ManualUndoRedoTest PRIVATE EditorLib GTest::gtest GTest::gtest_main)
 
 # Error Reporter Test with File Logging
 add_executable(ErrorReporterTest ErrorReporterTest.cpp)
@@ -177,20 +197,25 @@ target_link_libraries(SampleCriticalTest PRIVATE
 )
 
 # Large file performance tests
-add_executable(LargeFilePerformanceTest large_file_performance_test.cpp)
-target_link_libraries(LargeFilePerformanceTest PRIVATE 
-    EditorLib 
-    GTest::gtest 
-    GTest::gtest_main
-)
+add_executable(LargeFilePerformanceTest large_file_performance_test.cpp test_file_utilities.cpp)
+target_link_libraries(LargeFilePerformanceTest PRIVATE EditorLib gtest ${ADDITIONAL_TEST_LIBS})
 
 # Extreme large file performance tests (>10MB)
 add_executable(ExtremeLargeFileTest extreme_large_file_test.cpp test_file_utilities.cpp)
-target_link_libraries(ExtremeLargeFileTest PRIVATE 
+target_link_libraries(ExtremeLargeFileTest PRIVATE EditorLib gtest gtest_main)
+
+# Diff and Merge functionality tests
+add_executable(DiffMergeTest 
+    DiffMergeTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/commands/DiffCommand.cpp
+    ${CMAKE_SOURCE_DIR}/src/commands/MergeCommand.cpp
+)
+target_link_libraries(DiffMergeTest PRIVATE 
     EditorLib 
     GTest::gtest 
     GTest::gtest_main
 )
+add_test(NAME DiffMergeTest COMMAND DiffMergeTest)
 
 # Automated versions of manual tests
 add_executable(AutomatedUndoRedoTest AutomatedUndoRedoTest.cpp)
@@ -316,6 +341,7 @@ add_executable(RunAllTests
     ${CMAKE_SOURCE_DIR}/src/WorkspaceManager.h
     StandaloneDITest.cpp
     LifetimeManagerTest.cpp
+    ModelSelectionTest.cpp
 )
 
 # Define the RUN_ALL_TESTS_INCLUDE macro for the RunAllTests target to avoid duplicate main functions
@@ -352,5 +378,39 @@ gtest_discover_tests(EditorDependencyInjectionTest)
 gtest_discover_tests(SimpleDITest)
 gtest_discover_tests(StandaloneDITest)
 gtest_discover_tests(LifetimeManagerTest)
+gtest_discover_tests(ModelSelectionTest)
+
+# Minimal Test (for debugging test infrastructure)
+add_executable(MinimalTest MinimalTest.cpp)
+target_link_libraries(MinimalTest gtest_main)
+add_test(NAME MinimalTest COMMAND MinimalTest)
+
+# Syntax Highlighting Benchmark Test
+add_executable(SyntaxHighlightingBenchmark SyntaxHighlightingBenchmark.cpp)
+target_link_libraries(SyntaxHighlightingBenchmark PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+
+# VirtualizedTextBuffer Caching Test
+add_executable(VirtualizedTextBufferCachingTest VirtualizedTextBufferCachingTest.cpp)
+target_link_libraries(VirtualizedTextBufferCachingTest PRIVATE 
+    EditorLib 
+    GTest::gtest 
+    GTest::gtest_main
+)
+add_test(NAME VirtualizedTextBufferCachingTest COMMAND VirtualizedTextBufferCachingTest)
+
+# ThreadPool Test
+add_executable(ThreadPoolTest ThreadPoolTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/ThreadPool.cpp
+    ${CMAKE_SOURCE_DIR}/src/ThreadPool.h
+)
+target_link_libraries(ThreadPoolTest PRIVATE 
+    GTest::gtest 
+    GTest::gtest_main
+)
+add_test(NAME ThreadPoolTest COMMAND ThreadPoolTest)
 
 message(STATUS "Configured test executables for TextEditor") 

@@ -9,10 +9,17 @@
 #include "interfaces/ITextBuffer.hpp"
 #include "interfaces/ICommandManager.hpp"
 #include "interfaces/ISyntaxHighlightingManager.hpp"
+#include "interfaces/IDiffEngine.hpp"
+#include "interfaces/IMergeEngine.hpp"
+#include "interfaces/IMultiCursor.hpp"
+#include "MultiCursor.h"
+#include "AIAgentOrchestrator.h"
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <limits> // For std::numeric_limits
 #include <memory> // For std::shared_ptr
+#include <vector>
+#include <optional>
 
 // Position struct to represent cursor or selection position
 struct Position {
@@ -37,7 +44,9 @@ public:
     Editor(
         std::shared_ptr<ITextBuffer> textBuffer,
         std::shared_ptr<ICommandManager> commandManager,
-        std::shared_ptr<ISyntaxHighlightingManager> syntaxHighlightingManager
+        std::shared_ptr<ISyntaxHighlightingManager> syntaxHighlightingManager,
+        std::shared_ptr<IDiffEngine> diffEngine = nullptr,
+        std::shared_ptr<IMergeEngine> mergeEngine = nullptr
     );
     
     ~Editor() = default;
@@ -70,6 +79,18 @@ public:
     void moveCursorToBufferEnd() override;
     void moveCursorToNextWord();
     void moveCursorToPrevWord();
+
+    // Editor API Extensions
+    std::string getFileExtension() const; // Returns the extension of the current file
+    bool isNewFile() const; // Returns true if the file is new/untitled and unmodified
+    std::string getCurrentLineText() const; // Returns the text of the current line
+    bool isCursorAtLineStart() const; // Returns true if cursor is at the start of the line
+    bool isCursorAtLineEnd() const; // Returns true if cursor is at the end of the line
+    bool isCursorAtBufferStart() const; // Returns true if cursor is at the start of the buffer
+    bool isCursorAtBufferEnd() const; // Returns true if cursor is at the end of the buffer
+    size_t getViewportStartLine() const; // Returns the first visible line in the viewport
+    size_t getViewportHeight() const; // Returns the height of the viewport in lines
+    std::string getWordUnderCursor() const; // Returns the word at the current cursor position
 
     void printView(std::ostream& os) const;
     void printLineWithHighlighting(std::ostream& os, const std::string& line, const std::vector<SyntaxStyle>& styles) const;
@@ -160,6 +181,7 @@ public:
 
     // Search and replace operations
     bool searchNext() override;
+    bool findNext(const std::string& pattern);
     bool replace(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true) override;
     bool replaceAll(const std::string& searchTerm, const std::string& replacementText, bool caseSensitive = true) override;
 
@@ -201,9 +223,24 @@ public:
     std::vector<std::vector<SyntaxStyle>> getHighlightingStyles();
     virtual std::vector<std::vector<SyntaxStyle>> getHighlightingStyles() const override;
     
+    // Multiple cursor operations
+    bool isMultiCursorEnabled() const override;
+    void setMultiCursorEnabled(bool enable) override;
+    size_t getCursorCount() const override;
+    bool addCursor(size_t line, size_t col) override;
+    bool removeCursor(size_t line, size_t col) override;
+    void removeAllSecondaryCursors() override;
+    size_t addCursorsAtAllOccurrences(const std::string& text, bool caseSensitive = true) override;
+    size_t addCursorsAtColumn(size_t startLine, size_t endLine, size_t column) override;
+    IMultiCursor& getMultiCursor() override;
+    const IMultiCursor& getMultiCursor() const override;
+    
     // Helper methods for indentation commands
     void setLine(size_t lineIndex, const std::string& text);
     void setCursorPosition(const Position& pos);
+    
+    // Helper method for selection handling
+    std::string getSingleSelectionText() const;
 
     // Text Selection Helper methods
     bool isWhitespace(char c) const;
@@ -248,6 +285,9 @@ public:
     // Method to extract pure text content from a line (no formatting)
     std::string getLineContentForHighlighting(size_t lineIndex) const;
 
+    // For debugging and testing
+    void printBuffer(std::ostream& os) const; // Print buffer content to stream
+
     // Method to handle different line ending types in the buffer
     void normalizeLineEndings();
 
@@ -282,6 +322,31 @@ public:
     
     friend class TestEditor; 
 
+    // Diff and Merge Operations
+    bool showDiff(const std::vector<std::string>& text1, const std::vector<std::string>& text2) override;
+    bool diffWithCurrent(const std::vector<std::string>& otherText) override;
+    bool diffWithFile(const std::string& filename) override;
+    bool mergeTexts(
+        const std::vector<std::string>& base,
+        const std::vector<std::string>& ours,
+        const std::vector<std::string>& theirs) override;
+    bool mergeWithFile(const std::string& theirFile, const std::string& baseFile) override;
+    bool applyDiffChanges(
+        const std::vector<DiffChange>& changes,
+        const std::vector<std::string>& sourceText) override;
+    bool resolveConflict(
+        size_t conflictIndex,
+        MergeConflictResolution resolution,
+        const std::vector<std::string>& customResolution = {}) override;
+
+    // AI Agent Orchestrator integration
+    /**
+     * @brief Set the AI Agent Orchestrator
+     * 
+     * @param orchestrator The orchestrator to use
+     */
+    void setAIAgentOrchestrator(std::shared_ptr<ai_editor::AIAgentOrchestrator> orchestrator);
+
 protected:
     // The injected dependencies
     std::shared_ptr<ITextBuffer> textBuffer_;
@@ -314,6 +379,10 @@ protected:
     
     bool syntaxHighlightingEnabled_ = false;
     std::shared_ptr<SyntaxHighlighter> currentHighlighter_ = nullptr;
+    
+    // Multiple cursor support
+    std::unique_ptr<MultiCursor> multiCursor_;
+    bool multiCursorEnabled_ = false;
     
     // Viewing configuration and screen metrics
     size_t topVisibleLine_ = 0;     // First visible line in the editor window
@@ -349,11 +418,28 @@ protected:
         // Try to cast the textBuffer_ to a TextBuffer
         TextBuffer* concreteBuffer = dynamic_cast<TextBuffer*>(textBuffer_.get());
         if (!concreteBuffer) {
-            // If the cast fails, log an error and throw an exception
-            throw std::runtime_error("getTextBuffer called on an Editor with a non-TextBuffer implementation");
+            throw std::runtime_error("TextBuffer cast failed - interface implementation is not TextBuffer");
         }
         return *concreteBuffer;
     }
+    
+    // Diff and Merge Components
+    std::shared_ptr<IDiffEngine> diffEngine_;
+    std::shared_ptr<IMergeEngine> mergeEngine_;
+    MergeResult currentMergeResult_; // Stores the current merge result
+    
+    // Helper methods for diff and merge operations
+    std::vector<std::string> getCurrentTextAsLines() const;
+    bool loadTextFromFile(const std::string& filename, std::vector<std::string>& lines);
+    
+    // Update code context in the AI Agent Orchestrator
+    void updateCodeContext();
+    
+    // AI Agent Orchestrator for context-aware assistance
+    std::shared_ptr<ai_editor::AIAgentOrchestrator> aiAgentOrchestrator_;
+
+private:
+    // Add any private members or methods here
 };
 
 #endif // EDITOR_H 

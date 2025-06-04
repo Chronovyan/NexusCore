@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+// Include GLEW before any other OpenGL-related headers
+#include <GL/glew.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -14,6 +16,10 @@
 #include "MockOpenAI_API_Client.h"
 #include "WorkspaceManager.h"
 #include "AIAgentOrchestrator.h"
+#include "AIManager.h"
+#include "tutorials/TutorialManager.hpp"
+#include "tutorials/TutorialUIController.hpp"
+#include "tutorials/TutorialProgressTracker.hpp"
 
 // Include other necessary headers for your application
 
@@ -21,135 +27,426 @@ using namespace ai_editor;
 
 // Forward declarations
 bool saveApiKeyToEnvFile(const std::string& apiKey, const std::string& filePath);
+std::string readApiKeyFromEnvFile(const std::string& filePath);
+void renderModelSelectionDialog(UIModel& uiModel, AIManager& aiManager);
+void renderTutorialUI(UIModel& uiModel, TutorialUIController& tutorialController);
+void renderTutorialBrowser(UIModel& uiModel, TutorialUIController& tutorialController);
 
 // Function to read API key from .env file
 std::string readApiKeyFromEnvFile(const std::string& filePath) {
     std::ifstream envFile(filePath);
-    std::string apiKey;
-    
     if (!envFile.is_open()) {
-        LOG_ERROR("Could not open .env file: " + filePath);
+        LOG_DEBUG("Could not open .env file for reading");
         return "";
     }
     
     std::string line;
-    std::regex keyPattern("OPENAI_API_KEY=(.*)");
+    std::regex apiKeyRegex("^OPENAI_API_KEY=(.+)$");
+    std::smatch match;
     
     while (std::getline(envFile, line)) {
-        // Skip comments and empty lines
-        if (line.empty() || line[0] == '#') {
-            continue;
-        }
-        
-        std::smatch matches;
-        if (std::regex_search(line, matches, keyPattern) && matches.size() > 1) {
-            apiKey = matches[1].str();
-            break;
+        if (std::regex_search(line, match, apiKeyRegex) && match.size() > 1) {
+            return match[1].str();
         }
     }
     
-    return apiKey;
+    LOG_DEBUG("No API key found in .env file");
+    return "";
 }
 
 // Function to save API key to .env file
 bool saveApiKeyToEnvFile(const std::string& apiKey, const std::string& filePath) {
-    // First check if file exists and if it contains the API key line
-    bool fileExists = std::filesystem::exists(filePath);
-    bool keyExists = false;
-    std::string fileContent;
-    
-    if (fileExists) {
+    try {
+        // First, read the existing contents
         std::ifstream envFile(filePath);
-        if (envFile.is_open()) {
-            std::string line;
-            std::regex keyPattern("OPENAI_API_KEY=.*");
-            
+        bool fileExists = envFile.good();
+        
+        std::vector<std::string> lines;
+        std::string line;
+        bool keyFound = false;
+        std::regex apiKeyRegex("^OPENAI_API_KEY=.*$");
+        
+        if (fileExists) {
             while (std::getline(envFile, line)) {
-                if (std::regex_match(line, keyPattern)) {
-                    // Replace existing key line
-                    fileContent += "OPENAI_API_KEY=" + apiKey + "\n";
-                    keyExists = true;
+                if (std::regex_match(line, apiKeyRegex)) {
+                    // Replace the existing API key line
+                    lines.push_back("OPENAI_API_KEY=" + apiKey);
+                    keyFound = true;
                 } else {
-                    // Keep existing line
-                    fileContent += line + "\n";
+                    lines.push_back(line);
                 }
             }
             envFile.close();
-        } else {
-            LOG_ERROR("Could not read .env file for updating: " + filePath);
+        }
+        
+        // If the key wasn't found in the existing file, add it
+        if (!keyFound) {
+            lines.push_back("OPENAI_API_KEY=" + apiKey);
+        }
+        
+        // Write back to the file
+        std::ofstream envFileOut(filePath);
+        if (!envFileOut.is_open()) {
+            LOG_ERROR("Failed to open .env file for writing");
             return false;
         }
-    }
-    
-    // Now write the updated content or create a new file
-    std::ofstream envFileOut(filePath);
-    if (!envFileOut.is_open()) {
-        LOG_ERROR("Could not open .env file for writing: " + filePath);
+        
+        for (const auto& l : lines) {
+            envFileOut << l << std::endl;
+        }
+        
+        return true;
+    } catch (const std::exception& e) {
+        LOG_ERROR("Exception while saving API key to .env file: " + std::string(e.what()));
         return false;
     }
-    
-    if (keyExists) {
-        // Write the updated content
-        envFileOut << fileContent;
-    } else {
-        // Either new file or file without API key, add the key
-        if (!fileContent.empty()) {
-            envFileOut << fileContent;
-            if (fileContent.back() != '\n') {
-                envFileOut << "\n";
-            }
-        }
-        envFileOut << "OPENAI_API_KEY=" + apiKey << std::endl;
-    }
-    
-    envFileOut.close();
-    LOG_DEBUG("API key saved to .env file");
-    return true;
 }
 
 // Simple callback for text input when user clicks "Send"
 void handleSendButton(UIModel& uiModel, AIAgentOrchestrator& orchestrator) {
-    // Check if there's any text to send
-    if (uiModel.userInputBuffer[0] == '\0') {
+    try {
+        // Check if input is empty
+        if (uiModel.userInputBuffer[0] == '\0') {
+            LOG_DEBUG("Empty input, ignoring");
+            return;
+        }
+        
+        // Get the user input
+        std::string userInput = uiModel.userInputBuffer;
+        
+        // Clear the input buffer
+        uiModel.userInputBuffer[0] = '\0';
+        
+        // Process the input with the orchestrator
+        if (orchestrator.getState() == AIAgentOrchestrator::State::IDLE) {
+            // Initial prompt
+            LOG_DEBUG("Handling initial prompt: " + userInput);
+            orchestrator.handleSubmitUserPrompt(userInput);
+        } else if (orchestrator.getState() == AIAgentOrchestrator::State::AWAITING_APPROVAL) {
+            // Approve/reject
+            LOG_DEBUG("Handling approval/rejection: " + userInput);
+            orchestrator.handleUserFeedback(userInput);
+        } else if (orchestrator.getState() == AIAgentOrchestrator::State::EXECUTING_TASK) {
+            // Feedback during execution
+            LOG_DEBUG("Handling feedback during execution: " + userInput);
+            orchestrator.handleUserFeedbackDuringExecution(userInput);
+        } else if (orchestrator.getState() == AIAgentOrchestrator::State::AI_ERROR) {
+            // Try to recover from error
+            LOG_DEBUG("Trying to recover from error with: " + userInput);
+            orchestrator.resetState();
+            orchestrator.handleSubmitUserPrompt(userInput);
+        } else {
+            // Unhandled state
+            LOG_WARNING("Unhandled state in handleSendButton: " + 
+                        std::to_string(static_cast<int>(orchestrator.getState())));
+            uiModel.AddSystemMessage("Cannot process input in the current state: " +
+                        std::to_string(static_cast<int>(orchestrator.getState())));
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("Exception in handleSendButton: " + std::string(e.what()));
+        uiModel.AddSystemMessage("Error processing input: " + std::string(e.what()));
+    }
+}
+
+void renderModelSelectionDialog(UIModel& uiModel, AIManager& aiManager) {
+    if (!uiModel.showModelSelectionDialog) return;
+    
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), 
+                           ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_Appearing);
+    
+    if (ImGui::Begin("AI Model Selection", &uiModel.showModelSelectionDialog)) {
+        // Get all available provider types
+        std::vector<std::string> providerTypes = aiManager.getAvailableProviderTypesList();
+        
+        // Provider selection
+        const char* currentProvider = uiModel.currentProviderType.empty() ? 
+                                     "Select Provider" : uiModel.currentProviderType.c_str();
+        
+        if (ImGui::BeginCombo("Provider", currentProvider)) {
+            for (int i = 0; i < providerTypes.size(); i++) {
+                const bool isSelected = (uiModel.selectedProviderIndex == i);
+                if (ImGui::Selectable(providerTypes[i].c_str(), isSelected)) {
+                    uiModel.selectedProviderIndex = i;
+                    
+                    // Load models for this provider
+                    uiModel.availableModels = aiManager.listAvailableModels(providerTypes[i]);
+                    uiModel.selectedModelIndex = -1; // Reset model selection
+                }
+                
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        
+        // Model selection - only show if a provider is selected
+        if (uiModel.selectedProviderIndex >= 0 && uiModel.selectedProviderIndex < providerTypes.size()) {
+            ImGui::Separator();
+            ImGui::Text("Select Model:");
+            
+            // Create a child window for scrollable list
+            ImGui::BeginChild("ModelsScrollRegion", ImVec2(0, 250), true);
+            
+            for (int i = 0; i < uiModel.availableModels.size(); i++) {
+                const ModelInfo& model = uiModel.availableModels[i];
+                
+                const bool isSelected = (uiModel.selectedModelIndex == i);
+                std::string modelDisplay = model.name + " (" + model.id + ")";
+                
+                if (model.isLocal) {
+                    modelDisplay += " [Local]";
+                }
+                
+                if (ImGui::Selectable(modelDisplay.c_str(), isSelected)) {
+                    uiModel.selectedModelIndex = i;
+                }
+                
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+                
+                // Show model details on hover
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("ID: %s", model.id.c_str());
+                    ImGui::Text("Provider: %s", model.provider.c_str());
+                    ImGui::Text("Version: %s", model.version.c_str());
+                    ImGui::Text("Local: %s", model.isLocal ? "Yes" : "No");
+                    ImGui::Text("Context Window: %zu tokens", model.contextWindowSize);
+                    
+                    if (!model.capabilities.empty()) {
+                        ImGui::Separator();
+                        ImGui::Text("Capabilities:");
+                        for (const auto& [cap, support] : model.capabilities) {
+                            ImGui::Text("  %s: %s", cap.c_str(), support.c_str());
+                        }
+                    }
+                    
+                    ImGui::EndTooltip();
+                }
+            }
+            
+            ImGui::EndChild();
+        }
+        
+        ImGui::Separator();
+        
+        // Show currently active model
+        ImGui::Text("Current Model: %s", uiModel.GetCurrentModelDisplayName().c_str());
+        
+        // Apply button - only enabled if a model is selected
+        bool canApply = uiModel.selectedProviderIndex >= 0 && 
+                       uiModel.selectedModelIndex >= 0 && 
+                       uiModel.selectedModelIndex < uiModel.availableModels.size();
+        
+        if (!canApply) {
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        }
+        
+        if (ImGui::Button("Apply", ImVec2(120, 0)) && canApply) {
+            std::string providerType = providerTypes[uiModel.selectedProviderIndex];
+            std::string modelId = uiModel.availableModels[uiModel.selectedModelIndex].id;
+            
+            // Set the model in AIManager
+            if (aiManager.setActiveProvider(providerType) && 
+                aiManager.setCurrentModel(modelId)) {
+                
+                // Update the UI model
+                uiModel.SetCurrentModel(providerType, modelId);
+                uiModel.showModelSelectionDialog = false;
+            } else {
+                uiModel.AddSystemMessage("Failed to set model: " + modelId);
+            }
+        }
+        
+        if (!canApply) {
+            ImGui::PopStyleVar();
+        }
+        
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            uiModel.showModelSelectionDialog = false;
+        }
+        
+        ImGui::End();
+    }
+}
+
+// Function to render the tutorial UI
+void renderTutorialUI(UIModel& uiModel, TutorialUIController& tutorialController) {
+    if (!tutorialController.isTutorialVisible()) {
         return;
     }
     
-    // Get the user input
-    std::string userInput = uiModel.userInputBuffer;
+    // Calculate the appropriate position and size for the tutorial panel
+    ImVec2 windowPos = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.9f);
+    ImVec2 windowSize = ImVec2(ImGui::GetIO().DisplaySize.x * 0.8f, ImGui::GetIO().DisplaySize.y * 0.2f);
     
-    // Clear the input buffer
-    uiModel.userInputBuffer[0] = '\0';
+    ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     
-    // Check the orchestrator state to determine which method to call
-    AIAgentOrchestrator::OrchestratorState state = orchestrator.getCurrentState();
-    
-    // Route to the appropriate handler based on the current state
-    if (state == AIAgentOrchestrator::OrchestratorState::IDLE) {
-        // Initial prompt - starting a new conversation
-        orchestrator.handleSubmitUserPrompt(userInput);
-    } 
-    else if (state == AIAgentOrchestrator::OrchestratorState::AWAITING_USER_FEEDBACK_ON_PLAN ||
-             state == AIAgentOrchestrator::OrchestratorState::AWAITING_USER_CLARIFICATION_BEFORE_PLAN ||
-             state == AIAgentOrchestrator::OrchestratorState::AWAITING_USER_CLARIFICATION) {
-        // User is responding to a plan or clarification questions
-        orchestrator.handleSubmitUserFeedback(userInput);
-    }
-    else if (state == AIAgentOrchestrator::OrchestratorState::AWAITING_USER_APPROVAL_OF_PREVIEW) {
-        // Handle user approval of the preview
-        if (userInput == "approve preview" || userInput == "yes" || 
-            userInput == "proceed" || userInput == "approve" ||
-            userInput == "looks good" || userInput == "looks good, proceed") {
-            // User approved the preview, trigger file generation
-            orchestrator.handleSubmitUserApprovalOfPreview(userInput);
-        } else {
-            // Treat any other input as feedback requesting changes
-            orchestrator.handleSubmitUserFeedback(userInput);
+    if (ImGui::Begin("Tutorial", nullptr, 
+                    ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                    ImGuiWindowFlags_NoCollapse)) {
+        
+        // Display tutorial content
+        ImGui::TextWrapped("%s", uiModel.tutorialStepContent.c_str());
+        
+        ImGui::Separator();
+        
+        // Navigation buttons
+        if (ImGui::Button("Previous", ImVec2(120, 0))) {
+            // Just use the controller's UI update method
+            tutorialController.updateUI();
+        }
+        
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Next", ImVec2(120, 0))) {
+            // Just use the controller's UI update method
+            tutorialController.updateUI();
+        }
+        
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Close Tutorial")) {
+            tutorialController.hideTutorial();
         }
     }
-    else {
-        // For any other state, just show a message that we can't process this now
-        uiModel.AddSystemMessage("Cannot process input in the current state: " + 
-                               std::to_string(static_cast<int>(state)));
+    ImGui::End();
+}
+
+// Function to render the tutorial browser
+void renderTutorialBrowser(UIModel& uiModel, TutorialUIController& tutorialController) {
+    // Only render if browser is visible
+    if (!uiModel.isTutorialBrowserVisible) return;
+    
+    // Calculate the appropriate position and size for the browser window
+    ImGuiIO& io = ImGui::GetIO();
+    float windowWidth = 600.0f;
+    float windowHeight = 400.0f;
+    
+    // Center the window on the screen
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), 
+                           ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight), ImGuiCond_Appearing);
+    
+    if (ImGui::Begin("Tutorial Browser", &uiModel.isTutorialBrowserVisible, 
+                    ImGuiWindowFlags_NoCollapse)) {
+        
+        // Search box
+        ImGui::Text("Search Tutorials:");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::InputText("##TutorialSearch", uiModel.tutorialSearchBuffer, 
+                        IM_ARRAYSIZE(uiModel.tutorialSearchBuffer));
+        ImGui::PopItemWidth();
+        
+        // Filter tabs
+        if (ImGui::BeginTabBar("TutorialFilterTabs")) {
+            if (ImGui::BeginTabItem("All")) {
+                // Show all tutorials
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Getting Started")) {
+                // Show beginner tutorials
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Advanced")) {
+                // Show advanced tutorials
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Completed")) {
+                // Show completed tutorials
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+        
+        // Tutorial list
+        ImGui::BeginChild("TutorialsList", ImVec2(0, ImGui::GetContentRegionAvail().y - 50), true);
+        
+        // Display tutorial items
+        std::string searchStr = uiModel.tutorialSearchBuffer;
+        std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), 
+                      [](unsigned char c){ return std::tolower(c); });
+        
+        for (const auto& tutorial : uiModel.tutorialsList) {
+            // Filter by search string if present
+            if (!searchStr.empty()) {
+                std::string titleLower = tutorial.title;
+                std::transform(titleLower.begin(), titleLower.end(), titleLower.begin(), 
+                               [](unsigned char c){ return std::tolower(c); });
+                
+                std::string descLower = tutorial.description;
+                std::transform(descLower.begin(), descLower.end(), descLower.begin(), 
+                               [](unsigned char c){ return std::tolower(c); });
+                
+                if (titleLower.find(searchStr) == std::string::npos && 
+                    descLower.find(searchStr) == std::string::npos) {
+                    continue; // Skip this tutorial as it doesn't match the search
+                }
+            }
+            
+            // Create a unique identifier for the selectable item
+            std::string itemId = "##" + tutorial.id;
+            
+            // Create a color based on whether the tutorial is completed
+            ImVec4 itemColor = tutorial.isCompleted ? 
+                              ImVec4(0.4f, 0.8f, 0.4f, 1.0f) : 
+                              ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            
+            ImGui::PushStyleColor(ImGuiCol_Text, itemColor);
+            if (ImGui::Selectable((tutorial.title + itemId).c_str(), false)) {
+                // Start the selected tutorial
+                tutorialController.showTutorial(tutorial.id);
+                uiModel.isTutorialBrowserVisible = false;
+            }
+            ImGui::PopStyleColor();
+            
+            // Display tutorial info on hover
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("Title: %s", tutorial.title.c_str());
+                ImGui::Text("Difficulty: %d/5", tutorial.difficulty);
+                ImGui::Text("Estimated Time: %s", tutorial.estimatedTime.c_str());
+                ImGui::Text("Status: %s", tutorial.isCompleted ? "Completed" : "Not Completed");
+                ImGui::Separator();
+                ImGui::TextWrapped("%s", tutorial.description.c_str());
+                ImGui::EndTooltip();
+            }
+            
+            // Display tutorial metadata
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), 
+                              "[Difficulty: %d/5, Time: %s]", 
+                              tutorial.difficulty, 
+                              tutorial.estimatedTime.c_str());
+            
+            // Show completion status with a colored circle
+            ImGui::SameLine(ImGui::GetWindowWidth() - 40);
+            if (tutorial.isCompleted) {
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓");
+            } else {
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "○");
+            }
+            
+            // Display a short description
+            ImGui::TextWrapped("%s", tutorial.description.c_str());
+            ImGui::Separator();
+        }
+        
+        ImGui::EndChild(); // End tutorials list
+        
+        // Bottom buttons
+        if (ImGui::Button("Close", ImVec2(120, 0))) {
+            uiModel.isTutorialBrowserVisible = false;
+        }
+        
+        ImGui::End(); // End tutorial browser window
     }
 }
 
@@ -241,6 +538,12 @@ int main(int argc, char** argv) {
         glfwSwapInterval(1); // Enable vsync
         LOG_DEBUG("GLFW window created successfully");
         
+        // Initialize GLEW
+        if (glewInit() != GLEW_OK) {
+            LOG_ERROR("Failed to initialize GLEW");
+            return 1;
+        }
+        
         // Setup Dear ImGui context
         LOG_DEBUG("Setting up ImGui context");
         IMGUI_CHECKVERSION();
@@ -264,17 +567,115 @@ int main(int argc, char** argv) {
         LOG_DEBUG("Initializing UI model and components");
         UIModel uiModel;
         
-        // Create OpenAI client (using mock for now due to implementation missing methods)
-        LOG_DEBUG("Creating Mock OpenAI API client");
-        MockOpenAI_API_Client apiClient;
+        // Create AIManager
+        LOG_DEBUG("Creating AIManager");
+        AIManager aiManager;
+        
+        // Initialize the AI Manager
+        bool aiInitialized = false;
+        try {
+            // Attempt to initialize OpenAI provider if API key is available
+            if (!apiKeyStr.empty()) {
+                std::map<std::string, std::string> optionsMap = {
+                    {"api_key", apiKeyStr},
+                    {"model", "gpt-4-turbo-preview"} // Default model
+                };
+                
+                if (aiManager.initializeProvider("openai", optionsMap)) {
+                    aiManager.setActiveProvider("openai");
+                    aiInitialized = true;
+                    LOG_INFO("OpenAI provider initialized successfully");
+                }
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("Exception in AIManager initialization: " + std::string(e.what()));
+        }
+        
+        if (!aiInitialized) {
+            // Show a warning if no API provider is configured
+            uiModel.showApiKeyDialog = true;
+            LOG_WARNING("No AI provider configured, showing API key dialog");
+        }
+        
+        // Try to read API key from .env file
+        std::string savedApiKey = readApiKeyFromEnvFile(".env");
+        if (!savedApiKey.empty()) {
+            LOG_DEBUG("Found API key in .env file");
+            uiModel.SetApiKey(savedApiKey);
+            
+            // Register OpenAI provider with the API key
+            ProviderOptions openaiOptions;
+            openaiOptions.additionalOptions["api_key"] = savedApiKey;
+            if (aiManager.registerProvider("openai", openaiOptions)) {
+                aiManager.setActiveProvider("openai");
+                
+                // Get available models and set the default model
+                std::vector<ModelInfo> openaiModels = aiManager.listAvailableModels();
+                if (!openaiModels.empty()) {
+                    std::string defaultModelId = openaiModels[0].id;
+                    if (aiManager.setCurrentModel(defaultModelId)) {
+                        uiModel.SetCurrentModel("openai", defaultModelId);
+                        uiModel.UpdateAvailableModels(openaiModels);
+                    }
+                }
+            }
+        }
         
         // Create workspace manager
         LOG_DEBUG("Creating workspace manager");
         WorkspaceManager workspaceManager("./workspace");
         
+        // Create tutorial components
+        LOG_DEBUG("Creating tutorial components");
+        auto tutorialProgressTracker = std::make_shared<TutorialProgressTracker>();
+        auto tutorialManager = std::make_shared<TutorialManager>(tutorialProgressTracker);
+        
         // Create AI Agent Orchestrator
-        LOG_DEBUG("Creating AI Agent Orchestrator");
-        AIAgentOrchestrator orchestrator(apiClient, uiModel, workspaceManager);
+        LOG_DEBUG("Creating AI Agent Orchestrator with AIManager");
+        AIAgentOrchestrator orchestrator(aiManager, uiModel, workspaceManager);
+        
+        // Create Tutorial UI Controller
+        LOG_DEBUG("Creating Tutorial UI Controller");
+        std::shared_ptr<UIModel> uiModelPtr = std::make_shared<UIModel>();
+        *uiModelPtr = uiModel; // Copy the contents of uiModel to the shared_ptr
+        TutorialUIController tutorialController(uiModelPtr, tutorialManager);
+        
+        // Initialize tutorial progress from saved data
+        LOG_DEBUG("Loading tutorial progress");
+        std::string progressFilePath = "tutorial_progress.json";
+        if (std::filesystem::exists(progressFilePath)) {
+            tutorialProgressTracker->loadFromFile(progressFilePath);
+        }
+        
+        // Load available tutorials
+        LOG_DEBUG("Loading tutorials");
+        tutorialManager->loadTutorialsFromDirectory("./tutorials");
+        
+        // Get available tutorials
+        std::vector<TutorialListItem> tutorialsList;
+        auto tutorials = tutorialManager->getAllTutorials();
+        for (const auto& tutorial : tutorials) {
+            if (tutorial) {
+                TutorialListItem item;
+                item.id = tutorial->getId();
+                item.title = tutorial->getTitle();
+                item.description = tutorial->getDescription();
+                item.difficulty = static_cast<int>(tutorial->getDifficulty());
+                item.completedSteps = 0;
+                item.totalSteps = tutorial->getStepCount();
+                
+                // Check if we have progress data for this tutorial
+                auto progress = tutorialProgressTracker->getProgress(item.id);
+                if (progress.has_value()) {
+                    const auto& progressData = progress.value();
+                    item.completedSteps = progressData.completedSteps;
+                }
+                
+                tutorialsList.push_back(item);
+            }
+        }
+        uiModel.tutorials = tutorialsList;
+        
         LOG_DEBUG("Components initialized successfully");
         
         // Add initial welcome message
@@ -355,6 +756,23 @@ int main(int argc, char** argv) {
                         uiModel.showApiKeyDialog = true;
                         LOG_DEBUG("API Key Settings menu item clicked, showApiKeyDialog set to true");
                     }
+                    if (ImGui::MenuItem("AI Model Selection")) {
+                        // Open model selection dialog
+                        uiModel.showModelSelectionDialog = true;
+                        
+                        // Refresh the list of available models from all providers
+                        std::vector<std::string> providerTypes = aiManager.getAvailableProviderTypesList();
+                        std::vector<ModelInfo> allModels;
+                        
+                        for (const auto& providerType : providerTypes) {
+                            std::vector<ModelInfo> providerModels = aiManager.listAvailableModels(providerType);
+                            allModels.insert(allModels.end(), providerModels.begin(), providerModels.end());
+                        }
+                        
+                        uiModel.UpdateAvailableModels(allModels);
+                        
+                        LOG_DEBUG("AI Model Selection menu item clicked, showModelSelectionDialog set to true");
+                    }
                     ImGui::EndMenu();
                 }
                 
@@ -366,6 +784,9 @@ int main(int argc, char** argv) {
                 }
                 ImGui::EndMenuBar();
             }
+            
+            // Display current model in the status bar
+            ImGui::Text("Current Model: %s", uiModel.GetCurrentModelDisplayName().c_str());
             
             // Split the window into two panels
             float leftPanelWidth = 250.0f;
@@ -386,6 +807,12 @@ int main(int argc, char** argv) {
                     ImGui::Text("%s", file.description.c_str());
                     ImGui::EndTooltip();
                 }
+            }
+            
+            // Add Tutorials button
+            ImGui::Separator();
+            if (ImGui::Button("Tutorials", ImVec2(leftPanelWidth - 20, 0))) {
+                tutorialController.showTutorialBrowser();
             }
             
             ImGui::EndChild();
@@ -428,7 +855,7 @@ int main(int argc, char** argv) {
                     uiModel.chatHistory.push_back(userMsg);
                     
                     // Process user input through orchestrator
-                    orchestrator.handleSubmitUserPrompt(inputText);
+                    handleSendButton(uiModel, orchestrator);
                     
                     // Clear input field
                     inputText[0] = '\0';
@@ -456,11 +883,16 @@ int main(int argc, char** argv) {
                     if (ImGui::Button("Save", ImVec2(120, 0))) {
                         std::string newKey = uiModel.apiKeyBuffer;
                         if (uiModel.SetApiKey(newKey)) {
-                            // Update the API client with the new key
-                            // Using mock client instead since the real client is missing required implementations
-                            // apiClient = OpenAI_API_Client(newKey);
-                            MockOpenAI_API_Client newClient;
-                            apiClient = std::move(newClient);
+                            // Register or update OpenAI provider with the new key
+                            ProviderOptions openaiOptions;
+                            openaiOptions.additionalOptions["api_key"] = newKey;
+                            
+                            if (aiManager.isProviderRegistered("openai")) {
+                                aiManager.setProviderOptions("openai", openaiOptions);
+                            } else {
+                                aiManager.registerProvider("openai", openaiOptions);
+                                aiManager.setActiveProvider("openai");
+                            }
                             
                             // Save to .env file
                             if (saveApiKeyToEnvFile(newKey, ".env")) {
@@ -484,6 +916,13 @@ int main(int argc, char** argv) {
                 }
             }
 
+            // Render the model selection dialog
+            renderModelSelectionDialog(uiModel, aiManager);
+            
+            // Render tutorial UI and browser if visible
+            renderTutorialUI(uiModel, tutorialController);
+            renderTutorialBrowser(uiModel, tutorialController);
+
             // Rendering
             ImGui::Render();
             int display_w, display_h;
@@ -495,6 +934,10 @@ int main(int argc, char** argv) {
             
             glfwSwapBuffers(window);
         }
+        
+        // Save tutorial progress before exit
+        LOG_DEBUG("Saving tutorial progress");
+        tutorialProgressTracker->saveToFile(progressFilePath);
         
         // Cleanup
         LOG_DEBUG("Application closing, cleaning up resources");

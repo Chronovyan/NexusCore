@@ -9,7 +9,7 @@
 #include <iostream>
 
 // Forward declarations
-class TextBuffer;
+class ITextBuffer;
 
 /**
  * Simplified SyntaxHighlightingManager for testing purposes.
@@ -47,7 +47,7 @@ public:
     }
     
     // Set the buffer to highlight (non-owning pointer)
-    void setBuffer(const TextBuffer* buffer) {
+    void setBuffer(const ITextBuffer* buffer) {
         buffer_ = buffer;
         invalidateAllLines();
     }
@@ -110,7 +110,7 @@ public:
     }
     
 private:
-    const TextBuffer* buffer_;
+    const ITextBuffer* buffer_;
     std::shared_ptr<SyntaxHighlighter> highlighter_;
     bool enabled_;
 };

@@ -1,4 +1,5 @@
 #include "EditorServices.h"
+#include "LoggingCompatibility.h"
 #include "AppDebugLog.h"
 #include "interfaces/plugins/ICommandRegistry.hpp"
 #include "interfaces/plugins/IUIExtensionRegistry.hpp"
@@ -6,6 +7,8 @@
 #include "interfaces/plugins/IEventRegistry.hpp"
 #include "interfaces/plugins/IWorkspaceExtension.hpp"
 #include "interfaces/IEditorCoreThreadPool.hpp"
+#include "interfaces/IDiffEngine.hpp"
+#include "interfaces/IMergeEngine.hpp"
 
 namespace ai_editor {
 
@@ -21,19 +24,23 @@ EditorServices::EditorServices(
     std::shared_ptr<IEventRegistry> eventRegistry,
     std::shared_ptr<IWorkspaceExtension> workspaceExtension,
     std::shared_ptr<IEditorCoreThreadPool> editorCoreThreadPool,
-    di::Injector& injector
-) : textBuffer_(std::move(textBuffer)),
-    commandManager_(std::move(commandManager)),
-    workspaceManager_(std::move(workspaceManager)),
-    syntaxHighlightingManager_(std::move(syntaxHighlightingManager)),
-    errorReporter_(std::move(errorReporter)),
-    commandRegistry_(std::move(commandRegistry)),
-    uiExtensionRegistry_(std::move(uiExtensionRegistry)),
-    syntaxHighlightingRegistry_(std::move(syntaxHighlightingRegistry)),
-    eventRegistry_(std::move(eventRegistry)),
-    workspaceExtension_(std::move(workspaceExtension)),
-    editorCoreThreadPool_(std::move(editorCoreThreadPool)),
-    injector_(injector) {
+    std::shared_ptr<IDiffEngine> diffEngine,
+    std::shared_ptr<IMergeEngine> mergeEngine,
+    di::Injector& injector)
+: textBuffer_(std::move(textBuffer)),
+  commandManager_(std::move(commandManager)),
+  workspaceManager_(std::move(workspaceManager)),
+  syntaxHighlightingManager_(std::move(syntaxHighlightingManager)),
+  errorReporter_(std::move(errorReporter)),
+  commandRegistry_(std::move(commandRegistry)),
+  uiExtensionRegistry_(std::move(uiExtensionRegistry)),
+  syntaxHighlightingRegistry_(std::move(syntaxHighlightingRegistry)),
+  eventRegistry_(std::move(eventRegistry)),
+  workspaceExtension_(std::move(workspaceExtension)),
+  editorCoreThreadPool_(std::move(editorCoreThreadPool)),
+  diffEngine_(std::move(diffEngine)),
+  mergeEngine_(std::move(mergeEngine)),
+  injector_(injector) {
     
     LOG_DEBUG("EditorServices initialized with all required dependencies");
     
@@ -92,6 +99,16 @@ EditorServices::EditorServices(
         LOG_ERROR("EditorServices initialized with null EditorCoreThreadPool");
         throw std::invalid_argument("EditorCoreThreadPool cannot be null");
     }
+    
+    if (!diffEngine_) {
+        LOG_ERROR("EditorServices initialized with null DiffEngine");
+        throw std::invalid_argument("DiffEngine cannot be null");
+    }
+    
+    if (!mergeEngine_) {
+        LOG_ERROR("EditorServices initialized with null MergeEngine");
+        throw std::invalid_argument("MergeEngine cannot be null");
+    }
 }
 
 std::shared_ptr<ITextBuffer> EditorServices::getTextBuffer() const {
@@ -140,6 +157,14 @@ std::shared_ptr<IWorkspaceExtension> EditorServices::getWorkspaceExtension() con
 
 std::shared_ptr<IEditorCoreThreadPool> EditorServices::getEditorCoreThreadPool() const {
     return editorCoreThreadPool_;
+}
+
+std::shared_ptr<IDiffEngine> EditorServices::getDiffEngine() const {
+    return diffEngine_;
+}
+
+std::shared_ptr<IMergeEngine> EditorServices::getMergeEngine() const {
+    return mergeEngine_;
 }
 
 } // namespace ai_editor 

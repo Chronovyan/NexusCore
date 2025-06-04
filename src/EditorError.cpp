@@ -12,7 +12,7 @@
 bool ErrorReporter::debugLoggingEnabled = false; // Disable debug logging by default for performance
 bool ErrorReporter::suppressAllWarnings = false;
 EditorException::Severity ErrorReporter::severityThreshold = EditorException::Severity::Debug; // Lower threshold for tests
-std::vector<std::unique_ptr<LogDestination>> ErrorReporter::destinations_;
+std::vector<std::unique_ptr<LogDestination, ErrorReporter::LogDestDeleter>> ErrorReporter::destinations_;
 std::mutex ErrorReporter::destinationsMutex_;
 std::map<std::string, RetryEvent> ErrorReporter::pendingRetries_;
 std::mutex ErrorReporter::retryMutex_;
@@ -86,7 +86,7 @@ FileLogDestination::~FileLogDestination() {
     }
 }
 
-void FileLogDestination::write(EditorException::Severity severity, const std::string& message) {
+void FileLogDestination::write([[maybe_unused]] EditorException::Severity severity, const std::string& message) {
     // Only produce debug output when explicitly enabled
     if (ErrorReporter::debugLoggingEnabled) {
         std::cout << "FileLogDestination::write called: " << message << std::endl;
@@ -223,8 +223,8 @@ void FileLogDestination::rotateFile() {
             }
         }
         
-    } catch (const std::exception& e) {
-        std::cerr << "Error rotating log file: " << e.what() << std::endl;
+    } catch (const std::exception&) {
+        std::cerr << "Error rotating log file" << std::endl;
     }
     
     // Open new log file and reset size
@@ -353,7 +353,31 @@ std::string FileLogDestination::getDetailedTimestamp() {
 void ErrorReporter::addLogDestination(std::unique_ptr<LogDestination> destination) {
     std::lock_guard<std::mutex> lock(destinationsMutex_);
     std::cout << "Adding log destination" << std::endl;
-    destinations_.push_back(std::move(destination));
+    
+    // Convert to our vector's unique_ptr type with the default deleter
+    std::unique_ptr<LogDestination, LogDestDeleter> dest(
+        destination.release(),
+        [](LogDestination* p) { delete p; }
+    );
+    
+    destinations_.push_back(std::move(dest));
+}
+
+void ErrorReporter::addLogDestination(LogDestination* destination) {
+    // This version doesn't take ownership of the pointer
+    // It is the caller's responsibility to ensure the pointer remains valid
+    // This is typically used when a shared_ptr owns the object elsewhere
+    std::lock_guard<std::mutex> lock(destinationsMutex_);
+    std::cout << "Adding log destination (raw pointer)" << std::endl;
+    
+    // Create a unique_ptr with a no-op deleter
+    std::unique_ptr<LogDestination, LogDestDeleter> ptr(
+        destination,
+        [](LogDestination*) { /* No-op deleter */ }
+    );
+    
+    // Add it to the destinations
+    destinations_.push_back(std::move(ptr));
 }
 
 void ErrorReporter::clearLogDestinations() {
@@ -370,7 +394,11 @@ void ErrorReporter::initializeDefaultLogging() {
     
     // Add console destination
     std::cout << "Adding default console destination" << std::endl;
-    destinations_.push_back(std::make_unique<ConsoleLogDestination>());
+    auto console = new ConsoleLogDestination();
+    destinations_.push_back(std::unique_ptr<LogDestination, LogDestDeleter>(
+        console, 
+        [](LogDestination* p) { delete p; }
+    ));
 }
 
 void ErrorReporter::enableFileLogging(
@@ -387,8 +415,9 @@ void ErrorReporter::enableFileLogging(
     config.maxSizeBytes = maxSizeBytes;
     config.maxFileCount = maxFileCount;
     
-    auto fileDestination = std::make_unique<FileLogDestination>(config);
-    addLogDestination(std::move(fileDestination));
+    // Create file destination with the LogDestDeleter
+    auto fileDestRaw = new FileLogDestination(config);
+    addLogDestination(fileDestRaw);
 }
 
 void ErrorReporter::enableAsyncLogging(bool enable) {
@@ -423,7 +452,7 @@ void ErrorReporter::initializeAsyncLogging() {
         workerThread_ = std::thread(workerThreadFunction);
         workerThreadRunning_ = true;
     }
-    catch (const std::exception& e) {
+    catch (const std::exception&) {
         // Fall back to synchronous logging
         workerThreadRunning_ = false;
         asyncLoggingEnabled_ = false;
@@ -746,7 +775,7 @@ void ErrorReporter::logError(const std::string& message) {
     }
     
     // Errors are always logged (no filtering)
-    writeToDestinations(EditorException::Severity::Error, "Error: " + message);
+    writeToDestinations(EditorException::Severity::EDITOR_ERROR, "Error: " + message);
 }
 
 void ErrorReporter::logWarning(const std::string& message) {
@@ -872,7 +901,7 @@ std::string ErrorReporter::getSeverityString(EditorException::Severity severity)
     switch (severity) {
         case EditorException::Severity::Debug: return "Debug";
         case EditorException::Severity::Warning: return "Warning";
-        case EditorException::Severity::Error: return "Error";
+        case EditorException::Severity::EDITOR_ERROR: return "Error";
         case EditorException::Severity::Critical: return "Critical";
         default: return "Unknown";
     }

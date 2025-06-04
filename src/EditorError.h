@@ -15,6 +15,7 @@
 #include <thread>
 #include <condition_variable>
 #include <atomic>
+#include <functional>
 #include "RetryStats.h"  // Include the retry stats header
 
 // Global flag for disabling logging during tests
@@ -30,11 +31,11 @@ public:
     enum class Severity {
         Debug,      // Verbose debugging information
         Warning,    // Non-fatal but noteworthy
-        Error,      // Operation failed but editor can continue
+        EDITOR_ERROR,      // Operation failed but editor can continue
         Critical    // Serious error that may require termination or recovery
     };
 
-    EditorException(const std::string& message, Severity severity = Severity::Error)
+    EditorException(const std::string& message, Severity severity = Severity::EDITOR_ERROR)
         : std::runtime_error(message), severity_(severity) {}
 
     // Get the severity level of the exception
@@ -45,7 +46,7 @@ public:
         switch (severity_) {
             case Severity::Debug: return "Debug";
             case Severity::Warning: return "Warning";
-            case Severity::Error: return "Error";
+            case Severity::EDITOR_ERROR: return "Error";
             case Severity::Critical: return "Critical Error";
             default: return "Unknown";
         }
@@ -63,25 +64,25 @@ private:
 // Specialized exceptions for different error categories
 class TextBufferException : public EditorException {
 public:
-    TextBufferException(const std::string& message, Severity severity = Severity::Error)
+    TextBufferException(const std::string& message, Severity severity = Severity::EDITOR_ERROR)
         : EditorException("TextBuffer: " + message, severity) {}
 };
 
 class CommandException : public EditorException {
 public:
-    CommandException(const std::string& message, Severity severity = Severity::Error)
+    CommandException(const std::string& message, Severity severity = Severity::EDITOR_ERROR)
         : EditorException("Command: " + message, severity) {}
 };
 
 class SyntaxHighlightingException : public EditorException {
 public:
-    SyntaxHighlightingException(const std::string& message, Severity severity = Severity::Error)
+    SyntaxHighlightingException(const std::string& message, Severity severity = Severity::EDITOR_ERROR)
         : EditorException("Syntax Highlighting: " + message, severity) {}
 };
 
 class FileOperationException : public EditorException {
 public:
-    FileOperationException(const std::string& message, Severity severity = Severity::Error)
+    FileOperationException(const std::string& message, Severity severity = Severity::EDITOR_ERROR)
         : EditorException("File Operation: " + message, severity) {}
 };
 
@@ -265,6 +266,14 @@ public:
      * @param destination Unique pointer to the destination to add
      */
     static void addLogDestination(std::unique_ptr<LogDestination> destination);
+    
+    /**
+     * @brief Add a new log destination by raw pointer
+     * 
+     * @param destination Pointer to the destination to add
+     * @note The caller is responsible for ensuring the destination remains valid
+     */
+    static void addLogDestination(LogDestination* destination);
     
     /**
      * @brief Remove all log destinations
@@ -468,8 +477,9 @@ public:
     static AsyncQueueStats getAsyncQueueStats();
 
 private:
-    // Collection of log destinations
-    static std::vector<std::unique_ptr<LogDestination>> destinations_;
+    // Store log destinations
+    using LogDestDeleter = std::function<void(LogDestination*)>;
+    static std::vector<std::unique_ptr<LogDestination, LogDestDeleter>> destinations_;
     static std::mutex destinationsMutex_;
     
     // Map of operation IDs to their current retry events

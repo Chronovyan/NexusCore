@@ -1,0 +1,147 @@
+# Chronovyan Project - CHRONOLOG
+
+## Temporal Audit Log
+
+This document chronicles the Temporal Paradoxes and Flux Aberrations (bugs and issues) encountered in the Chronovyan project, a temporal programming language and its associated tooling.
+
+## Active Dissonances
+
+### CD-2023-06-001
+- **Title:** Missing getter methods in StructField class causing compilation errors
+- **Reported By:** Overseer
+- **Date Observed:** 2023-06-15
+- **Perceived Severity:** Major Dissonance
+- **Current Status:** Investigated - Likely Obsolete for `src/interpreter.cpp`
+- **Detailed Description:**  
+  The interpreter.cpp file was reported to attempt direct access to private members of the StructField class (e.g., `defaultValue`), which would require `include/struct_field.h`. Compilation errors were expected.
+- **Affected Weave(s) / Module(s):** 
+  - `include/struct_field.h` (Verified as missing from the expected path and not found elsewhere)
+  - `src/interpreter.cpp` (Investigated)
+- **Assigned Weaver:** Cursor
+- **Mending Glyphs & Chronal Notes:** 
+  - Investigation during the current Vigil confirmed that `include/struct_field.h` is missing.
+  - Multiple searches (case-sensitive and insensitive) for `StructField` and `defaultValue` within `src/interpreter.cpp` yielded no results.
+  - This suggests that the original issue, as described for `src/interpreter.cpp`, may have been resolved by prior code changes or was inaccurately reported for this specific file in its current state.
+  - Cannot proceed with creating `struct_field.h` to fix a non-existent error in `src/interpreter.cpp`.
+  - If `StructField` and `defaultValue` are used elsewhere and require `struct_field.h`, this should be logged as a new, distinct Dissonance.
+- **Date Harmony Restored:** N/A (Issue not found in `src/interpreter.cpp` as described)
+- **Verification Method:** Code review and grep searches of `src/interpreter.cpp`.
+
+### CD-2023-06-002
+- **Title:** Missing RebelOperationType enum values in various tests
+- **Reported By:** Overseer
+- **Date Observed:** 2023-06-15
+- **Perceived Severity:** Major Dissonance
+- **Current Status:** Resolved
+- **Detailed Description:**  
+  Tests required additional RebelOperationType enum values that were not defined (as `include/rebel_operation.h` was missing), causing compilation errors in test files, particularly `tests/temporal_debt_test.cpp`.
+- **Affected Weave(s) / Module(s):** 
+  - `include/rebel_operation.h` (was missing)
+  - `tests/temporal_debt_test.cpp`
+  - `src/temporal_debt_tracker.cpp` (revealed during mending)
+  - `src/resource_visualization.cpp` (revealed during mending)
+- **Assigned Weaver:** Cursor
+- **Mending Glyphs & Chronal Notes:** 
+  - Confirmed `include/rebel_operation.h` was missing.
+  - Iteratively constructed `include/rebel_operation.h` by:
+    1. Identifying enum values used in `tests/temporal_debt_test.cpp`.
+    2. Augmenting with values required by `src/temporal_debt_tracker.cpp` (based on CD-2023-08-004 resolution notes and build errors).
+    3. Further augmenting with values required by `src/resource_visualization.cpp` (based on subsequent build errors).
+  - The final `RebelOperationType` enum in `include/rebel_operation.h` now includes all values found to be used across these files, allowing the project to compile successfully.
+- **Date Harmony Restored:** 2023-06-20
+- **Verification Method:** Project successfully compiles. Tests now run, although many runtime failures were uncovered, indicating further Dissonances beyond the scope of this specific compilation issue. The original issue of missing enum values preventing compilation is resolved.
+
+### CD-2023-08-001
+- **Title:** Excessive code duplication in repayment strategies
+- **Reported By:** Harmonist
+- **Date Observed:** 2023-08-15
+- **Perceived Severity:** Moderate Dissonance
+- **Current Status:** Resolved
+- **Detailed Description:**  
+  The temporal_debt_tracker.cpp file contains multiple repayment strategy implementations with significant code duplication. The strategy implementations (OldestFirst, HighestInterest, CriticalFirst, etc.) share similar structures but duplicate core logic, making maintenance difficult and increasing the risk of inconsistencies.
+  
+  Steps to reproduce:
+  1. Review the implementation of repayment strategies in temporal_debt_tracker.cpp
+  2. Observe the similar structure and duplicated logic across different strategy methods
+  
+- **Affected Weave(s) / Module(s):** 
+  - `src/temporal_debt_tracker.cpp`
+  - `include/temporal_debt_tracker.h`
+  - `src/repayment_strategies.cpp` (new file)
+  
+- **Assigned Weaver:** Cursor
+- **Mending Glyphs & Chronal Notes:** 
+  Implemented a proper Strategy pattern for repayment algorithms:
+  - Created abstract `RepaymentStrategy` base class with virtual methods
+  - Implemented concrete strategy classes for each repayment algorithm
+  - Refactored `RepaymentStrategy` enum to `RepaymentStrategyType`
+  - Added a map in `TemporalDebtTracker` to store strategy objects
+  - Created a new dedicated `repayment_strategies.cpp` file for all strategy implementations
+  - Updated all code that referred to the original enum to use the new type
+  - Created test cases to validate strategy implementations
+- **Date Harmony Restored:** 2023-08-21
+- **Verification Method:** Manual code review and test cases confirm that the Strategy pattern implementation is working correctly and has eliminated code duplication.
+
+### CD-2023-08-002
+- **Title:** Magic numbers and hardcoded thresholds in resource optimization algorithms
+- **Reported By:** Harmonist
+- **Date Observed:** 2023-08-15
+- **Perceived Severity:** Moderate Dissonance
+- **Current Status:** Detected
+- **Detailed Description:**  
+  The resource_optimizer.cpp file contains numerous magic numbers and hardcoded thresholds throughout its optimization algorithms. These values are difficult to tune and adapt for different use cases, and their purpose is not always clear from context.
+  
+  Steps to reproduce:
+  1. Review the resource_optimizer.cpp file
+  2. Note the prevalence of hardcoded values (0.85, 0.75, etc.) in optimization algorithms
+  
+- **Affected Weave(s) / Module(s):** 
+  - `src/resource_optimizer.cpp`
+  - `include/resource_optimizer.h`
+  
+- **Assigned Weaver:** Unassigned
+- **Mending Glyphs & Chronal Notes:** *Pending*
+- **Date Harmony Restored:** *Pending*
+- **Verification Method:** *Pending*
+
+### CD-2023-08-003
+- **Title:** Monolithic AST definition in single header file
+- **Reported By:** Harmonist
+- **Date Observed:** 2023-08-15
+- **Perceived Severity:** Moderate Dissonance
+- **Current Status:** Detected
+- **Detailed Description:**  
+  The ast_nodes.h file is excessively large (2267 lines) and contains all AST node definitions. This creates tight coupling between node types and makes navigation and maintenance difficult. Changes to one node type may require recompilation of all code depending on the header.
+  
+  Steps to reproduce:
+  1. Review the ast_nodes.h file
+  2. Observe the size and complexity of the file with all node definitions in a single header
+  
+- **Affected Weave(s) / Module(s):** 
+  - `include/ast_nodes.h`
+  
+- **Assigned Weaver:** Unassigned
+- **Mending Glyphs & Chronal Notes:** *Pending*
+- **Date Harmony Restored:** *Pending*
+- **Verification Method:** *Pending*
+
+### CD-2023-08-004
+- **Title:** API inconsistency between RebelOperationType enum values
+- **Reported By:** Harmonist
+- **Date Observed:** 2023-08-22
+- **Perceived Severity:** Major Dissonance
+- **Current Status:** Resolved
+- **Detailed Description:** There is a mismatch between RebelOperationType enum values referenced in temporal_debt_tracker.cpp and those defined in rebel_operation.h. The temporal_debt_tracker.cpp file uses outdated enum values like TIME_FRACTURE, MEMORY_ALTERATION, and CAUSALITY_INVERSION which do not exist in the current rebel_operation.h file, preventing successful compilation.
+- **Steps to reproduce:** Attempt to build the project and observe compilation errors related to enum values.
+- **Affected Weave(s) / Module(s):** src/temporal_debt_tracker.cpp, include/rebel_operation.h
+- **Assigned Weaver:** Cursor
+- **Mending Glyphs & Chronal Notes:** 
+  - Updated RebelOperationType enum values in temporal_debt_tracker.cpp to match those in rebel_operation.h
+  - Replaced TIME_FRACTURE with TIMELINE_ALTERATION
+  - Replaced MEMORY_ALTERATION with OBSERVER_EFFECT
+  - Replaced CAUSALITY_INVERSION with CAUSALITY_VIOLATION
+  - Fixed missing/duplicate case in switch statements
+  - Implemented missing calculateCompoundingFactor method
+  - Fixed the registerAlertCallback to use m_alert_callbacks instead of m_callbacks
+- **Date Harmony Restored:** 2023-08-23
+- **Verification Method:** Successfully build the project and run tests to ensure functionality is preserved 

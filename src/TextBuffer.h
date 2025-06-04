@@ -5,6 +5,7 @@
 #include <string>
 #include <iosfwd> // For std::ostream forward declaration
 #include <utility> // For std::pair
+#include <thread> // For std::thread::id
 #include "interfaces/ITextBuffer.hpp"
 
 // Forward declaration for a friend function if needed later for direct stream output
@@ -74,6 +75,30 @@ public:
     void deleteText(size_t startLine, size_t startCol, size_t endLine, size_t endCol) override;
     bool isModified() const override;
     void setModified(bool modified) override;
+    
+    // Thread ownership methods for use with EditorCoreThreadPool
+    
+    /**
+     * @brief Set the owner thread ID for this text buffer
+     * 
+     * This method is used by the EditorCoreThreadPool to establish ownership
+     * of the buffer by a specific thread. Only the owner thread should make
+     * modifications to the buffer to ensure thread safety.
+     *
+     * @param threadId The ID of the thread that will own this buffer
+     */
+    void setOwnerThread(const std::thread::id& threadId);
+    
+    /**
+     * @brief Process pending operations in the buffer's operation queue
+     * 
+     * This method processes any pending operations in the buffer's operation queue.
+     * It should be called periodically by the owner thread to ensure operations
+     * submitted by other threads are executed.
+     *
+     * @return The number of operations processed
+     */
+    size_t processOperationQueue();
 
     // Optional: Friend declaration for stream operator
     // friend std::ostream& operator<<(std::ostream& os, const TextBuffer& buffer);
@@ -81,6 +106,7 @@ public:
 private:
     std::vector<std::string> lines_;
     bool modified_ = false;
+    std::thread::id ownerThreadId_; // ID of the thread that owns this buffer
 };
 
 // Optional: Declaration for potential stream operator

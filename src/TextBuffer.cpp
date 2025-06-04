@@ -22,14 +22,14 @@ void TextBuffer::addLine(const std::string& line) {
 
 void TextBuffer::insertLine(size_t index, const std::string& line) {
     if (index > lines_.size()) {
-        throw TextBufferException("Index out of range for insertLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for insertLine", EditorException::Severity::EDITOR_ERROR);
     }
     lines_.insert(lines_.begin() + index, line);
 }
 
 void TextBuffer::deleteLine(size_t index) {
     if (index >= lines_.size()) {
-        throw TextBufferException("Index out of range for deleteLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for deleteLine", EditorException::Severity::EDITOR_ERROR);
     }
     
     if (lines_.size() == 1 && index == 0) { // If it's the only line and we're deleting it
@@ -42,14 +42,14 @@ void TextBuffer::deleteLine(size_t index) {
 
 void TextBuffer::replaceLine(size_t index, const std::string& newLine) {
     if (index >= lines_.size()) {
-        throw TextBufferException("Index out of range for replaceLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for replaceLine", EditorException::Severity::EDITOR_ERROR);
     }
     lines_[index] = newLine;
 }
 
 const std::string& TextBuffer::getLine(size_t index) const {
     if (index >= lines_.size()) {
-        throw TextBufferException("Index out of range for getLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for getLine", EditorException::Severity::EDITOR_ERROR);
     }
     return lines_[index];
 }
@@ -124,18 +124,18 @@ bool TextBuffer::loadFromFile(const std::string& filename) {
 // Character level operations
 void TextBuffer::insertChar(size_t lineIndex, size_t colIndex, char ch) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for insertChar", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for insertChar", EditorException::Severity::EDITOR_ERROR);
     }
     std::string& line = lines_[lineIndex];
     if (colIndex > line.length()) { // Allow inserting at the very end (colIndex == length)
-        throw TextBufferException("Column index out of range for insertChar", EditorException::Severity::Error);
+        throw TextBufferException("Column index out of range for insertChar", EditorException::Severity::EDITOR_ERROR);
     }
     line.insert(colIndex, 1, ch);
 }
 
 void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for deleteChar", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for deleteChar", EditorException::Severity::EDITOR_ERROR);
     }
     
     std::string& line = lines_[lineIndex];
@@ -166,7 +166,7 @@ void TextBuffer::deleteChar(size_t lineIndex, size_t colIndex) {
 
 void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for deleteCharForward", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for deleteCharForward", EditorException::Severity::EDITOR_ERROR);
     }
     
     std::string& line = lines_[lineIndex];
@@ -175,7 +175,7 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
     // When colIndex >= line.length() we can still handle line joining with the next line
     // Only throw if colIndex > line.length() AND we're on the last line OR colIndex is unreasonably large
     if (colIndex > line.length() && (lineIndex == lines_.size() - 1 || colIndex > line.length() + 100)) {
-        throw TextBufferException("Column index out of range for deleteCharForward", EditorException::Severity::Error);
+        throw TextBufferException("Column index out of range for deleteCharForward", EditorException::Severity::EDITOR_ERROR);
     }
     
     if (colIndex < line.length()) {
@@ -193,13 +193,13 @@ void TextBuffer::deleteCharForward(size_t lineIndex, size_t colIndex) {
 
 void TextBuffer::splitLine(size_t lineIndex, size_t colIndex) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for splitLine", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for splitLine", EditorException::Severity::EDITOR_ERROR);
     }
     
     std::string& line = lines_[lineIndex];
     
     if (colIndex > line.length()) {
-        throw TextBufferException("Column index out of range for splitLine", EditorException::Severity::Error);
+        throw TextBufferException("Column index out of range for splitLine", EditorException::Severity::EDITOR_ERROR);
     }
     
     // Extract the part of the line after the split point
@@ -213,7 +213,7 @@ void TextBuffer::splitLine(size_t lineIndex, size_t colIndex) {
 
 void TextBuffer::joinLines(size_t lineIndex) {
     if (lineIndex >= lines_.size() - 1) {
-        throw TextBufferException("Cannot join last line with next line", EditorException::Severity::Error);
+        throw TextBufferException("Cannot join last line with next line", EditorException::Severity::EDITOR_ERROR);
     }
     
     // Append the next line to the current line
@@ -226,11 +226,11 @@ void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::stri
     // ADD LOGGING FOR PARAMETERS
 
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Index out of range for insertString (lineIndex)", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for insertString (lineIndex)", EditorException::Severity::EDITOR_ERROR);
     }
     if (colIndex > lines_[lineIndex].length()) {
         // The column index is out of range - this is the check that's failing
-        throw TextBufferException("Index out of range for insertString (colIndex)", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for insertString (colIndex)", EditorException::Severity::EDITOR_ERROR);
     }
 
     size_t currentPosInInputText = 0; 
@@ -260,10 +260,10 @@ void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::stri
     
     if (!remainingTextToInsert.empty()) {
         if (lineIndex >= lines_.size()) { 
-             throw TextBufferException("Index out of range for insertString final (lineIndex)", EditorException::Severity::Error);
+             throw TextBufferException("Index out of range for insertString final (lineIndex)", EditorException::Severity::EDITOR_ERROR);
         }
         if (colIndex > lines_[lineIndex].length()){ 
-            throw TextBufferException("Index out of range for insertString final (colIndex)", EditorException::Severity::Error);
+            throw TextBufferException("Index out of range for insertString final (colIndex)", EditorException::Severity::EDITOR_ERROR);
         }
 
         
@@ -275,14 +275,14 @@ void TextBuffer::insertString(size_t lineIndex, size_t colIndex, const std::stri
 
 std::string TextBuffer::getLineSegment(size_t lineIndex, size_t startCol, size_t endCol) const {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for getLineSegment", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for getLineSegment (lineIndex)", EditorException::Severity::EDITOR_ERROR);
     }
     
     const std::string& line = lines_[lineIndex];
     
     // Validate column indices
     if (startCol > endCol || startCol > line.length()) {
-        throw TextBufferException("Invalid column range for getLineSegment", EditorException::Severity::Error);
+        throw TextBufferException("Invalid column range for getLineSegment", EditorException::Severity::EDITOR_ERROR);
     }
     
     // Clamp endCol to line length
@@ -294,14 +294,14 @@ std::string TextBuffer::getLineSegment(size_t lineIndex, size_t startCol, size_t
 
 size_t TextBuffer::lineLength(size_t lineIndex) const {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Invalid line index in TextBuffer::lineLength");
+        throw TextBufferException("Index out of range for lineLength", EditorException::Severity::EDITOR_ERROR);
     }
     return lines_[lineIndex].length();
 }
 
 std::string& TextBuffer::getLine(size_t lineIndex) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for getLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for getLine (non-const)", EditorException::Severity::EDITOR_ERROR);
     }
     
     return lines_[lineIndex];
@@ -309,7 +309,7 @@ std::string& TextBuffer::getLine(size_t lineIndex) {
 
 void TextBuffer::setLine(size_t lineIndex, const std::string& text) {
     if (lineIndex >= lines_.size()) {
-        throw TextBufferException("Line index out of range for setLine", EditorException::Severity::Error);
+        throw TextBufferException("Index out of range for setLine", EditorException::Severity::EDITOR_ERROR);
     }
     
     lines_[lineIndex] = text;
@@ -336,49 +336,31 @@ std::vector<std::string> TextBuffer::getAllLines() const {
 // New method: Replace a segment of text within a line
 void TextBuffer::replaceLineSegment(size_t lineIndex, size_t startCol, size_t endCol, const std::string& newText) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Invalid line index in TextBuffer::replaceLineSegment");
+        throw TextBufferException("Index out of range for replaceLineSegment (lineIndex)", EditorException::Severity::EDITOR_ERROR);
     }
-    
-    // Ensure startCol <= endCol
+    std::string& line = lines_[lineIndex];
+    if (startCol > line.length() || endCol > line.length()) {
+        throw TextBufferException("Column index out of range for replaceLineSegment", EditorException::Severity::EDITOR_ERROR);
+    }
     if (startCol > endCol) {
-        std::swap(startCol, endCol);
+        throw TextBufferException("Start column cannot be greater than end column for replaceLineSegment", EditorException::Severity::EDITOR_ERROR);
     }
-    
-    // Clamp endCol to line length if it exceeds it
-    const size_t lineLen = lines_[lineIndex].length();
-    endCol = std::min(endCol, lineLen);
-    
-    // If startCol is beyond line length, treat as append
-    if (startCol >= lineLen) {
-        lines_[lineIndex].append(newText);
-    } else {
-        // Replace the segment
-        lines_[lineIndex].replace(startCol, endCol - startCol, newText);
-    }
+    line.replace(startCol, endCol - startCol, newText);
 }
 
 // New method: Delete a segment of text within a line
 void TextBuffer::deleteLineSegment(size_t lineIndex, size_t startCol, size_t endCol) {
     if (lineIndex >= lines_.size()) {
-        throw std::out_of_range("Invalid line index in TextBuffer::deleteLineSegment");
+        throw TextBufferException("Index out of range for deleteLineSegment (lineIndex)", EditorException::Severity::EDITOR_ERROR);
     }
-    
-    // Ensure startCol <= endCol
+    std::string& line = lines_[lineIndex];
+    if (startCol > line.length() || endCol > line.length()) {
+        throw TextBufferException("Column index out of range for deleteLineSegment", EditorException::Severity::EDITOR_ERROR);
+    }
     if (startCol > endCol) {
-        std::swap(startCol, endCol);
+        throw TextBufferException("Start column cannot be greater than end column for deleteLineSegment", EditorException::Severity::EDITOR_ERROR);
     }
-    
-    // Clamp endCol to line length if it exceeds it
-    const size_t lineLen = lines_[lineIndex].length();
-    endCol = std::min(endCol, lineLen);
-    
-    // If startCol is beyond line length or startCol equals endCol, do nothing
-    if (startCol >= lineLen || startCol == endCol) {
-        return;
-    }
-    
-    // Delete the segment
-    lines_[lineIndex].erase(startCol, endCol - startCol);
+    line.erase(startCol, endCol - startCol);
 }
 
 // Optional: Implementation for a friend ostream operator if you prefer `std::cout << buffer;`
@@ -389,14 +371,16 @@ void TextBuffer::deleteLineSegment(size_t lineIndex, size_t startCol, size_t end
 
 // New method: Delete multiple lines from startIndex (inclusive) to endIndex (exclusive)
 void TextBuffer::deleteLines(size_t startIndex, size_t endIndex) {
-    // Handle empty buffer case
-    if (lines_.empty()) {
-        return;
+    if (startIndex >= lines_.size() || endIndex >= lines_.size() || startIndex > endIndex) {
+        throw TextBufferException("Invalid range for deleteLines", EditorException::Severity::EDITOR_ERROR);
     }
     
-    // Validate the indices
-    if (startIndex >= lines_.size() || startIndex >= endIndex) {
-        throw std::out_of_range("Invalid range in TextBuffer::deleteLines");
+    // Special handling if deleting all lines means we need to keep one empty line
+    if (startIndex == endIndex) {
+        if (lines_.empty()) {
+            lines_.emplace_back(""); // Add an empty line
+        }
+        return;
     }
     
     // Clamp endIndex to prevent out-of-bounds access
@@ -413,17 +397,9 @@ void TextBuffer::deleteLines(size_t startIndex, size_t endIndex) {
 
 // New method: Insert multiple lines at the specified index
 void TextBuffer::insertLines(size_t index, const std::vector<std::string>& newLines) {
-    // Validate the index
     if (index > lines_.size()) {
-        throw std::out_of_range("Index out of range in TextBuffer::insertLines");
+        throw TextBufferException("Index out of range for insertLines", EditorException::Severity::EDITOR_ERROR);
     }
-    
-    // If newLines is empty, there's nothing to do
-    if (newLines.empty()) {
-        return;
-    }
-    
-    // Insert the new lines
     lines_.insert(lines_.begin() + index, newLines.begin(), newLines.end());
 }
 
@@ -470,7 +446,7 @@ std::vector<std::string> TextBuffer::getLines() const {
 
 void TextBuffer::replaceText(size_t startLine, size_t startCol, size_t endLine, size_t endCol, const std::string& text) {
     if (startLine >= lines_.size() || endLine >= lines_.size()) {
-        throw TextBufferException("Line index out of range for replaceText", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for replaceText", EditorException::Severity::EDITOR_ERROR);
     }
     
     if (startLine == endLine) {
@@ -504,11 +480,11 @@ void TextBuffer::replaceText(size_t startLine, size_t startCol, size_t endLine, 
 
 void TextBuffer::insertText(size_t line, size_t col, const std::string& text) {
     if (line >= lines_.size()) {
-        throw TextBufferException("Line index out of range for insertText", EditorException::Severity::Error);
+        throw TextBufferException("Invalid line index for insertText", EditorException::Severity::EDITOR_ERROR);
     }
     
     if (col > lines_[line].length()) {
-        throw TextBufferException("Column index out of range for insertText", EditorException::Severity::Error);
+        throw TextBufferException("Invalid column index for insertText", EditorException::Severity::EDITOR_ERROR);
     }
     
     // Check if text contains newlines
@@ -526,7 +502,7 @@ void TextBuffer::insertText(size_t line, size_t col, const std::string& text) {
 
 void TextBuffer::deleteText(size_t startLine, size_t startCol, size_t endLine, size_t endCol) {
     if (startLine >= lines_.size() || endLine >= lines_.size()) {
-        throw TextBufferException("Line index out of range for deleteText", EditorException::Severity::Error);
+        throw TextBufferException("Line index out of range for deleteText", EditorException::Severity::EDITOR_ERROR);
     }
     
     if (startLine == endLine) {
@@ -564,4 +540,16 @@ bool TextBuffer::isModified() const {
 
 void TextBuffer::setModified(bool modified) {
     modified_ = modified;
+}
+
+// Thread ownership methods
+void TextBuffer::setOwnerThread(const std::thread::id& threadId) {
+    ownerThreadId_ = threadId;
+}
+
+size_t TextBuffer::processOperationQueue() {
+    // This is a stub implementation since we don't have the actual operation queue
+    // In a real implementation, this would process pending operations from a queue
+    // For now, we'll just return 0 to indicate no operations were processed
+    return 0;
 } 

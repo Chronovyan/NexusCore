@@ -652,8 +652,6 @@ void ReplaceAllCommand::execute(Editor& editor) {
             // Get current selection positions
             size_t selStartLine = editor.getSelectionStartLine();
             size_t selStartCol = editor.getSelectionStartCol();
-            size_t selEndLine = editor.getSelectionEndLine();
-            size_t selEndCol = editor.getSelectionEndCol();
             
             // Check for potential infinite loop - if we're at the same position as last time
             if (selStartLine == lastReplacementLine && selStartCol == lastReplacementCol) {
@@ -1034,32 +1032,47 @@ void PasteCommand::execute(Editor& editor) {
     originalCursorCol_ = editor.getCursorCol();
     textPasted_ = clipboardText;
     
-    // Normal paste operation for all other cases
-    size_t endLineCalc, endColCalc;
-    editor.directInsertText(originalCursorLine_, originalCursorCol_, textPasted_, endLineCalc, endColCalc);
+    // Store selection details to restore on undo
+    wasSelectionActive_ = editor.hasSelection();
+    if (wasSelectionActive_) {
+        selStartLine_ = editor.getSelectionStartLine();
+        selStartCol_ = editor.getSelectionStartCol();
+        // The following two lines are unused and cause C4189 warnings (now errors)
+        // size_t selEndLine = editor.getSelectionEndLine(); 
+        // size_t selEndCol = editor.getSelectionEndCol(); 
+        
+        // For single cursor, use direct replacement.
+        // For multi-cursor, this command might need significant rework
+        // or a different approach. For now, assume single cursor focus.
+        editor.replaceSelection(textPasted_); 
+    } else {
+        // Normal paste operation for all other cases
+        size_t endLineCalc, endColCalc;
+        editor.directInsertText(originalCursorLine_, originalCursorCol_, textPasted_, endLineCalc, endColCalc);
 
-    editor.setCursor(endLineCalc, endColCalc); 
-    
-    pastedTextLength_ = textPasted_.length(); 
-    pastedNumLines_ = 0;
-    lastNewlinePos_ = std::string::npos;
-    size_t currentPos = 0;
-    for(char ch : textPasted_) {
-        if (ch == '\n') {
-            pastedNumLines_++;
-            lastNewlinePos_ = currentPos;
-        }
-        currentPos++;
-    }
-    // If text is not empty and doesn't end with a newline, it still constitutes one more line segment visually.
-    if (!textPasted_.empty() && (textPasted_.back() != '\n')) {
-        pastedNumLines_++; 
-    }
-    if (textPasted_.empty()) { // if clipboard was empty, pastedNumLines should be 0
+        editor.setCursor(endLineCalc, endColCalc); 
+        
+        pastedTextLength_ = textPasted_.length(); 
         pastedNumLines_ = 0;
-    }
+        lastNewlinePos_ = std::string::npos;
+        size_t currentPos = 0;
+        for(char ch : textPasted_) {
+            if (ch == '\n') {
+                pastedNumLines_++;
+                lastNewlinePos_ = currentPos;
+            }
+            currentPos++;
+        }
+        // If text is not empty and doesn't end with a newline, it still constitutes one more line segment visually.
+        if (!textPasted_.empty() && (textPasted_.back() != '\n')) {
+            pastedNumLines_++; 
+        }
+        if (textPasted_.empty()) { // if clipboard was empty, pastedNumLines should be 0
+            pastedNumLines_ = 0;
+        }
 
-    editor.invalidateHighlightingCache();
+        editor.invalidateHighlightingCache();
+    }
 }
 
 void PasteCommand::undo(Editor& editor) {

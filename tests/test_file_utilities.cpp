@@ -272,38 +272,10 @@ std::string generateFile(
         }
         
         case ContentPattern::MIXED_LINE_ENDINGS: {
-            // This pattern forces mixed line endings regardless of the lineEnding parameter
-            const std::vector<std::string> baseTexts = {
-                "Line with LF ending",
-                "Line with CRLF ending",
-                "Line with CR ending",
-                "Another line with LF ending",
-                "Another line with CRLF ending",
-                "Another line with CR ending"
-            };
-            
-            size_t lineCount = 0;
-            while (currentSize < sizeInBytes) {
-                std::string line = baseTexts[lineCount % baseTexts.size()];
-                
-                // Add appropriate line ending based on line content
-                if (line.find("LF") != std::string::npos) {
-                    line += "\n";
-                } else if (line.find("CRLF") != std::string::npos) {
-                    line += "\r\n";
-                } else if (line.find("CR") != std::string::npos) {
-                    line += "\r";
-                }
-                
-                // Write to file and update size tracker
-                if (!file.write(line.c_str(), line.size())) {
-                    file.close();
-                    throw std::runtime_error("Error writing to file: " + filename);
-                }
-                currentSize += line.size();
-                lineCount++;
-            }
-            break;
+            // This is handled by the MIXED lineEnding option
+            // Default to REPEATED_TEXT pattern with MIXED line endings
+            LineEnding mixedEnding = LineEnding::MIXED;
+            return generateFile(sizeInBytes, filename, ContentPattern::REPEATED_TEXT, mixedEnding);
         }
     }
     
@@ -328,50 +300,43 @@ std::string generateFile(
 namespace MemoryTracker {
 
 size_t getCurrentMemoryUsage() {
+    size_t memoryUsage = 0;
+    
 #ifdef _WIN32
     // Windows implementation
     PROCESS_MEMORY_COUNTERS_EX pmc;
     if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
-        // Return working set size (physical memory used by process)
-        return pmc.WorkingSetSize;
+        memoryUsage = pmc.WorkingSetSize;
     }
-    return 0;
-
 #elif defined(__APPLE__)
     // macOS implementation
     struct mach_task_basic_info info;
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO,
-                  (task_info_t)&info, &infoCount) == KERN_SUCCESS) {
-        // Return resident memory size
-        return info.resident_size;
+    
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) == KERN_SUCCESS) {
+        memoryUsage = info.resident_size;
     }
-    return 0;
-
 #else
     // Linux implementation
-    // Method 1: Parse /proc/self/statm
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        // Convert kilobytes to bytes
+        memoryUsage = usage.ru_maxrss * 1024;
+    }
+    
+    // Alternative using /proc/self/statm
     FILE* file = fopen("/proc/self/statm", "r");
     if (file) {
-        long size, resident;
-        if (fscanf(file, "%ld %ld", &size, &resident) == 2) {
-            fclose(file);
-            // Convert pages to bytes
-            return resident * sysconf(_SC_PAGESIZE);
+        unsigned long size, resident, share, text, lib, data, dt;
+        if (fscanf(file, "%lu %lu %lu %lu %lu %lu %lu", &size, &resident, &share, &text, &lib, &data, &dt) == 7) {
+            // resident set size in bytes = resident * page size
+            memoryUsage = resident * sysconf(_SC_PAGESIZE);
         }
         fclose(file);
     }
-
-    // Method 2: Fallback to getrusage
-    struct rusage usage;
-    if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        // Note: ru_maxrss gives KB on Linux, bytes on BSD
-        // We'll assume Linux here and convert to bytes
-        return usage.ru_maxrss * 1024;
-    }
-    
-    return 0;
 #endif
+    
+    return memoryUsage;
 }
 
 } // namespace MemoryTracker 

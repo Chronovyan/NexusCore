@@ -1,5 +1,6 @@
 #include "EditorCoreThreadPool.h"
 #include "TextBuffer.h"
+#include "LoggingCompatibility.h"
 #include "AppDebugLog.h"
 #include <algorithm>
 #include <chrono>

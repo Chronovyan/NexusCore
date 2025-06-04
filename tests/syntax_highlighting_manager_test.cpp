@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <future>
 #include <random>
+#include <mutex>
+#include <condition_variable>
 
 // Custom action for returning a unique_ptr<vector<SyntaxStyle>>
 ACTION_P(ReturnStyleVector, style) {
@@ -27,7 +29,7 @@ public:
     MockSyntaxHighlighter() {
         // Set up default behavior
         ON_CALL(*this, highlightLine(testing::_, testing::_))
-            .WillByDefault([this](const std::string& line, size_t lineIndex) -> std::unique_ptr<std::vector<SyntaxStyle>> {
+            .WillByDefault([this](const std::string& line, size_t /*lineIndex*/) -> std::unique_ptr<std::vector<SyntaxStyle>> {
                 try {
                     if (throw_on_highlight_line_) {
                         // Use logic_error which doesn't need heap allocation
@@ -62,7 +64,7 @@ public:
             });
             
         ON_CALL(*this, highlightBuffer(testing::_))
-            .WillByDefault([this](const TextBuffer& buffer) -> std::vector<std::vector<SyntaxStyle>> {
+            .WillByDefault([this](const ITextBuffer& buffer) -> std::vector<std::vector<SyntaxStyle>> {
                 try {
                     // Create a vector of vector for each line
                     std::vector<std::vector<SyntaxStyle>> result;
@@ -86,7 +88,7 @@ public:
     }
 
     MOCK_METHOD(std::unique_ptr<std::vector<SyntaxStyle>>, highlightLine, (const std::string& line, size_t lineIndex), (const, override));
-    MOCK_METHOD(std::vector<std::vector<SyntaxStyle>>, highlightBuffer, (const TextBuffer& buffer), (const, override));
+    MOCK_METHOD(std::vector<std::vector<SyntaxStyle>>, highlightBuffer, (const ITextBuffer& buffer), (const, override));
     MOCK_METHOD(std::vector<std::string>, getSupportedExtensions, (), (const, override));
     MOCK_METHOD(std::string, getLanguageName, (), (const, override));
 
@@ -113,7 +115,7 @@ protected:
         // Disable debug logging and set severity threshold to suppress warnings
         ErrorReporter::debugLoggingEnabled = false; 
         ErrorReporter::suppressAllWarnings = true;
-        ErrorReporter::setSeverityThreshold(EditorException::Severity::Error);
+        ErrorReporter::setSeverityThreshold(EditorException::Severity::EDITOR_ERROR);
         
         // Debug output to stdout (not cerr)
         std::cout << "[DEBUG] SyntaxHighlightingManagerTest::SetUp() - Start" << std::endl;
@@ -192,7 +194,7 @@ TEST_F(SyntaxHighlightingManagerTest, HighlightLineCatchesExceptionFromHighlight
             throw std::runtime_error("Direct exception without mock framework"); 
         }
         
-        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer&) const override {
             throw std::runtime_error("Direct exception without mock framework");
         }
         
@@ -248,7 +250,7 @@ TEST_F(SyntaxHighlightingManagerTest, GetHighlightingStylesReturnsEmptyWhenHighl
             throw std::runtime_error("Direct exception without mock framework");
         }
         
-        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer&) const override {
             throw std::runtime_error("Direct exception without mock framework");
         }
         
@@ -474,23 +476,20 @@ class ExceptionThrowingHighlighter : public SyntaxHighlighter {
 public:
     ExceptionThrowingHighlighter() = default;
     
-    std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(
-        const std::string&, size_t) const override {
-        // Use logic_error to avoid heap allocation during exception
-        throw std::logic_error("Intentional exception from ExceptionThrowingHighlighter");
+    std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string&, size_t) const override {
+        throw std::runtime_error("Exception from highlightLine");
     }
     
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(
-        const TextBuffer&) const override {
-        throw std::logic_error("Intentional exception from ExceptionThrowingHighlighter");
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer&) const override {
+        throw std::runtime_error("Exception from highlightBuffer");
     }
     
     std::vector<std::string> getSupportedExtensions() const override {
-        return {".test"};
+        return {".cpp", ".h"};
     }
     
     std::string getLanguageName() const override {
-        return "TestLanguage";
+        return "ExceptionHighlighter";
     }
 };
 
@@ -531,11 +530,11 @@ TEST(StandaloneExceptionTest, HighlightingManagerHandlesExceptions) {
     class SimpleExceptionHighlighter : public SyntaxHighlighter {
     public:
         std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string&, size_t) const override {
-            throw std::logic_error("Simple test exception");
+            throw std::runtime_error("Exception in highlightLine");
         }
         
-        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer&) const override {
-            throw std::logic_error("Simple test exception");
+        std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer&) const override {
+            throw std::runtime_error("Exception in highlightBuffer");
         }
         
         std::vector<std::string> getSupportedExtensions() const override {
@@ -543,7 +542,7 @@ TEST(StandaloneExceptionTest, HighlightingManagerHandlesExceptions) {
         }
         
         std::string getLanguageName() const override {
-            return "Test";
+            return "SimpleExceptionHighlighter";
         }
     };
     
@@ -766,7 +765,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) {
 
     // Create reader threads
     for (size_t t = 0; t < READER_THREADS; ++t) {
-        threads.emplace_back([this, t, LINE_COUNT, READER_THREADS, OPERATIONS_PER_THREAD, &encounteredIssues]() {
+        threads.emplace_back([this, t, &encounteredIssues]() {
             try {
                 for (int i = 0; i < OPERATIONS_PER_THREAD && !encounteredIssues.load(); ++i) {
                     // Calculate range for this thread to avoid overlaps
@@ -793,7 +792,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentReadsAndWritesAreThreadSafe) {
 
     // Create writer threads
     for (size_t t = 0; t < WRITER_THREADS; ++t) {
-        threads.emplace_back([this, t, LINE_COUNT, OPERATIONS_PER_THREAD, &encounteredIssues]() {
+        threads.emplace_back([this, t, &encounteredIssues]() {
             try {
                 for (int i = 0; i < OPERATIONS_PER_THREAD && !encounteredIssues.load(); ++i) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -855,7 +854,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetEnabledAndReads) {
     std::atomic<int> errors(0);
 
     // Writer thread
-    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+    threads.emplace_back([this, &stop_flag, &errors]() {
         bool current_enabled_state = true;
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
@@ -919,7 +918,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetTimeoutAndReads) {
     std::atomic<int> errors(0);
 
     // Writer thread
-    threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+    threads.emplace_back([this, &stop_flag, &errors]() {
         for (int i = 0; i < OPERATIONS_PER_THREAD && !stop_flag.load(); ++i) {
             try {
                 manager_->setHighlightingTimeout(10 + i * 5); // Simple incremental timeout
@@ -1001,7 +1000,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetBufferAndReads) {
 
     // Reader threads
     for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
-        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+        threads.emplace_back([this, &stop_flag, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
                     auto styles = manager_->getHighlightingStyles(0, 0);
@@ -1034,34 +1033,30 @@ public:
 
     std::unique_ptr<std::vector<SyntaxStyle>> highlightLine(const std::string& line, size_t) const override {
         auto styles = std::make_unique<std::vector<SyntaxStyle>>();
-        // Always apply a style, even for empty lines
-        SyntaxColor color = static_cast<SyntaxColor>((static_cast<int>(SyntaxColor::Keyword) + id_) % 
-                                                    (static_cast<int>(SyntaxColor::Operator) + 1));
-        styles->push_back(SyntaxStyle(0, std::max(size_t(1), line.length()), color));
+        // Add a unique style based on the id to make it identifiable
+        styles->push_back(SyntaxStyle(0, line.length(), static_cast<SyntaxColor>(id_ % 10)));
         return styles;
     }
 
-    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const TextBuffer& buffer) const override {
+    std::vector<std::vector<SyntaxStyle>> highlightBuffer(const ITextBuffer& buffer) const override {
         std::vector<std::vector<SyntaxStyle>> result;
-        result.reserve(buffer.lineCount());
         for (size_t i = 0; i < buffer.lineCount(); ++i) {
-            const std::string& line = buffer.getLine(i);
-            std::vector<SyntaxStyle> lineStyles;
-            // Always apply a style, even for empty lines
-            SyntaxColor color = static_cast<SyntaxColor>((static_cast<int>(SyntaxColor::Keyword) + id_) % 
-                                                        (static_cast<int>(SyntaxColor::Operator) + 1));
-            lineStyles.push_back(SyntaxStyle(0, std::max(size_t(1), line.length()), color));
-            result.push_back(std::move(lineStyles));
+            auto lineStyles = highlightLine(buffer.getLine(i), i);
+            if (lineStyles) {
+                result.push_back(std::move(*lineStyles));
+            } else {
+                result.push_back({});
+            }
         }
         return result;
     }
 
     std::vector<std::string> getSupportedExtensions() const override {
-        return {".test"};
+        return {".txt", ".md", ".cpp"};
     }
 
     std::string getLanguageName() const override {
-        return "TestLanguage" + std::to_string(id_);
+        return "DistinctStyle-" + std::to_string(id_);
     }
 
 private:
@@ -1111,7 +1106,7 @@ TEST_F(SyntaxHighlightingManagerTest, ConcurrentSetHighlighterAndReads) {
 
     // Reader threads
     for (size_t i = 0; i < NUM_READER_THREADS; ++i) {
-        threads.emplace_back([this, &stop_flag, OPERATIONS_PER_THREAD, &errors]() {
+        threads.emplace_back([this, &stop_flag, &errors]() {
             for (int j = 0; j < OPERATIONS_PER_THREAD && !stop_flag.load(); ++j) {
                 try {
                     auto styles = manager_->getHighlightingStyles(0, 1);

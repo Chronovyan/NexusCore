@@ -3,34 +3,12 @@
 #include <string>
 #include "../src/di/Injector.hpp"
 #include "../src/di/CoreModule.hpp"
+#include "di/TestServices.hpp"
 
 // This test demonstrates the standalone DI implementation
 // It uses both the modern and legacy interfaces to show how they work together
 using namespace di;
-
-// Define a simple greeter interface for demonstration
-class IGreeter {
-public:
-    virtual ~IGreeter() = default;
-    virtual std::string greet(const std::string& name) const = 0;
-};
-
-// A concrete implementation of the greeter that depends on a logger
-class SimpleGreeter : public IGreeter {
-public:
-    // Constructor injection is used to pass dependencies
-    SimpleGreeter(std::shared_ptr<ISimpleLogger> logger) : logger_(logger) {
-        logger_->log("SimpleGreeter created");
-    }
-
-    std::string greet(const std::string& name) const override {
-        logger_->log("Greeting: " + name);
-        return "Hello, " + name + "!";
-    }
-
-private:
-    std::shared_ptr<ISimpleLogger> logger_;
-};
+using namespace di::test;
 
 // A more advanced greeter that also uses a configuration service
 class ConfigurableGreeter : public IGreeter {

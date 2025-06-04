@@ -1,5 +1,9 @@
 #include "Injector.hpp"
+#include <iostream>
 
-// Implementation note:
-// All methods are defined inline in the header,
-// this file only exists to satisfy the build requirements. 
+namespace di {
+
+// Empty implementation file for Injector.hpp
+// Most functionality is template-based and defined in the header
+
+} // namespace di 

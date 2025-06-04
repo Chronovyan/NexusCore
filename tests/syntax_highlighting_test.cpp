@@ -7,16 +7,15 @@
 #include "TextBuffer.h"
 #include "TestEditor.h"
 #include "TestSyntaxHighlightingManager.h"
+#include "SyntaxHighlightingTestUtils.h" // Include the shared utility header
+#include "SyntaxHighlightingManager.h"
+#include "Editor.h"
+#include <vector>
+#include <thread>
+#include <atomic>
 
-// Helper function to check if a specific style is applied to a range
-static bool hasStyle(const std::vector<SyntaxStyle>& styles, size_t start, size_t end, SyntaxColor color) {
-    for (const auto& style : styles) {
-        if (style.startCol == start && style.endCol == end && style.color == color) {
-            return true;
-        }
-    }
-    return false;
-}
+// Use the function from the shared header
+// using ::hasStyle;
 
 // Test fixture for CppHighlighter tests
 class CppHighlighterTest : public ::testing::Test {
@@ -38,9 +37,9 @@ TEST_F(CppHighlighterTest, HighlightsKeywords) {
     const auto& styles = *stylesPtr;
 
     // Check for "int" - it's a Type in our implementation
-    EXPECT_TRUE(hasStyle(styles, 0, 3, SyntaxColor::Type)); 
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 0, 3, SyntaxColor::Type)); 
     // Check for "return" - position is at [13,19] in our implementation
-    EXPECT_TRUE(hasStyle(styles, 13, 19, SyntaxColor::Keyword)); 
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 13, 19, SyntaxColor::Keyword)); 
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, HighlightsKeywords) - End" << std::endl;
 }
 
@@ -51,7 +50,7 @@ TEST_F(CppHighlighterTest, HighlightsLineComments) {
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
     
-    EXPECT_TRUE(hasStyle(styles, 11, 31, SyntaxColor::Comment));
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 11, 31, SyntaxColor::Comment));
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, HighlightsLineComments) - End" << std::endl;
 }
 
@@ -62,7 +61,7 @@ TEST_F(CppHighlighterTest, HighlightsBlockCommentsOnSingleLine) {
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 
-    EXPECT_TRUE(hasStyle(styles, 0, 19, SyntaxColor::Comment));
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 0, 19, SyntaxColor::Comment));
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, HighlightsBlockCommentsOnSingleLine) - End" << std::endl;
 }
 
@@ -73,7 +72,7 @@ TEST_F(CppHighlighterTest, HighlightsStringLiterals) {
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 
-    EXPECT_TRUE(hasStyle(styles, 18, 33, SyntaxColor::String));
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 18, 33, SyntaxColor::String));
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, HighlightsStringLiterals) - End" << std::endl;
 }
 
@@ -84,8 +83,8 @@ TEST_F(CppHighlighterTest, HighlightsNumbers) {
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 
-    EXPECT_TRUE(hasStyle(styles, 11, 18, SyntaxColor::Number));
-    EXPECT_TRUE(hasStyle(styles, 32, 35, SyntaxColor::Number));
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 11, 18, SyntaxColor::Number));
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 32, 35, SyntaxColor::Number));
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, HighlightsNumbers) - End" << std::endl;
 }
 
@@ -97,9 +96,9 @@ TEST_F(CppHighlighterTest, MixedElements) {
     ASSERT_TRUE(stylesPtr != nullptr);
     const auto& styles = *stylesPtr;
 
-    EXPECT_TRUE(hasStyle(styles, 0, 2, SyntaxColor::Keyword));       // "if"
-    EXPECT_TRUE(hasStyle(styles, 10, 11, SyntaxColor::Number));      // "0"
-    EXPECT_TRUE(hasStyle(styles, 15, 32, SyntaxColor::Comment));   // "// Check positive"
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 0, 2, SyntaxColor::Keyword));       // "if"
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 10, 11, SyntaxColor::Number));      // "0"
+    EXPECT_TRUE(SyntaxHighlightingTestUtils::hasStyle(styles, 15, 32, SyntaxColor::Comment));   // "// Check positive"
     std::cout << "[DEBUG] TEST_F(CppHighlighterTest, MixedElements) - End" << std::endl;
 }
 
@@ -316,7 +315,7 @@ TEST_F(PatternBasedHighlighterTest, OverlappingPatternsFavorFirstAdded) {
 class RegistryMockSyntaxHighlighter : public SyntaxHighlighter {
 public:
     MOCK_CONST_METHOD2(highlightLine, std::unique_ptr<std::vector<SyntaxStyle>>(const std::string& line, size_t lineIndex));
-    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const TextBuffer& buffer));
+    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const ITextBuffer& buffer));
     MOCK_CONST_METHOD0(getSupportedExtensions, std::vector<std::string>());
     MOCK_CONST_METHOD0(getLanguageName, std::string());
 
@@ -477,7 +476,7 @@ TEST(SyntaxHighlighterTest, GetHighlighterForExtension) {
 class MockSyntaxHighlighter : public SyntaxHighlighter {
 public:
     MOCK_CONST_METHOD2(highlightLine, std::unique_ptr<std::vector<SyntaxStyle>>(const std::string&, size_t));
-    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const TextBuffer&));
+    MOCK_CONST_METHOD1(highlightBuffer, std::vector<std::vector<SyntaxStyle>>(const ITextBuffer&));
     MOCK_CONST_METHOD0(getSupportedExtensions, std::vector<std::string>());
     MOCK_CONST_METHOD0(getLanguageName, std::string());
 };

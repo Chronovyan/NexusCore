@@ -113,7 +113,7 @@ TEST_F(AutomatedSearchTest, SearchAndReplace) {
         ASSERT_EQ(selectedText, "test") << "Search should find 'test'";
         
         // Replace the selected text
-        editor.deleteSelectedText();
+        editor.deleteSelection();
         editor.typeText("EXAMPLE");
         
         // Verify replacement
@@ -197,7 +197,7 @@ TEST_F(AutomatedSearchTest, ReplaceAll) {
     
     auto afterReplaceAll = [](TestEditor& editor) {
         // Verify buffer state after replaceAll
-        const TextBuffer& buffer = editor.getBuffer();
+        const ITextBuffer& buffer = editor.getBuffer();
         for (size_t i = 0; i < buffer.lineCount(); i++) {
             std::string line = buffer.getLine(i);
             ASSERT_EQ(line.find("test"), std::string::npos) 
@@ -212,7 +212,7 @@ TEST_F(AutomatedSearchTest, ReplaceAll) {
     
     auto afterUndo = [](TestEditor& editor) {
         // Verify buffer state after undo
-        const TextBuffer& buffer = editor.getBuffer();
+        const ITextBuffer& buffer = editor.getBuffer();
         bool foundTest = false;
         for (size_t i = 0; i < buffer.lineCount(); i++) {
             std::string line = buffer.getLine(i);

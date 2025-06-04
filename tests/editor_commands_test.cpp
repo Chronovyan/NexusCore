@@ -22,7 +22,7 @@ protected:
 // --- InsertArbitraryTextCommand Tests ---
 
 TEST_F(EditorCommandsTest, InsertArbitraryTextExecuteAndUndo) {
-    TextBuffer& buffer = editor.getBuffer(); // Get ref to buffer for convenience
+    ITextBuffer& buffer = editor.getBuffer(); // Get ref to buffer for convenience
     // Initial state: buffer has one empty line: [""]
     ASSERT_EQ(buffer.lineCount(), 1);
     ASSERT_EQ(buffer.getLine(0), "");
@@ -46,7 +46,7 @@ TEST_F(EditorCommandsTest, InsertArbitraryTextExecuteAndUndo) {
 }
 
 TEST_F(EditorCommandsTest, InsertArbitraryTextInMiddleAndUndo) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Horld"); // Initial state: ["Horld"]
     
     std::string textToInsert = "ell";
@@ -65,7 +65,7 @@ TEST_F(EditorCommandsTest, InsertArbitraryTextInMiddleAndUndo) {
 }
 
 TEST_F(EditorCommandsTest, InsertArbitraryTextAtEndOfLineAndUndo) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello"); // Initial state: ["Hello"]
     
     std::string textToInsert = " World";
@@ -84,7 +84,7 @@ TEST_F(EditorCommandsTest, InsertArbitraryTextAtEndOfLineAndUndo) {
 }
 
 TEST_F(EditorCommandsTest, InsertArbitraryTextIntoNewLineAndUndo) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     // Starts with [""]
     buffer.addLine("Second Line"); // Buffer: ["", "Second Line"]
     ASSERT_EQ(buffer.lineCount(), 2);
@@ -109,7 +109,7 @@ TEST_F(EditorCommandsTest, InsertArbitraryTextIntoNewLineAndUndo) {
 }
 
 TEST_F(EditorCommandsTest, InsertArbitraryTextEmptyStringAndUndo) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Text"); // Initial state: ["Text"]
     
     std::string textToInsert = "";
@@ -130,7 +130,7 @@ TEST_F(EditorCommandsTest, InsertArbitraryTextEmptyStringAndUndo) {
 // --- DeleteCharCommand Tests ---
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceInMiddle) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 3); // Cursor after 'l': He|llo -> Hel|lo
 
@@ -150,7 +150,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceInMiddle) {
 }
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteInMiddle) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 2); // Cursor before second 'l': He|llo
 
@@ -170,7 +170,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteInMiddle) {
 }
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceAtLineStart_JoinsLines) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "First");
     buffer.addLine("Second"); // Buffer: ["First", "Second"]
     editor.setCursor(1, 0);    // Cursor at start of "Second"
@@ -194,7 +194,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceAtLineStart_JoinsLines) {
 }
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteAtLineEnd_JoinsLines) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "First");
     buffer.addLine("Second"); // Buffer: ["First", "Second"]
     editor.setCursor(0, 5);    // Cursor at end of "First"
@@ -218,7 +218,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteAtLineEnd_JoinsLines) 
 }
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceAtBufferStart) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 0); // Cursor at start of buffer
 
@@ -241,7 +241,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_BackspaceAtBufferStart) {
 }
 
 TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteAtBufferEnd) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 5); // Cursor at end of buffer (single line)
 
@@ -266,7 +266,7 @@ TEST_F(EditorCommandsTest, DeleteCharCommand_ForwardDeleteAtBufferEnd) {
 // --- CutCommand Tests ---
 
 TEST_F(EditorCommandsTest, CutCommand_CutsSelectedTextAndUpdatesClipboard) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello World");
     editor.setSelectionRange(0, 6, 0, 11); // Select "World"
     editor.setCursor(0, 11); // Cursor at end of selection for consistency with typical UX
@@ -307,7 +307,7 @@ TEST_F(EditorCommandsTest, CutCommand_CutsSelectedTextAndUpdatesClipboard) {
 }
 
 TEST_F(EditorCommandsTest, CutCommand_NoSelection_DoesNothing) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello World");
     editor.clearSelection();
     editor.setCursor(0, 5); // Cursor somewhere in the middle
@@ -340,7 +340,7 @@ TEST_F(EditorCommandsTest, CutCommand_NoSelection_DoesNothing) {
 // --- PasteCommand Tests ---
 
 TEST_F(EditorCommandsTest, PasteCommand_PastesSingleLineText) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello ");
     editor.setCursor(0, 6); // Cursor at end of "Hello "
     
@@ -363,7 +363,7 @@ TEST_F(EditorCommandsTest, PasteCommand_PastesSingleLineText) {
 }
 
 TEST_F(EditorCommandsTest, PasteCommand_PastesMultiLineText) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line1");
     editor.setCursor(0, 5); // Cursor at end of "Line1"
 
@@ -390,7 +390,7 @@ TEST_F(EditorCommandsTest, PasteCommand_PastesMultiLineText) {
 }
 
 TEST_F(EditorCommandsTest, PasteCommand_PasteEmptyClipboard_DoesNothing) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 2); // Cursor at H|ello
     
@@ -417,7 +417,7 @@ TEST_F(EditorCommandsTest, PasteCommand_PasteEmptyClipboard_DoesNothing) {
 // --- InsertTextCommand Tests ---
 
 TEST_F(EditorCommandsTest, InsertTextCommand_InsertsTextAtCursor) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello orld");
     editor.setCursor(0, 6); // Cursor between " " and "o": Hello |orld
 
@@ -437,7 +437,7 @@ TEST_F(EditorCommandsTest, InsertTextCommand_InsertsTextAtCursor) {
 }
 
 TEST_F(EditorCommandsTest, InsertTextCommand_InsertsMultiCharTextAtCursor) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Heo");
     editor.setCursor(0, 2); // Cursor after "e": He|o
 
@@ -457,7 +457,7 @@ TEST_F(EditorCommandsTest, InsertTextCommand_InsertsMultiCharTextAtCursor) {
 }
 
 TEST_F(EditorCommandsTest, InsertTextCommand_EmptyText_DoesNothing) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 2); // H|ello -> He|llo
 
@@ -483,7 +483,7 @@ TEST_F(EditorCommandsTest, InsertTextCommand_EmptyText_DoesNothing) {
 // --- NewLineCommand Tests ---
 
 TEST_F(EditorCommandsTest, NewLineCommand_SplitsLineInMiddle) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "HelloWorld");
     editor.setCursor(0, 5); // Cursor between "Hello" and "World"
 
@@ -506,7 +506,7 @@ TEST_F(EditorCommandsTest, NewLineCommand_SplitsLineInMiddle) {
 }
 
 TEST_F(EditorCommandsTest, NewLineCommand_AtEndOfLine_AddsEmptyLineAfter) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 5); // Cursor at end of "Hello"
 
@@ -529,7 +529,7 @@ TEST_F(EditorCommandsTest, NewLineCommand_AtEndOfLine_AddsEmptyLineAfter) {
 }
 
 TEST_F(EditorCommandsTest, NewLineCommand_AtStartOfLine_AddsEmptyLineBefore) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 0); // Cursor at start of "Hello"
 
@@ -552,7 +552,7 @@ TEST_F(EditorCommandsTest, NewLineCommand_AtStartOfLine_AddsEmptyLineBefore) {
 }
 
 TEST_F(EditorCommandsTest, NewLineCommand_OnDefaultEmptyBuffer_SplitsToTwoEmptyLines) {
-    TextBuffer& buffer = editor.getBuffer(); // Starts with [""]
+    ITextBuffer& buffer = editor.getBuffer(); // Starts with [""]
     ASSERT_EQ(buffer.lineCount(), 1);
     ASSERT_EQ(buffer.getLine(0), "");
     editor.setCursor(0, 0);
@@ -579,7 +579,7 @@ TEST_F(EditorCommandsTest, NewLineCommand_OnDefaultEmptyBuffer_SplitsToTwoEmptyL
 
 // Tests for AddLineCommand() (split behavior)
 TEST_F(EditorCommandsTest, AddLineCommand_Default_SplitsLineInMiddle) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "HelloWorld");
     editor.setCursor(0, 5); // Cursor between "Hello" and "World"
 
@@ -602,7 +602,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_Default_SplitsLineInMiddle) {
 }
 
 TEST_F(EditorCommandsTest, AddLineCommand_Default_AtEndOfLine_AddsEmptyLineAfter) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 5); // Cursor at end of "Hello"
 
@@ -625,7 +625,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_Default_AtEndOfLine_AddsEmptyLineAfter
 }
 
 TEST_F(EditorCommandsTest, AddLineCommand_Default_AtStartOfLine_AddsEmptyLineBefore) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Hello");
     editor.setCursor(0, 0); // Cursor at start of "Hello"
 
@@ -648,7 +648,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_Default_AtStartOfLine_AddsEmptyLineBef
 }
 
 TEST_F(EditorCommandsTest, AddLineCommand_Default_OnDefaultEmptyBuffer_SplitsToTwoEmptyLines) {
-    TextBuffer& buffer = editor.getBuffer(); // Starts with [""]
+    ITextBuffer& buffer = editor.getBuffer(); // Starts with [""]
     ASSERT_EQ(buffer.lineCount(), 1);
     ASSERT_EQ(buffer.getLine(0), "");
     editor.setCursor(0, 0);
@@ -673,7 +673,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_Default_OnDefaultEmptyBuffer_SplitsToT
 
 // Tests for AddLineCommand(const std::string& text) (add to end behavior)
 TEST_F(EditorCommandsTest, AddLineCommand_WithText_AddsLineToEnd) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1"); // Buffer: ["Line 0", "Line 1"]
     editor.setCursor(0, 2); // Cursor somewhere on Line 0
@@ -701,7 +701,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_WithText_AddsLineToEnd) {
 }
 
 TEST_F(EditorCommandsTest, AddLineCommand_WithText_ToEmptyBuffer) {
-    TextBuffer& buffer = editor.getBuffer(); // Starts with [""]
+    ITextBuffer& buffer = editor.getBuffer(); // Starts with [""]
     ASSERT_EQ(buffer.lineCount(), 1);
     ASSERT_EQ(buffer.getLine(0), "");
     editor.setCursor(0, 0);
@@ -727,7 +727,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_WithText_ToEmptyBuffer) {
 }
 
 TEST_F(EditorCommandsTest, AddLineCommand_WithEmptyText_AddsEmptyLineToEnd) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0"); // Buffer: ["Line 0"]
     editor.setCursor(0, 2); // Cursor somewhere on Line 0
     size_t originalCursorLine = editor.getCursorLine();
@@ -754,7 +754,7 @@ TEST_F(EditorCommandsTest, AddLineCommand_WithEmptyText_AddsEmptyLineToEnd) {
 // --- DeleteLineCommand Tests ---
 
 TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesMiddleLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1 (to delete)");
     buffer.addLine("Line 2"); // Buffer: ["Line 0", "Line 1 (to delete)", "Line 2"]
@@ -783,7 +783,7 @@ TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesMiddleLine) {
 }
 
 TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesFirstLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0 (to delete)");
     buffer.addLine("Line 1");
     buffer.addLine("Line 2");
@@ -812,7 +812,7 @@ TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesFirstLine) {
 }
 
 TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesLastLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1");
     buffer.addLine("Line 2 (to delete)");
@@ -842,7 +842,7 @@ TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesLastLine) {
 }
 
 TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesOnlyLine_LeavesOneEmptyLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Only Line (to delete)");
     editor.setCursor(0, 0);
     size_t originalCursorLine = editor.getCursorLine();
@@ -866,7 +866,7 @@ TEST_F(EditorCommandsTest, DeleteLineCommand_DeletesOnlyLine_LeavesOneEmptyLine)
 }
 
 TEST_F(EditorCommandsTest, DeleteLineCommand_OutOfBounds_DoesNothing) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1");
     editor.setCursor(0, 0);
@@ -898,7 +898,7 @@ TEST_F(EditorCommandsTest, DeleteLineCommand_OutOfBounds_DoesNothing) {
 // --- ReplaceLineCommand Tests ---
 
 TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplacesMiddleLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1 Original");
     buffer.addLine("Line 2");
@@ -937,7 +937,7 @@ TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplacesMiddleLine) {
 }
 
 TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplacesOnlyLine) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Original Only Line");
     size_t lineIndexToReplace = 0;
     std::string newLineText = "Replaced Only Line";
@@ -960,7 +960,7 @@ TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplacesOnlyLine) {
 }
 
 TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplaceWithEmptyString) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1 To Be Emptied");
     buffer.addLine("Line 2");
@@ -985,7 +985,7 @@ TEST_F(EditorCommandsTest, ReplaceLineCommand_ReplaceWithEmptyString) {
 }
 
 TEST_F(EditorCommandsTest, ReplaceLineCommand_OutOfBounds_DoesNothing) {
-    TextBuffer& buffer = editor.getBuffer();
+    ITextBuffer& buffer = editor.getBuffer();
     buffer.replaceLine(0, "Line 0");
     buffer.addLine("Line 1");
     // Buffer: ["Line 0", "Line 1"]

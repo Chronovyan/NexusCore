@@ -6,10 +6,10 @@
 #include <mutex>
 
 /**
- * @struct RetryStats
+ * @struct SimpleRetryStats
  * @brief Simplified statistics for retry operations
  */
-struct RetryStats {
+struct SimpleRetryStats {
     size_t totalAttempts = 0;       ///< Total retry attempts
     size_t successfulAttempts = 0;  ///< Number of successful attempts
     size_t failedAttempts = 0;      ///< Number of failed attempts
@@ -80,13 +80,13 @@ public:
      * @param operationType The type of operation
      * @return Statistics for the operation
      */
-    RetryStats getStats(const std::string& operationType) const {
+    SimpleRetryStats getStats(const std::string& operationType) const {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = statsMap_.find(operationType);
         if (it != statsMap_.end()) {
             return it->second;
         }
-        return RetryStats{};
+        return SimpleRetryStats{};
     }
     
     /**
@@ -99,7 +99,7 @@ public:
     
 private:
     mutable std::mutex mutex_;
-    std::map<std::string, RetryStats> statsMap_;
+    std::map<std::string, SimpleRetryStats> statsMap_;
 };
 
 #endif // RETRY_STATS_TRACKER_H 

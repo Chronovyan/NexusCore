@@ -8,6 +8,7 @@
 #include <functional>
 #include <chrono>
 #include <map>
+#include <algorithm>
 
 namespace ai_editor {
 
@@ -413,7 +414,7 @@ public:
             if (i > 0) json += ",";
             json += "{\"object\":\"embedding\",\"index\":" + std::to_string(i) + ",\"embedding\":[";
             // Add first few embedding values for brevity
-            for (size_t j = 0; j < std::min(size_t(3), embeddings[i].size()); ++j) {
+            for (size_t j = 0; j < (std::min)(size_t(3), embeddings[i].size()); ++j) {
                 if (j > 0) json += ",";
                 json += std::to_string(embeddings[i][j]);
             }

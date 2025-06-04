@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 // Forward declarations
 class Command;
@@ -84,4 +85,48 @@ public:
      * @brief Clear both undo and redo stacks
      */
     virtual void clear() = 0;
+    
+    /**
+     * @brief Begin a new transaction
+     * 
+     * Starts a new transaction group that will collect all commands executed until
+     * endTransaction is called. The entire group will be treated as a single
+     * undoable/redoable unit.
+     *
+     * @param name Optional name for the transaction (used in descriptions)
+     * @return True if successfully started, false otherwise
+     */
+    virtual bool beginTransaction(const std::string& name = "") = 0;
+    
+    /**
+     * @brief End the current transaction and commit it
+     * 
+     * Ends the current transaction and commits it to the undo stack as a single unit.
+     *
+     * @return True if transaction was successfully committed, false if no active transaction
+     */
+    virtual bool endTransaction() = 0;
+    
+    /**
+     * @brief Cancel the current transaction without committing it
+     * 
+     * Cancels the current transaction and discards all commands within it.
+     *
+     * @return True if transaction was successfully canceled, false if no active transaction
+     */
+    virtual bool cancelTransaction() = 0;
+    
+    /**
+     * @brief Check if a transaction is currently active
+     * 
+     * @return True if a transaction is active
+     */
+    virtual bool isInTransaction() const = 0;
+    
+    /**
+     * @brief Get the current transaction depth (number of nested transactions)
+     * 
+     * @return The transaction depth (0 if no active transaction)
+     */
+    virtual size_t getTransactionDepth() const = 0;
 }; 

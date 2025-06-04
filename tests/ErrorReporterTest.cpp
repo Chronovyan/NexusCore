@@ -247,7 +247,7 @@ TEST_F(ErrorReporterTest, ExceptionLogging) {
     
     // Log various exceptions
     try {
-        throw EditorException("Test editor exception", EditorException::Severity::Error);
+        throw EditorException("Test editor exception", EditorException::Severity::EDITOR_ERROR);
     } catch (const EditorException& e) {
         ErrorReporter::logException(e);
     }

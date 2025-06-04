@@ -1259,6 +1259,10 @@ public:
         
         // Register a dispose handler for the type
         registerDisposeHandler(typeIndex, [](std::shared_ptr<void> instance, std::shared_ptr<LifetimeManager> manager) {
+            // Mark parameters as used to avoid compiler warnings
+            (void)instance;
+            (void)manager;
+            
             // We cannot use dynamic_pointer_cast on void* 
             // If this is a disposable type, it should be registered through the typed registerFactory method
             // or the caller should handle the disposal manually

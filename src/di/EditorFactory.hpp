@@ -5,6 +5,8 @@
 #include "../interfaces/ITextBuffer.hpp"
 #include "../interfaces/ICommandManager.hpp"
 #include "../interfaces/ISyntaxHighlightingManager.hpp"
+#include "../interfaces/IDiffEngine.hpp"
+#include "../interfaces/IMergeEngine.hpp"
 #include "Injector.hpp"
 
 namespace di {
@@ -31,12 +33,16 @@ public:
         auto textBuffer = injector.get<ITextBuffer>();
         auto commandManager = injector.get<ICommandManager>();
         auto syntaxHighlightingManager = injector.get<ISyntaxHighlightingManager>();
+        auto diffEngine = injector.get<IDiffEngine>();
+        auto mergeEngine = injector.get<IMergeEngine>();
         
         // Create and return the Editor instance
         return std::make_shared<Editor>(
             textBuffer,
             commandManager,
-            syntaxHighlightingManager
+            syntaxHighlightingManager,
+            diffEngine,
+            mergeEngine
         );
     }
 };

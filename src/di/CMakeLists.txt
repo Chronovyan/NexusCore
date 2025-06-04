@@ -450,4 +450,12 @@ install(FILES
     LifetimeManager.hpp
     Injector.hpp
     DESTINATION include/di
-) 
+)
+
+# Add an executable for the request scope example
+add_executable(request_scope_example RequestScopeExample.cpp)
+target_link_libraries(request_scope_example PRIVATE DIFramework ${CMAKE_THREAD_LIBS_INIT})
+set_target_properties(request_scope_example PROPERTIES FOLDER "Tests/DI")
+
+# Add test for RequestScopeExample
+add_test(NAME RequestScopeExample COMMAND request_scope_example) 

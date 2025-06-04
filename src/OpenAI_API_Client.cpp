@@ -1,5 +1,9 @@
 #include "OpenAI_API_Client.h"
-#include <cpr/cpr.h>
+#include <cpr/session.h>
+#include <cpr/response.h>
+#include <cpr/payload.h>
+#include <cpr/api.h>
+#include <cpr/cprtypes.h>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -36,14 +40,14 @@ public:
     }
     
     // Retrieve details for a specific model
-    ApiModelInfo retrieveModel(const std::string& model_id) {
+    ApiModelInfo retrieveModel([[maybe_unused]] const std::string& model_id) {
         ApiModelInfo modelInfo;
         modelInfo.id = "error:not_implemented";
         return modelInfo;
     }
     
     // Create embeddings for the provided input
-    ApiEmbeddingResponse createEmbedding(const ApiEmbeddingRequest& request) {
+    ApiEmbeddingResponse createEmbedding([[maybe_unused]] const ApiEmbeddingRequest& request) {
         ApiEmbeddingResponse response;
         response.success = false;
         response.error_message = "Embedding functionality not fully implemented yet";
@@ -51,11 +55,11 @@ public:
     }
 
     ApiResponse sendChatCompletionRequest(
-        const std::vector<ApiChatMessage>& messages,
-        const std::vector<ApiToolDefinition>& tools,
-        const std::string& model,
-        float temperature,
-        int32_t max_tokens
+        [[maybe_unused]] const std::vector<ApiChatMessage>& messages,
+        [[maybe_unused]] const std::vector<ApiToolDefinition>& tools,
+        [[maybe_unused]] const std::string& model,
+        [[maybe_unused]] float temperature,
+        [[maybe_unused]] int32_t max_tokens
     ) {
         // Create a simple response for now
         ApiResponse response;

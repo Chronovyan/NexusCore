@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "TextBuffer.h"
 
 // Debug test fixture for isolating issues
 class DebugCommandTest : public test_utils::EditorCommandTestBase {
@@ -127,13 +128,13 @@ TEST(DirectCompoundCommandTest, BasicTest) {
     
     // Create a mock editor object that just tracks state
     struct MockEditor {
-        TextBuffer& buffer;
+        ITextBuffer& buffer;
         size_t cursorLine = 0;
         size_t cursorCol = 0;
         
-        MockEditor(TextBuffer& buf) : buffer(buf) {}
+        MockEditor(ITextBuffer& buf) : buffer(buf) {}
         
-        TextBuffer& getBuffer() { return buffer; }
+        ITextBuffer& getBuffer() { return buffer; }
         size_t getCursorLine() const { return cursorLine; }
         size_t getCursorCol() const { return cursorCol; }
         void setCursor(size_t line, size_t col) { 
@@ -184,13 +185,13 @@ TEST(DirectCompoundCommandTest, CompoundTest) {
     
     // Create a mock editor object that just tracks state
     struct MockEditor {
-        TextBuffer& buffer;
+        ITextBuffer& buffer;
         size_t cursorLine = 0;
         size_t cursorCol = 0;
         
-        MockEditor(TextBuffer& buf) : buffer(buf) {}
+        MockEditor(ITextBuffer& buf) : buffer(buf) {}
         
-        TextBuffer& getBuffer() { return buffer; }
+        ITextBuffer& getBuffer() { return buffer; }
         size_t getCursorLine() const { return cursorLine; }
         size_t getCursorCol() const { return cursorCol; }
         void setCursor(size_t line, size_t col) { 
@@ -269,13 +270,13 @@ TEST(DirectCompoundCommandTest, InsertDeleteTest) {
     
     // Create a mock editor object that just tracks state
     struct MockEditor {
-        TextBuffer& buffer;
+        ITextBuffer& buffer;
         size_t cursorLine = 0;
         size_t cursorCol = 0;
         
-        MockEditor(TextBuffer& buf) : buffer(buf) {}
+        MockEditor(ITextBuffer& buf) : buffer(buf) {}
         
-        TextBuffer& getBuffer() { return buffer; }
+        ITextBuffer& getBuffer() { return buffer; }
         size_t getCursorLine() const { return cursorLine; }
         size_t getCursorCol() const { return cursorCol; }
         void setCursor(size_t line, size_t col) { 

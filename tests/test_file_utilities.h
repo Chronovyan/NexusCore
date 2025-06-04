@@ -31,22 +31,22 @@ namespace TestFileGenerator {
      * Defines different content patterns for generated test files
      */
     enum class ContentPattern {
-        SEQUENTIAL_NUMBERS,  // Lines with sequential numbers
-        REPEATED_TEXT,       // Repeated text patterns
-        RANDOM_TEXT,         // Random ASCII text
-        CODE_LIKE,           // C++-like code patterns
-        MIXED_LINE_LENGTHS,  // Varying line lengths
-        MIXED_LINE_ENDINGS   // Mix of different line endings
+        SEQUENTIAL_NUMBERS,   // Lines with sequential numbers (1, 2, 3...)
+        REPEATED_TEXT,        // Repeating standard text snippets
+        RANDOM_TEXT,          // Random ASCII text with varying lengths
+        CODE_LIKE,            // C++-like code patterns
+        MIXED_LINE_LENGTHS,   // Lines with different lengths (5, 10, 20, 50, 100...)
+        MIXED_LINE_ENDINGS    // Mix of CR, LF, and CRLF line endings
     };
     
     /**
      * Defines line ending types for generated test files
      */
     enum class LineEnding {
-        LF,      // Unix/Linux (\n)
-        CRLF,    // Windows (\r\n)
-        CR,      // Classic Mac (\r)
-        MIXED    // Mix of different endings
+        LF,      // Unix-style \n
+        CR,      // MacOS 9 style \r
+        CRLF,    // Windows-style \r\n
+        MIXED    // Mix of all types
     };
     
     /**
@@ -62,7 +62,7 @@ namespace TestFileGenerator {
     std::string generateFile(
         size_t sizeInBytes, 
         const std::string& filename,
-        ContentPattern pattern = ContentPattern::MIXED_LINE_LENGTHS,
+        ContentPattern pattern = ContentPattern::REPEATED_TEXT,
         LineEnding lineEnding = LineEnding::LF
     );
 

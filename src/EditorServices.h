@@ -12,10 +12,12 @@ class ISyntaxHighlightingManager;
 class IErrorReporter;
 class ICommandRegistry;
 class IUIExtensionRegistry;
-class ISyntaxHighlightingRegistry;
+namespace ai_editor { class ISyntaxHighlightingRegistry; }
 class IEventRegistry;
 class IWorkspaceExtension;
 class IEditorCoreThreadPool;
+class IDiffEngine;
+class IMergeEngine;
 
 namespace ai_editor {
 
@@ -44,6 +46,8 @@ public:
      * @param eventRegistry The event registry service
      * @param workspaceExtension The workspace extension service
      * @param editorCoreThreadPool The editor core thread pool service
+     * @param diffEngine The diff engine service
+     * @param mergeEngine The merge engine service
      * @param injector The dependency injection container
      */
     EditorServices(
@@ -54,10 +58,12 @@ public:
         std::shared_ptr<IErrorReporter> errorReporter,
         std::shared_ptr<ICommandRegistry> commandRegistry,
         std::shared_ptr<IUIExtensionRegistry> uiExtensionRegistry,
-        std::shared_ptr<ISyntaxHighlightingRegistry> syntaxHighlightingRegistry,
+        std::shared_ptr<ai_editor::ISyntaxHighlightingRegistry> syntaxHighlightingRegistry,
         std::shared_ptr<IEventRegistry> eventRegistry,
         std::shared_ptr<IWorkspaceExtension> workspaceExtension,
         std::shared_ptr<IEditorCoreThreadPool> editorCoreThreadPool,
+        std::shared_ptr<IDiffEngine> diffEngine,
+        std::shared_ptr<IMergeEngine> mergeEngine,
         di::Injector& injector
     );
 
@@ -129,7 +135,7 @@ public:
      * 
      * @return Shared pointer to the syntax highlighting registry interface
      */
-    std::shared_ptr<ISyntaxHighlightingRegistry> getSyntaxHighlightingRegistry() const override;
+    std::shared_ptr<ai_editor::ISyntaxHighlightingRegistry> getSyntaxHighlightingRegistry() const override;
     
     /**
      * @brief Get the event registry service
@@ -151,6 +157,20 @@ public:
      * @return Shared pointer to the editor core thread pool interface
      */
     std::shared_ptr<IEditorCoreThreadPool> getEditorCoreThreadPool() const override;
+    
+    /**
+     * @brief Get the diff engine service
+     * 
+     * @return Shared pointer to the diff engine interface
+     */
+    std::shared_ptr<IDiffEngine> getDiffEngine() const override;
+    
+    /**
+     * @brief Get the merge engine service
+     * 
+     * @return Shared pointer to the merge engine interface
+     */
+    std::shared_ptr<IMergeEngine> getMergeEngine() const override;
 
 private:
     // Store the service instances
@@ -161,10 +181,12 @@ private:
     std::shared_ptr<IErrorReporter> errorReporter_;
     std::shared_ptr<ICommandRegistry> commandRegistry_;
     std::shared_ptr<IUIExtensionRegistry> uiExtensionRegistry_;
-    std::shared_ptr<ISyntaxHighlightingRegistry> syntaxHighlightingRegistry_;
+    std::shared_ptr<ai_editor::ISyntaxHighlightingRegistry> syntaxHighlightingRegistry_;
     std::shared_ptr<IEventRegistry> eventRegistry_;
     std::shared_ptr<IWorkspaceExtension> workspaceExtension_;
     std::shared_ptr<IEditorCoreThreadPool> editorCoreThreadPool_;
+    std::shared_ptr<IDiffEngine> diffEngine_;
+    std::shared_ptr<IMergeEngine> mergeEngine_;
     di::Injector& injector_;  // Reference to the dependency injection container
 };
 

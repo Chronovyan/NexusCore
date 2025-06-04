@@ -114,24 +114,35 @@ public:
     }
     
     /**
-     * @brief Register a singleton instance of type T
+     * @brief Register a singleton service
      * 
-     * This method registers an existing instance as a singleton for type T.
-     * The same instance will be returned whenever an instance of type T is requested.
+     * This method registers a singleton service that will be created once and shared.
      * 
-     * @tparam T The interface type to register
-     * @param instance The singleton instance
+     * @tparam TInterface The interface type to register
+     * @tparam TImplementation The implementation type
+     * @param name Optional name for the service
      */
-    template<typename T>
-    void registerSingleton(std::shared_ptr<T> instance) {
-        LOG_DEBUG("Registering singleton instance for type: " + std::string(typeid(T).name()));
+    template<typename TInterface, typename TImplementation>
+    void registerSingleton(const std::string& name = "") {
+        LOG_DEBUG("Registering singleton " + std::string(typeid(TInterface).name()) + 
+                 (name.empty() ? "" : " with name '" + name + "'"));
         
-        // Create a factory that always returns the same instance
-        auto factory = [instance]() { return instance; };
+        // Store type indices for runtime type checking
+        auto interfaceTypeIndex = std::type_index(typeid(TInterface));
+        auto implementationTypeIndex = std::type_index(typeid(TImplementation));
         
-        // Register with both injectors for compatibility
-        injector_->registerFactory<T>(factory);
-        lifetimeInjector_->registerFactory<T>(factory, lifetime::ServiceLifetime::Singleton);
+        // Create a factory function that will be called when the service is requested
+        factories_[{interfaceTypeIndex, name}] = [name](const std::string&) -> std::shared_ptr<void> {
+            try {
+                // Create a new instance of the implementation
+                auto instance = std::make_shared<TImplementation>();
+                return std::static_pointer_cast<void>(instance);
+            } catch (const std::exception& ex) {
+                LOG_ERROR("Error creating singleton " + std::string(typeid(TImplementation).name()) + 
+                         (name.empty() ? "" : " with name '" + name + "'") + ": " + ex.what());
+                throw;
+            }
+        };
     }
     
     /**
@@ -173,28 +184,82 @@ public:
     }
     
     /**
-     * @brief Get an instance of type T
+     * @brief Register a factory function for a service that takes the request ID
      * 
-     * This method resolves an instance of type T from the container.
-     * If no factory is registered for type T, an exception is thrown.
+     * This method allows registering a factory function that receives the request ID,
+     * which is useful for request-scoped services.
      * 
-     * @tparam T The interface type to resolve
-     * @return A shared pointer to the instance
-     * @throws std::runtime_error if no factory is registered for type T
+     * @tparam TInterface The interface type to register
+     * @tparam TImplementation The implementation type
+     * @param name Optional name for the service
+     * @param factory Factory function that receives the request ID
+     */
+    template<typename TInterface, typename TImplementation>
+    void registerFactory(const std::string& name, std::function<std::shared_ptr<TImplementation>(const std::string&)> factory) {
+        LOG_DEBUG("Registering factory for " + std::string(typeid(TInterface).name()) + 
+                 (name.empty() ? "" : " with name '" + name + "'"));
+        
+        // Store type indices for runtime type checking
+        auto interfaceTypeIndex = std::type_index(typeid(TInterface));
+        auto implementationTypeIndex = std::type_index(typeid(TImplementation));
+        
+        // Create a factory function that will be called when the service is requested
+        factories_[{interfaceTypeIndex, name}] = [factory, name](const std::string& requestId) -> std::shared_ptr<void> {
+            try {
+                // Call the user-provided factory function with the request ID
+                auto instance = factory(requestId);
+                return std::static_pointer_cast<void>(instance);
+            } catch (const std::exception& ex) {
+                LOG_ERROR("Error creating service " + std::string(typeid(TImplementation).name()) + 
+                         (name.empty() ? "" : " with name '" + name + "'") + ": " + ex.what());
+                throw;
+            }
+        };
+    }
+    
+    /**
+     * @brief Get a service by type and optional name
+     * 
+     * @tparam T The type of service to get
+     * @param name Optional name of the service
+     * @param requestId Optional request ID for request-scoped services
+     * @return A shared pointer to the service
      */
     template<typename T>
-    std::shared_ptr<T> get() {
-        LOG_DEBUG("Resolving instance of type: " + std::string(typeid(T).name()));
+    std::shared_ptr<T> get(const std::string& name = "", const std::string& requestId = "") {
+        // Get the type index for T
+        auto typeIndex = std::type_index(typeid(T));
         
-        try {
-            // Prefer the lifetime injector for more advanced lifetime management
-            return lifetimeInjector_->get<T>();
+        LOG_DEBUG("Getting service " + std::string(typeid(T).name()) + 
+                 (name.empty() ? "" : " with name '" + name + "'") +
+                 (requestId.empty() ? "" : " for request '" + requestId + "'"));
+        
+        // Look for a factory for this type and name
+        auto factoryIt = factories_.find({typeIndex, name});
+        if (factoryIt == factories_.end()) {
+            // Try to use the Injector as a fallback
+            return injector_->get<T>();
         }
-        catch (const std::exception& ex) {
-            LOG_ERROR("Failed to resolve type: " + std::string(typeid(T).name()) + 
-                      ", error: " + std::string(ex.what()));
-            throw;
+        
+        // Check if it's a singleton and we already have an instance
+        if (requestId.empty()) {
+            auto instanceIt = instances_.find({typeIndex, name});
+            if (instanceIt != instances_.end()) {
+                // Return the existing instance
+                return std::static_pointer_cast<T>(instanceIt->second);
+            }
         }
+        
+        // Create a new instance using the factory
+        auto instance = factoryIt->second(requestId);
+        
+        // Store the instance for singletons
+        if (requestId.empty()) {
+            instances_[{typeIndex, name}] = instance;
+        }
+        
+        // Return the instance cast to the requested type
+        return std::static_pointer_cast<T>(instance);
     }
     
     /**
@@ -232,21 +297,22 @@ public:
     }
     
     /**
-     * @brief Create a new scope
+     * @brief Creates a new scope for request-scoped services
      * 
-     * This method creates a new scope for resolving scoped services.
-     * Scoped services are created once per scope and shared within the scope.
-     * 
-     * @return A shared pointer to a new DIFramework instance representing the scope
+     * @return A new DIFramework instance for the scope
      */
     std::shared_ptr<DIFramework> createScope() {
-        LOG_DEBUG("Creating new scope");
+        LOG_DEBUG("Creating new scope from DIFramework");
+        // Create a new DIFramework that shares the same service definitions
+        // but has its own instance cache
+        auto scope = std::make_shared<DIFramework>();
         
-        // Create a new lifetime scope
-        auto scopedInjector = lifetimeInjector_->createScope();
+        // Copy service definitions from this instance to the new scope
+        for (const auto& [key, factory] : factories_) {
+            scope->factories_[key] = factory;
+        }
         
-        // Create a new framework with the scoped injector
-        return std::shared_ptr<DIFramework>(new DIFramework(scopedInjector));
+        return scope;
     }
     
     /**
@@ -297,6 +363,25 @@ public:
 private:
     std::shared_ptr<Injector> injector_;
     std::shared_ptr<lifetime::LifetimeInjector> lifetimeInjector_;
+
+    // Using a type index and name as a composite key for the service map
+    using ServiceKey = std::pair<std::type_index, std::string>;
+    
+    // Hash function for the service key
+    struct ServiceKeyHash {
+        std::size_t operator()(const ServiceKey& key) const {
+            return std::hash<std::type_index>()(key.first) ^ std::hash<std::string>()(key.second);
+        }
+    };
+    
+    // Factory function type that can take a request ID
+    using FactoryFunc = std::function<std::shared_ptr<void>(const std::string&)>;
+    
+    // Map of type + name to factory functions
+    std::unordered_map<ServiceKey, FactoryFunc, ServiceKeyHash> factories_;
+    
+    // Map of type + name to instances (for singletons)
+    std::unordered_map<ServiceKey, std::shared_ptr<void>, ServiceKeyHash> instances_;
 };
 
 } // namespace di 
