@@ -1,0 +1,81 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+**Global Rule: Project Setup & Scaffolding Guidelines (Template)**
+
+**Purpose:** To guide the AI in generating consistent and complete initial project structures, configuration files, and boilerplate code when assisting with the creation of new projects or significant new modules.
+
+**Instructions for the AI:**
+"When I ask you to help set up a new project, a new module, or scaffold parts of an application, adhere to the following guidelines to ensure a standardized and best-practice starting point. If I specify a particular project type or technology stack, tailor the setup accordingly, prioritizing any explicit instructions I give."
+
+**1. General Principles for New Projects:**
+    * "**Clarity and Organization:** The initial project structure should be logical, easy to navigate, and promote a clear separation of concerns."
+    * "**Completeness (Baseline):** Include essential files and configurations that most projects of a given type would need from the start."
+    * "**Minimalism (Avoid Unnecessary Clutter):** While being complete, avoid adding unnecessary boilerplate or dependencies that aren't broadly applicable or specifically requested."
+    * "**Configurability:** Suggest or include placeholders for common configuration points."
+
+**2. Standard Directory Structures:**
+    * "(User to specify preferred structures for common project types. Examples:)
+        * **Generic Web Application (e.g., Python Flask/Django, Node.js Express):**
+            * `/app` or `/src` (source code)
+            * `/app/static` or `/public` (static assets: CSS, JS, images)
+            * `/app/templates` (server-side templates)
+            * `/app/routes` or `/app/controllers` (route definitions)
+            * `/app/models` (data models)
+            * `/app/services` (business logic)
+            * `/tests` (test code, mirroring app structure)
+            * `/config` (configuration files)
+            * `/scripts` (utility scripts)
+            * `/docs` (project documentation)
+        * **Library/Package:**
+            * `/src` or `/[library_name]` (source code)
+            * `/tests`
+            * `/examples`
+            * `/docs`
+        * **Command-Line Tool (CLI):**
+            * `/cmd` or `/[tool_name]` (main application code)
+            * `/internal` or `/pkg` or `/lib` (library code)
+            * `/tests`
+        * 'For [Specific Language/Framework, e.g., React with Create React App, Spring Boot], follow its standard idiomatic structure unless I specify otherwise.'"
+
+**3. Essential Configuration Files:**
+    * "**Version Control:**
+        * Always include a `.gitignore` file, populated with common ignores for the language/framework and OS. (User to specify any personal global ignores to always include if possible, e.g., `.DS_Store`, `*.pyc`, `node_modules/`, `build/`, `dist/`)"
+    * "**README:**
+        * Include a `README.md` file with:
+            * Project Title
+            * Brief Description
+            * (Placeholder for) Prerequisites
+            * (Placeholder for) Installation/Setup Instructions
+            * (Placeholder for) Running the Application/Tests
+            * (Placeholder for) Basic Usage/Examples
+            * (Placeholder for) How to Contribute (if applicable)
+    * "**License:**
+        * Include a `LICENSE` file. (User to specify default license, e.g., 'MIT', 'Apache 2.0', 'GPLv3', or state 'Prompt user to choose a license.')"
+    * "**Linter/Formatter Configuration:**
+        * "(User to specify if standard config files for tools like ESLint, Prettier, Flake8, Pylint, ClangFormat, etc., should be included with sensible defaults or their preferred settings.)"
+    * "**Dependency Management:**
+        * "(User to specify, e.g., 'Initialize a `package.json` for Node.js projects,' 'Include a `requirements.txt` or `Pipfile`/`pyproject.toml` for Python,' 'A `pom.xml` or `build.gradle` for Java/Kotlin.')"
+    * "**Editor Configuration:**
+        * "Consider including an `.editorconfig` file for basic editor settings like indent style, line endings, etc."
+
+**4. Boilerplate Code / Starting Files:**
+    * "(User to specify minimal boilerplate. Examples:)
+        * 'A simple "Hello, World!" or basic entry point (`main.py`, `index.js`, `App.java`).'
+        * 'A basic test file with a sample passing test.'
+        * 'An example configuration file (`config.example.json`, `.env.example`).'"
+
+**5. Environment Setup:**
+    * "Recommend and, if possible, scaffold setup for isolated development environments (e.g., Python virtual environments, Node.js `nvm` usage notes in README)."
+    * "Include an `.env.example` file for environment-specific configurations, with instructions in the README on how to create a `.env` file from it. **Ensure `.env` is in `.gitignore`.**"
+
+**6. Build System Integration (if applicable):**
+    * "If the project type typically requires a build system (e.g., Webpack, Maven, Gradle, CMake), include a basic, functional configuration file for it."
+
+**7. Version Control Initialization:**
+    * "After scaffolding, suggest initializing a Git repository (`git init`)."
+    * "Suggest making an initial commit with a message like 'Initial project setup' or 'feat: Initial project structure scaffolding'." (Refer to 'Detailed Commit Message Conventions' if active).
+
+"When I request a new project, ask clarifying questions about the project type, primary language/framework, and any specific preferences I have that might override these general guidelines. Provide a summary of the created structure and key files."

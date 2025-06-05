@@ -2,6 +2,19 @@
 
 Thank you for your interest in contributing to the AI-First TextEditor project! This document provides guidelines and instructions for contributing.
 
+## Markdown Conventions (MDC)
+
+This project uses Markdown Convention (MDC) files to maintain consistent documentation. The rules are located in the `.mdc` directory.
+
+### Key MDC Files
+
+- `.mdc/config.json` - Main configuration file that references all rules
+- `.mdc/documenting.mdc` - Documentation standards
+- `.mdc/cpp-standards.mdc` - C++ coding standards
+- `.mdc/testing.mdc` - Testing guidelines
+
+To use these rules in your editor, point it to the `.mdc/config.json` file.
+
 ## Getting Started
 
 ### Prerequisites

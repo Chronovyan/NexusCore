@@ -1,0 +1,19 @@
+{
+  "rules": [
+    "@.mdc/api.mdc",
+    "@.mdc/cpp-standards.mdc",
+    "@.mdc/database.mdc",
+    "@.mdc/doumenting.mdc",
+    "@.mdc/error.mdc",
+    "@.mdc/git.mdc",
+    "@.mdc/house-keeping.mdc",
+    "@.mdc/license-rule.mdc",
+    "@.mdc/performance.mdc",
+    "@.mdc/project-setup.mdc",
+    "@.mdc/refactor.mdc",
+    "@.mdc/security.mdc",
+    "@.mdc/testing.mdc"
+  ],
+  "version": "1.0.0",
+  "description": "Markdown convention rules for AI-First TextEditor project"
+}
