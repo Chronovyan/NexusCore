@@ -1,3 +1,10 @@
+# Editor and IDE
+.cursor/
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
 # Build directories
 /build*/
 /build_msvc/
