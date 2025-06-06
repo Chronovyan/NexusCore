@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
 project(TextEditorTests)
 
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Enable testing
 enable_testing()
 
@@ -13,35 +17,16 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# Include directories
-include_directories(
-  ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_SOURCE_DIR}/src/interfaces
-  ${CMAKE_SOURCE_DIR}/include
-  ${CMAKE_SOURCE_DIR}/tests
+# Add SimpleEditorTest (self-contained test)
+add_executable(SimpleEditorTest
+  SimpleEditorTest.cpp
 )
 
-# Add the minimal test
-add_executable(MinimalTest MinimalDocumentTest.cpp)
-target_link_libraries(MinimalTest
+target_link_libraries(SimpleEditorTest
   PRIVATE
     GTest::gtest_main
-)
-
-# Add mock Editor test
-add_executable(EditorMockTest 
-  EditorMockTest.cpp
-  MockEditor.h
-  IEditorTestInterface.hpp
-)
-
-target_link_libraries(EditorMockTest
-  PRIVATE
-    GTest::gtest_main
-    GTest::gmock
 )
 
 # Add tests
 include(GoogleTest)
-gtest_discover_tests(MinimalTest)
-gtest_discover_tests(EditorMockTest)
+gtest_discover_tests(SimpleEditorTest)
