@@ -92,8 +92,8 @@ void PromptTemplate::setSystemMessageFormat(SystemMessageFormat format)
     if (!isEditable_) {
         EditorErrorReporter::reportError(
             "PromptTemplate",
-            "Cannot modify non-editable template: " + id_,
-            "Create a new template based on this one instead"
+            "Cannot modify non-editable template: " + id_ + ". Create a new template based on this one instead.",
+            3  // ERROR level
         );
         return;
     }
@@ -106,8 +106,8 @@ void PromptTemplate::setUserMessageFormat(UserMessageFormat format)
     if (!isEditable_) {
         EditorErrorReporter::reportError(
             "PromptTemplate",
-            "Cannot modify non-editable template: " + id_,
-            "Create a new template based on this one instead"
+            "Cannot modify non-editable template: " + id_ + ". Create a new template based on this one instead.",
+            3  // ERROR level
         );
         return;
     }
@@ -120,8 +120,8 @@ void PromptTemplate::setAssistantMessageFormat(AssistantMessageFormat format)
     if (!isEditable_) {
         EditorErrorReporter::reportError(
             "PromptTemplate",
-            "Cannot modify non-editable template: " + id_,
-            "Create a new template based on this one instead"
+            "Cannot modify non-editable template: " + id_ + ". Create a new template based on this one instead.",
+            3  // ERROR level
         );
         return;
     }
@@ -134,8 +134,8 @@ void PromptTemplate::setToolMessageFormat(ToolMessageFormat format)
     if (!isEditable_) {
         EditorErrorReporter::reportError(
             "PromptTemplate",
-            "Cannot modify non-editable template: " + id_,
-            "Create a new template based on this one instead"
+            "Cannot modify non-editable template: " + id_ + ". Create a new template based on this one instead.",
+            3  // ERROR level
         );
         return;
     }
@@ -148,8 +148,8 @@ void PromptTemplate::setConversationFormatter(ConversationFormatter formatter)
     if (!isEditable_) {
         EditorErrorReporter::reportError(
             "PromptTemplate",
-            "Cannot modify non-editable template: " + id_,
-            "Create a new template based on this one instead"
+            "Cannot modify non-editable template: " + id_ + ". Create a new template based on this one instead.",
+            3  // ERROR level
         );
         return;
     }
@@ -312,7 +312,7 @@ bool PromptTemplateManager::addTemplate(std::shared_ptr<PromptTemplate> templ)
         EditorErrorReporter::reportError(
             "PromptTemplateManager",
             "Cannot add null template",
-            "Provide a valid template"
+            3  // ERROR level
         );
         return false;
     }
@@ -324,7 +324,7 @@ bool PromptTemplateManager::addTemplate(std::shared_ptr<PromptTemplate> templ)
         EditorErrorReporter::reportError(
             "PromptTemplateManager",
             "Template with ID '" + id + "' already exists",
-            "Use a different ID or remove the existing template first"
+            3  // ERROR level
         );
         return false;
     }
@@ -341,7 +341,7 @@ bool PromptTemplateManager::removeTemplate(const std::string& templateId)
         EditorErrorReporter::reportError(
             "PromptTemplateManager",
             "Template with ID '" + templateId + "' not found",
-            "Check the template ID"
+            3  // ERROR level
         );
         return false;
     }
@@ -351,7 +351,7 @@ bool PromptTemplateManager::removeTemplate(const std::string& templateId)
         EditorErrorReporter::reportError(
             "PromptTemplateManager",
             "Cannot remove default template '" + templateId + "'",
-            "Default templates are protected"
+            3  // ERROR level
         );
         return false;
     }
@@ -427,7 +427,7 @@ std::shared_ptr<PromptTemplate> PromptTemplateManager::getDefaultTemplateForProv
 void PromptTemplateManager::initializeDefaultTemplates()
 {
     // 1. OpenAI ChatGPT template
-    auto openaiTemplate = std::make_shared<PromptTemplate>(
+    auto openaiTemplate = std::shared_ptr<PromptTemplate>(new PromptTemplate(
         "openai-default",
         "OpenAI Default",
         "Standard template for OpenAI ChatGPT models",
@@ -435,7 +435,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
         {"gpt-3.5-turbo*", "gpt-4*"},
         true,
         false
-    );
+    ));
     
     // OpenAI doesn't need any special formatting as the API handles the roles
     openaiTemplate->setConversationFormatter([](const std::vector<Message>& messages) {
@@ -445,7 +445,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
     });
     
     // 2. Llama-2-Chat template
-    auto llama2Template = std::make_shared<PromptTemplate>(
+    auto llama2Template = std::shared_ptr<PromptTemplate>(new PromptTemplate(
         "llama2-chat",
         "Llama-2 Chat",
         "Template for Llama-2 chat models",
@@ -453,7 +453,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
         {"llama-2*", "*-chat", "*-7b", "*-13b", "*-70b"},
         true,
         false
-    );
+    ));
     
     llama2Template->setSystemMessageFormat([](const std::string& content) {
         return "<s>[SYSTEM]\n" + content + "\n</s>";
@@ -493,7 +493,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
                     break;
                 }
                 case Message::Role::ASSISTANT: {
-                    if (!result.empty() && !result.ends_with("[/INST]")) {
+                    if (!result.empty() && result.size() >= 8 && result.compare(result.size() - 8, 8, "[/INST]") != 0) {
                         result += "\n\n";
                     }
                     result += message.content + "\n</s>";
@@ -513,7 +513,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
     });
     
     // 3. Alpaca template
-    auto alpacaTemplate = std::make_shared<PromptTemplate>(
+    auto alpacaTemplate = std::shared_ptr<PromptTemplate>(new PromptTemplate(
         "alpaca-style",
         "Alpaca Style",
         "Template for Alpaca-style instruction models",
@@ -521,7 +521,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
         {"*alpaca*", "*instruct*"},
         false,
         false
-    );
+    ));
     
     alpacaTemplate->setSystemMessageFormat([](const std::string& content) {
         return "### Instruction:\n" + content;
@@ -574,7 +574,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
     });
     
     // 4. ChatML template (Claude, etc.)
-    auto chatMLTemplate = std::make_shared<PromptTemplate>(
+    auto chatMLTemplate = std::shared_ptr<PromptTemplate>(new PromptTemplate(
         "chatml",
         "ChatML",
         "Template for models supporting the ChatML format",
@@ -582,7 +582,7 @@ void PromptTemplateManager::initializeDefaultTemplates()
         {"*claude*", "*mistral*", "*mixtral*"},
         false,
         false
-    );
+    ));
     
     chatMLTemplate->setSystemMessageFormat([](const std::string& content) {
         return "<|im_start|>system\n" + content + "<|im_end|>";
