@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusCore Social Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --nexus-blue: #2563EB;
+            --sky-blue: #4F86F7;
+            --light-blue: #93C5FD;
+            --dark-blue: #1E40AF;
+            --gray-50: #F8FAFC;
+            --gray-900: #0F172A;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .preview-container {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, var(--nexus-blue), var(--sky-blue));
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .tagline {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            max-width: 800px;
+            line-height: 1.2;
+            z-index: 2;
+        }
+        
+        .subtitle {
+            font-size: 1.5rem;
+            font-weight: 400;
+            opacity: 0.9;
+            text-align: center;
+            max-width: 700px;
+            margin-bottom: 3rem;
+            z-index: 2;
+        }
+        
+        .url {
+            font-size: 1.2rem;
+            font-weight: 400;
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            opacity: 0.8;
+            z-index: 2;
+        }
+        
+        .accent-shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            top: -200px;
+            right: -150px;
+        }
+        
+        .shape-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -100px;
+            left: -100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <div class="accent-shape shape-1"></div>
+        <div class="accent-shape shape-2"></div>
+        
+        <div class="logo">NexusCore</div>
+        <h1 class="tagline">The Future of AI-Powered Text Editing</h1>
+        <p class="subtitle">Experience the next generation of intelligent code editing with NexusCore's cutting-edge AI features</p>
+        <div class="url">github.com/yourusername/nexuscore</div>
+    </div>
+</body>
+</html>
