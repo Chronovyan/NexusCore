@@ -1,12 +1,13 @@
-﻿# implementation_notes Documentation
+# Implementation Notes
 
-This directory contains documentation related to implementation_notes.
+This directory has been consolidated into the main development documentation.
 
-## Contents
+## Moved
 
-- [diff_merge_implementation](diff_merge_implementation.md)
+All implementation notes have been moved to the [Development Documentation](../development/).
 
+Please update your bookmarks to the new location.
 
-## Overview
+## Why This Change?
 
-*TODO: Add an overview of this documentation section.*
+To improve documentation organization and make it easier to find related content, we've consolidated all implementation notes into the main development documentation section.
