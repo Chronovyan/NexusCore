@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]  # Trigger on pushes to master branch
+    paths:
+      - 'docs/**'  # Only trigger when files in docs/ change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (if needed)
+        run: npm run build --if-present
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs  # The folder to deploy (your built site files)
+          keep_files: true  # Keep existing files in gh-pages branch
+          force_orphan: false  # Don't delete existing files
+          enable_jekyll: false  # Not using Jekyll
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
