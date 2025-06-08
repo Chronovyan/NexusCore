@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World with NexusCore - NexusCore Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Brand Colors */
+            --nexus-blue: #2563EB;
+            --sky-blue: #4F86F7;
+            --light-blue: #93C5FD;
+            --dark-blue: #1E40AF;
+            
+            /* Neutrals */
+            --gray-50: #F8FAFC;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-400: #94A3B8;
+            --gray-500: #64748B;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1E293B;
+            --gray-900: #0F172A;
+            
+            /* Accents */
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            
+            /* Spacing */
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-6: 1.5rem;
+            --spacing-8: 2rem;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background-color: var(--gray-50);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-4);
+        }
+        
+        header {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-4) 0;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--nexus-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+        }
+        
+        nav ul {
+            display: flex;
+            gap: var(--spacing-6);
+            list-style: none;
+        }
+        
+        nav a {
+            color: var(--gray-700);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        nav a:hover {
+            color: var(--nexus-blue);
+        }
+        
+        .main-content {
+            padding: var(--spacing-8) 0;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: var(--spacing-6);
+            line-height: 1.2;
+        }
+        
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin: var(--spacing-8) 0 var(--spacing-4);
+            padding-top: var(--spacing-6);
+            border-top: 1px solid var(--gray-200);
+        }
+        
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin: var(--spacing-6) 0 var(--spacing-2);
+        }
+        
+        p, ul, ol {
+            margin-bottom: var(--spacing-4);
+            color: var(--gray-700);
+        }
+        
+        ul, ol {
+            padding-left: var(--spacing-6);
+        }
+        
+        li {
+            margin-bottom: var(--spacing-2);
+        }
+        
+        a {
+            color: var(--nexus-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        a:hover {
+            color: var(--dark-blue);
+            text-decoration: underline;
+        }
+
+        /* Code blocks */
+        pre, code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        pre {
+            background-color: var(--gray-900);
+            color: white;
+            padding: var(--spacing-4);
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: var(--spacing-4) 0;
+            position: relative;
+        }
+        
+        .code-block {
+            margin: var(--spacing-6) 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--gray-800);
+            padding: var(--spacing-2) var(--spacing-4);
+        }
+        
+        .code-title {
+            font-size: 0.75rem;
+            color: var(--gray-300);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .copy-button {
+            background: none;
+            border: 1px solid var(--gray-600);
+            color: var(--gray-200);
+            padding: var(--spacing-1) var(--spacing-2);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-button:hover {
+            background-color: var(--gray-700);
+            color: white;
+        }
+        
+        .copy-button.copied {
+            background-color: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        
+        /* Terminal */
+        .terminal {
+            background-color: var(--gray-900);
+            color: #33ff33;
+            padding: var(--spacing-4);
+            border-radius: 6px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            margin: var(--spacing-4) 0;
+            position: relative;
+        }
+        
+        .terminal::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 12px;
+            height: 12px;
+            background-color: #ff5f56;
+            border-radius: 50%;
+            box-shadow: 20px 0 0 #ffbd2e, 40px 0 0 #27c93f;
+        }
+        
+        .terminal pre {
+            margin: 0;
+            padding: 0;
+            background: none;
+            overflow: visible;
+        }
+        
+        .terminal .prompt {
+            color: #78dce8;
+        }
+        
+        .terminal .command {
+            color: #f8f8f2;
+        }
+        
+        .terminal .output {
+            color: #a9dc76;
+        }
+        
+        /* Callouts */
+        .callout {
+            padding: var(--spacing-4);
+            border-radius: 6px;
+            margin: var(--spacing-6) 0;
+            display: flex;
+            gap: var(--spacing-3);
+        }
+        
+        .callout.note {
+            background-color: var(--light-blue);
+            border-left: 4px solid var(--nexus-blue);
+            color: var(--gray-800);
+        }
+        
+        .callout.tip {
+            background-color: #d1fae5;
+            border-left: 4px solid var(--success);
+            color: var(--gray-800);
+        }
+        
+        .callout.warning {
+            background-color: #fef3c7;
+            border-left: 4px solid var(--warning);
+            color: var(--gray-800);
+        }
+        
+        .callout-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        
+        .callout-content h4 {
+            margin-top: 0;
+            margin-bottom: var(--spacing-2);
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .callout-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Steps */
+        .steps {
+            counter-reset: step;
+            margin: var(--spacing-6) 0;
+        }
+        
+        .step {
+            position: relative;
+            padding-left: 3rem;
+            margin-bottom: var(--spacing-8);
+        }
+        
+        .step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2rem;
+            height: 2rem;
+            background-color: var(--nexus-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: var(--spacing-4);
+                text-align: center;
+            }
+            
+            nav ul {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: var(--spacing-4);
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 var(--spacing-3);
+            }
+            
+            h1 {
+                font-size: 1.75rem;
+            }
+            
+            h2 {
+                font-size: 1.375rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <span>NexusCore</span>
+                </a>
+                <nav>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/#features">Features</a></li>
+                        <li><a href="/#docs">Documentation</a></li>
+                        <li><a href="/tutorials">Tutorials</a></li>
+                        <li><a href="https://github.com/yourusername/nexuscore" target="_blank" rel="noopener">GitHub</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <article>
+                <header>
+                    <nav aria-label="Breadcrumb">
+                        <a href="/tutorials">Tutorials</a> &raquo; <span>Hello World</span>
+                    </nav>
+                    <h1>Hello World with NexusCore</h1>
+                    <p class="lead">Get started with NexusCore by creating your first AI-powered text editor application.</p>
+                </header>
+
+                <section>
+                    <p>Welcome to NexusCore, the AI-first text editor designed to enhance your coding experience with intelligent features. In this tutorial, we'll walk you through creating a simple "Hello World" application using NexusCore's powerful API.</p>
+                    
+                    <div class="callout note">
+                        <div class="callout-icon">ℹ️</div>
+                        <div class="callout-content">
+                            <h4>Prerequisites</h4>
+                            <p>Before you begin, make sure you have the following installed:</p>
+                            <ul>
+                                <li>Node.js 16+ and npm</li>
+                                <li>Git</li>
+                                <li>A modern web browser (Chrome, Firefox, Safari, or Edge)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Getting Started</h2>
+                    <p>Let's create a simple Hello World application with NexusCore. Follow these steps:</p>
+                    
+                    <div class="steps">
+                        <div class="step">
+                            <h3>Step 1: Install NexusCore CLI</h3>
+                            <p>First, install the NexusCore CLI globally using npm:</p>
+                            
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Terminal</span>
+                                    <button class="copy-button" onclick="copyToClipboard('npm install -g @nexuscore/cli')">Copy</button>
+                                </div>
+                                <pre><code>npm install -g @nexuscore/cli</code></pre>
+                            </div>
+                            
+                            <p>Verify the installation by running:</p>
+                            
+                            <div class="terminal">
+                                <pre><span class="prompt">$</span> <span class="command">nexuscore --version</span>
+<span class="output">@nexuscore/cli v1.0.0</span></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <h3>Step 2: Create a New Project</h3>
+                            <p>Create a new directory for your project and initialize it with NexusCore:</p>
+                            
+                            <div class="terminal">
+                                <pre><span class="prompt">$</span> <span class="command">mkdir hello-nexuscore</span>
+<span class="prompt">$</span> <span class="command">cd hello-nexuscore</span>
+<span class="prompt">$</span> <span class="command">nexuscore init</span>
+<span class="output">Initializing new NexusCore project...</span>
+<span class="output">Installing dependencies...</span>
+<span class="output">Project created successfully!</span></pre>
+                            </div>
+                            
+                            <p>This will create a new project with the following structure:</p>
+                            
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Project Structure</span>
+                                </div>
+                                <pre><code>hello-nexuscore/
+├── node_modules/
+├── public/
+│   ├── index.html
+│   └── favicon.ico
+├── src/
+│   ├── index.js
+│   └── styles.css
+├── package.json
+└── README.md</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <h3>Step 3: Create Your First Component</h3>
+                            <p>Open <code>src/index.js</code> and replace its content with:</p>
+                            
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">src/index.js</span>
+                                    <button class="copy-button" onclick="copyToClipboard(document.querySelector('#hello-code').textContent)">Copy</button>
+                                </div>
+                                <pre><code id="hello-code">import { Editor } from '@nexuscore/editor';
+import '@nexuscore/editor/dist/styles.css';
+
+// Initialize the editor
+const editor = new Editor({
+    target: document.getElementById('app'),
+    props: {
+        content: '# Hello, NexusCore!\n\nStart typing here...',
+        theme: 'light',
+        showLineNumbers: true
+    }
+});
+
+// Expose editor instance for development
+window.editor = editor;</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <h3>Step 4: Update the HTML</h3>
+                            <p>Open <code>public/index.html</code> and update it to include your app container:</p>
+                            
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">public/index.html</span>
+                                    <button class="copy-button" onclick="copyToClipboard(document.querySelector('#html-code').textContent)">Copy</button>
+                                </div>
+                                <pre><code id="html-code">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Hello NexusCore&lt;/title&gt;
+    &lt;link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"&gt;
+    &lt;link rel="stylesheet" href="/src/styles.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div id="app"&gt;&lt;/div&gt;
+    &lt;script type="module" src="/src/index.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <h3>Step 5: Add Some Basic Styling</h3>
+                            <p>Update <code>src/styles.css</code> with some basic styles:</p>
+                            
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">src/styles.css</span>
+                                    <button class="copy-button" onclick="copyToClipboard(document.querySelector('#css-code').textContent)">Copy</button>
+                                </div>
+                                <pre><code id="css-code">:root {
+    --nexus-blue: #2563EB;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-900: #0F172A;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 2rem;
+    background-color: var(--gray-50);
+    color: var(--gray-900);
+    line-height: 1.5;
+}
+
+#app {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Customize the editor */
+.nexus-editor {
+    min-height: 300px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+}
+
+.nexus-toolbar {
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0.5rem;
+}</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="step">
+                            <h3>Step 6: Start the Development Server</h3>
+                            <p>Run the development server with hot-reload:</p>
+                            
+                            <div class="terminal">
+                                <pre><span class="prompt">$</span> <span class="command">npm run dev</span>
+<span class="output">> hello-nexuscore@1.0.0 dev</span>
+<span class="output">> nexuscore dev</span>
+<span class="output"></span>
+<span class="output">  VITE v3.0.0  ready in 234 ms</span>
+<span class="output"></span>
+<span class="output">  ➜  Local:   http://localhost:3000/</span>
+<span class="output">  ➜  Network: use --host to expose</span></pre>
+                            </div>
+                            
+                            <p>Open <a href="http://localhost:3000" target="_blank">http://localhost:3000</a> in your browser to see your app in action!</p>
+                            
+                            <div class="callout tip">
+                                <div class="callout-icon">💡</div>
+                                <div class="callout-content">
+                                    <h4>Tip</h4>
+                                    <p>Try typing in the editor and use the toolbar to format your text. The editor supports Markdown syntax and keyboard shortcuts for a better writing experience.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section>
+                    <h2>Next Steps</h2>
+                    <p>Congratulations! You've successfully created your first NexusCore application. Here are some ideas for what to do next:</p>
+                    
+                    <ul>
+                        <li>Explore the <a href="/docs/api" target="_blank">API documentation</a> to learn about all available features</li>
+                        <li>Customize the editor's appearance with <a href="/docs/theming" target="_blank">theming options</a></li>
+                        <li>Add <a href="/docs/plugins" target="_blank">plugins</a> to extend functionality</li>
+                        <li>Check out the <a href="/examples" target="_blank">examples</a> for more inspiration</li>
+                    </ul>
+                    
+                    <div class="callout note">
+                        <div class="callout-icon">ℹ️</div>
+                        <div class="callout-content">
+                            <h4>Need Help?</h4>
+                            <p>If you run into any issues or have questions, check out our <a href="/docs/faq" target="_blank">FAQ</a> or join our <a href="https://community.nexuscore.dev" target="_blank">community forum</a> for support.</p>
+                        </div>
+                    </div>
+                </section>
+            </article>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2023 NexusCore. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Copy to clipboard functionality
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+        
+        // Make copy buttons work
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.copy-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const codeBlock = button.closest('.code-block');
+                    if (codeBlock) {
+                        const code = codeBlock.querySelector('code');
+                        if (code) {
+                            copyToClipboard(code.textContent);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
