@@ -3,9 +3,66 @@
 <head>
     <meta charset="utf-8">
     <title>Loom - AI-First Text Editor</title>
-    <meta http-equiv="refresh" content="0; url=index.md" />
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #24292e;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { color: #24292e; }
+        h2 { color: #2f363d; margin-top: 24px; }
+        a { color: #0366d6; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 16px;
+            overflow: auto;
+        }
+        code { font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+    </style>
 </head>
 <body>
-    <p>Redirecting to documentation... <a href="index.md">Click here</a> if you are not redirected.</p>
+    <h1>AI-First TextEditor Documentation</h1>
+    
+    <p>Welcome to the AI-First TextEditor documentation. This guide will help you get started with building, using, and contributing to the project.</p>
+
+    <h2>Main Documentation</h2>
+    <ul>
+        <li><a href="project_overview.md">Project Overview</a> - Comprehensive introduction to the project</li>
+        <li><a href="getting_started.md">Getting Started Guide</a> - First-time setup and basic usage</li>
+        <li><a href="troubleshooting.md">Troubleshooting Guide</a> - Common issues and solutions</li>
+    </ul>
+
+    <h2>Quick Start</h2>
+    <h3>Build Commands</h3>
+    <pre><code># Windows (Visual Studio)
+mkdir build_vs && cd build_vs
+cmake -G "Visual Studio 17 2022" -A x64 ..
+cmake --build . --config Release
+
+# Linux/macOS
+mkdir build && cd build
+cmake ..
+make</code></pre>
+
+    <h3>Run Commands</h3>
+    <pre><code># Run the application
+./TextEditor
+
+# Run all tests
+./tests/RunAllTests
+
+# Run specific tests
+./tests/RunAllTests --gtest_filter=OpenAIApiEndpointsTest*</code></pre>
+
+    <h2>Project Links</h2>
+    <ul>
+        <li><a href="https://github.com/Chronovyan/loom">GitHub Repository</a> - Source code</li>
+        <li><a href="https://github.com/Chronovyan/loom/issues">Issue Tracker</a> - Report bugs and feature requests</li>
+    </ul>
 </body>
 </html>
