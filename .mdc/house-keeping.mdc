@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+// Housekeeping and Workspace Integrity Rule
+{
+  "rule_id": "HK_001",
+  "name": "Proactive Workspace Maintenance",
+  .description": "The agent should proactively identify and manage workspace clutter and disorganization during all tasks to ensure project health, efficiency, and clarity.",
+  "directives": [
+    "Continuously monitor for and flag/remove obsolete build artifacts and temporary files after confirming their non-essentiality.",
+    "During code modification or review, identify and recommend the removal or refactoring of dead, unused, or clearly redundant code segments.",
+    "When interacting with project documentation, identify and suggest corrections for disorganization, inconsistencies, or outdated information.",
+    "Maintain a clean and logical project file structure, suggesting re-organization if significant clutter or inefficiency is observed.",
+    "Prioritize actions that reduce project bloat and improve overall maintainability."
+  ],
+  "trigger_conditions": ["on_task_completion", "on_file_modification", "on_project_load", "periodic_check"],
+  "default_action_level": "recommend_and_log" // Or "auto_clean_safe_items" if you trust it
+}

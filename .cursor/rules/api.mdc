@@ -1,0 +1,91 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+**Global Rule: API Design Principles (Template)**
+
+**Purpose:** To ensure that APIs (e.g., RESTful services, GraphQL, gRPC, library interfaces) designed or suggested by the AI are consistent, usable, discoverable, and adhere to established best practices and user-specified conventions.
+
+**Instructions for the AI:**
+"When generating, reviewing, or suggesting API designs (including REST endpoints, GraphQL schemas, gRPC service definitions, or public methods/interfaces in libraries), you **must** adhere to the following principles. If the project has existing API design guidelines, those take precedence."
+
+**1. General Principles:**
+    * "**Clarity & Predictability:** APIs should be easy to understand and use. Behavior should be predictable."
+    * "**Consistency:** Maintain consistency in naming, data formats, error handling, and behavior across all parts of the API."
+    * "**Usability (Developer Experience):** Design APIs with the developer experience in mind. Make common tasks simple and complex tasks possible."
+    * "**Discoverability:** For RESTful APIs, consider HATEOAS principles if appropriate. For all APIs, ensure clear documentation makes them discoverable (refer to 'Code Documentation & Commenting Style' rule)."
+    * "**Flexibility & Extensibility:** Design APIs that can evolve without breaking existing clients unnecessarily."
+    * "**Security First:** API design must incorporate security considerations from the outset (refer to 'Security Best Practices' rule for details on authentication, authorization, input validation, etc.)."
+
+**2. For RESTful APIs (User to specify if other API types like GraphQL or gRPC are primary):**
+    * **Resource-Oriented Design:**
+        * "Identify resources clearly (e.g., `/users`, `/orders`). Use nouns, not verbs, for resource names."
+        * "Prefer plural nouns for collections (e.g., `/users` instead of `/user`)."
+    * **HTTP Methods (Verbs):**
+        * `GET`: Retrieve resources. Should be safe (no side effects) and idempotent.
+        * `POST`: Create new resources (typically at a collection endpoint, e.g., `POST /users`). Can also be used for actions that don't fit other methods. Not necessarily idempotent.
+        * `PUT`: Update/replace an existing resource entirely (at a specific resource endpoint, e.g., `PUT /users/{id}`). Should be idempotent.
+        * `PATCH`: Partially update an existing resource (e.g., `PATCH /users/{id}`). Should ideally be idempotent.
+        * `DELETE`: Remove a resource (e.g., `DELETE /users/{id}`). Should be idempotent.
+        * "Use other HTTP methods (e.g., `HEAD`, `OPTIONS`) appropriately."
+    * **Statelessness:** "Ensure requests from a client to the server contain all the information needed to understand the request. Do not store client session state on the server between requests."
+    * **Idempotency:** "Ensure `GET`, `PUT`, `DELETE` operations are idempotent. `POST` is generally not. `PATCH` should be designed to be idempotent if possible."
+
+**3. Request & Response Formats:**
+    * "**Data Format:** (User to specify, e.g., 'Prefer JSON for request and response bodies.' Consider `Content-Type` and `Accept` headers.)"
+    * "**Naming Conventions:** (User to specify, e.g., 'Use `camelCase` or `snake_case` consistently for keys in JSON payloads.')"
+    * "**Structure:**
+        * 'Aim for clear, well-structured, and reasonably flat data payloads.'
+        * 'For collections, provide consistent mechanisms for pagination, filtering, sorting, and searching.' (User to specify preferences, e.g., query parameters like `?limit=10&offset=0`, `?sort_by=name&order=asc`)
+        * 'Consider envelope responses if needed (e.g., `{"data": [...], "pagination": {...}}`), but avoid over-wrapping.'"
+    * "**Empty States:** Clearly define representations for empty collections (e.g., an empty array `[]`) or non-existent optional fields."
+
+**4. HTTP Status Codes (for RESTful APIs):**
+    * "Use HTTP status codes semantically and consistently:"
+        * `2xx` (Success):
+            * `200 OK`: General success.
+            * `201 Created`: Resource successfully created (often with a `Location` header to the new resource).
+            * `202 Accepted`: Request accepted for processing, but processing not complete.
+            * `204 No Content`: Success, but no data to return (e.g., for `DELETE` operations).
+        * `3xx` (Redirection): Use as appropriate (e.g., `301 Moved Permanently`).
+        * `4xx` (Client Errors):
+            * `400 Bad Request`: General client-side error (e.g., invalid JSON, validation error).
+            * `401 Unauthorized`: Authentication is required and has failed or has not yet been provided.
+            * `403 Forbidden`: Authenticated user does not have permission to access the resource.
+            * `404 Not Found`: Resource does not exist.
+            * `405 Method Not Allowed`: HTTP method used is not supported for this resource.
+            * `409 Conflict`: Request conflicts with the current state of the resource (e.g., duplicate creation).
+            * `422 Unprocessable Entity`: Server understands the content type, and the syntax is correct, but it was unable to process the contained instructions (e.g., semantic errors in data).
+            * `429 Too Many Requests`: Rate limiting.
+        * `5xx` (Server Errors):
+            * `500 Internal Server Error`: Generic server error. Avoid using this if a more specific error code applies.
+            * `502 Bad Gateway`: Invalid response from an upstream server.
+            * `503 Service Unavailable`: Server is temporarily unavailable (e.g., overloaded or down for maintenance).
+    * "For errors (`4xx`, `5xx`), provide a consistent JSON error response body with helpful details (e.g., `{"error": {"code": "...", "message": "...", "details": "..."}}`)." (Refer to 'General Error Handling Philosophy' rule)
+
+**5. API Versioning:**
+    * "(User to specify preferred strategy if any, e.g.:)
+        * 'Include the version in the URL path (e.g., `/v1/users`).'
+        * 'Use custom request headers (e.g., `Accept-Version: v1`).'
+        * 'Use `Accept` header with vendor media types (e.g., `Accept: application/vnd.mycompany.v1+json`).'
+    * "Plan for non-breaking changes where possible. Major version changes for breaking changes."
+
+**6. Authentication & Authorization (High-Level Reminder):**
+    * "All endpoints must be protected by appropriate authentication mechanisms unless explicitly public."
+    * "Authorization checks must be performed for all requests."
+    * "(Refer to 'Security Best Practices' rule for detailed mechanisms like OAuth 2.0, JWTs, API Keys etc.)"
+
+**7. Rate Limiting & Quotas:**
+    * "If applicable, remind to consider rate limiting to protect the API from abuse and ensure fair usage."
+
+**8. Documentation:**
+    * "All API endpoints and data models must be clearly documented."
+    * "(Refer to 'Code Documentation & Commenting Style' rule, and consider tools like OpenAPI/Swagger for REST APIs.)"
+
+**9. For Library/SDK Public Interfaces (if not a web API):**
+    * "Apply similar principles of clarity, consistency, and usability to public class methods, function signatures, and data structures."
+    * "Minimize the public surface area."
+    * "Clearly document contracts, parameters, return values, and exceptions/errors."
+
+"When asked to design or extend an API, proactively apply these principles and explain your design choices."

@@ -1,0 +1,48 @@
+cmake_minimum_required(VERSION 3.14)
+project(MinimalOpenGLTest VERSION 1.0 LANGUAGES CXX)
+
+# Standard output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Global compiler settings
+if(MSVC)
+    add_compile_options(/W4)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Use clang-specific compiler flags
+    message(STATUS "Using Clang compiler flags")
+    add_compile_options(-Wall -Wextra -Wpedantic -Wno-language-extension-token)
+else()
+    # Default compiler flags for other compilers (like GCC)
+    message(STATUS "Using default compiler flags")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) # Prefer not to use compiler-specific extensions
+
+# Use absolute paths with correct path to project root
+set(PROJECT_ROOT_DIR "C:/Users/HydraPony/dev/AI-First TextEditor")
+set(GLFW_DIR "${PROJECT_ROOT_DIR}/external/glfw")
+set(GLEW_DIR "${PROJECT_ROOT_DIR}/external/glew")
+
+# Find OpenGL
+find_package(OpenGL REQUIRED)
+
+# --- Minimal OpenGL Test ---
+add_executable(MinimalOpenGLTest main_minimal.cpp)
+
+# Include directories for GLFW and GLEW
+target_include_directories(MinimalOpenGLTest PRIVATE 
+  "${GLFW_DIR}/include"
+  "${GLEW_DIR}/include"
+)
+
+# Link against OpenGL and prebuilt GLFW and GLEW libraries
+target_link_libraries(MinimalOpenGLTest PRIVATE 
+  OpenGL::GL
+  "${PROJECT_ROOT_DIR}/build/debug/lib/glfw3.lib"
+  "${GLEW_DIR}/lib/Release/x64/glew32.lib"
+) 

@@ -1,0 +1,39 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+**Global Rule: License and Attribution Guidelines (Template)**
+
+**Purpose:** To guide the AI in matters related to software licensing for new projects and to ensure awareness and proper handling of licenses and attribution requirements when incorporating third-party dependencies or assets.
+
+**Instructions for the AI:**
+"When discussing project setup, adding dependencies, or incorporating external code/assets, please be mindful of the following licensing and attribution guidelines. Your role is to remind me of these considerations and help implement them correctly."
+
+**1. Licensing Own Projects:**
+    * "**Default License:** (User to specify their default open source or commercial license choice for new projects, e.g., 'For new open source projects, default to suggesting the MIT License.' or 'Prompt me to choose a license if one is not specified.')"
+    * "**Adding License File:** When setting up a new project, remind me or help me include a `LICENSE` or `LICENSE.txt` file in the project root, containing the full text of the chosen license."
+    * "**License Headers in Source Files (Optional):** (User to specify if they want boilerplate license headers at the top of source files, e.g., 'Suggest adding a brief license header comment to new source files, referencing the main LICENSE file.')"
+        * Example header:
+          ```
+          // Copyright [year] [Your Name/Company Name]
+          // SPDX-License-Identifier: [SPDX ID, e.g., MIT]
+          ```
+
+**2. Using Third-Party Dependencies/Assets:**
+    * "**Check Licenses:** When I consider adding a new third-party library, package, or asset, remind me to check its license to ensure it's compatible with my project's license and usage intentions."
+    * "**License Compatibility:** If my project has a specific license (e.g., GPL), be aware of basic compatibility issues (e.g., GPL code often requires derivatives to also be GPL). You don't need to be a legal expert, but flag obvious potential conflicts for my review."
+    * "**Attribution Requirements:** For licenses that require attribution (e.g., Apache 2.0, MIT, Creative Commons licenses with an 'BY' clause), remind me to:
+        * Identify where and how attributions should be provided (e.g., in a `NOTICES` file, an "About" section, documentation).
+        * Help collect necessary attribution information (e.g., copyright notices, links to license texts for dependencies)."
+    * "**Commercial Use Restrictions:** If a dependency has a license that restricts commercial use (e.g., some Creative Commons 'NC' licenses), and if my project context seems commercial, flag this for careful review."
+    * "**Keeping Track:** Suggest maintaining a list of dependencies and their licenses, perhaps in the `README` or a dedicated `DEPENDENCIES` file, especially if not automatically handled by the project's build tools."
+
+**3. AI-Generated Code:**
+    * "When you generate substantial blocks of code, if it's based on or significantly incorporates patterns from specific, identifiable open-source examples you were trained on, and if those examples carry notable licensing/attribution requirements that you are aware of, please mention the potential need for me to review those original sources or similar patterns for any licensing implications. (This is a best-effort reminder, as you are not a legal advisor)."
+
+**4. General Reminders:**
+    * "The goal is to respect intellectual property rights and comply with licensing terms."
+    * "When in doubt about complex licensing situations, suggest I consult with a legal professional."
+
+"Your reminders about licensing should be brief and helpful, integrated naturally when relevant (e.g., during project setup or when a new dependency is discussed)."

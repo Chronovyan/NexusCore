@@ -1,0 +1,62 @@
+---
+description: 
+globs: .gitignore
+alwaysApply: false
+---
+**Global Rule: Detailed Commit Message Conventions (Template)**
+
+**Purpose:** To ensure all Git commit messages drafted or suggested by the AI adhere to a consistent and informative format, enhancing the clarity and utility of the project's version history.
+
+**Instructions for the AI:**
+"When drafting or suggesting Git commit messages, you **must** strictly follow the conventions outlined below. If the user is in a project with its own `CONTRIBUTING.md` or project-specific commit message rules, those should take precedence if they conflict, and you should highlight that."
+
+**1. General Structure:**
+    * "A commit message should consist of a header, an optional body, and an optional footer, separated by a blank line."
+    * "The header is mandatory and should be a single line summarizing the change."
+
+**2. Header Format:**
+    * "The header line should follow this pattern: `type(scope): subject`"
+    * **`type`**: (User to specify allowed types and their meaning. Example based on Conventional Commits:)
+        * `feat`: A new feature for the user.
+        * `fix`: A bug fix for the user.
+        * `docs`: Documentation only changes.
+        * `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
+        * `refactor`: A code change that neither fixes a bug nor adds a feature.
+        * `perf`: A code change that improves performance.
+        * `test`: Adding missing tests or correcting existing tests.
+        * `build`: Changes that affect the build system or external dependencies (e.g., Gulp, Webpack, NPM).
+        * `ci`: Changes to our CI configuration files and scripts (e.g., Travis, Circle, BrowserStack, SauceLabs).
+        * `chore`: Other changes that don't modify src or test files (e.g., updating dependencies, project configuration).
+        * *(User to add/remove/modify types as needed)*
+    * **`scope`** (Optional): (User to specify how scope should be used, e.g., name of the module, component, or file affected. Examples:)
+        * "The scope provides additional contextual information and is contained within parentheses, e.g., `feat(parser): add ability to parse arrays`."
+        * "If the change affects multiple scopes, consider omitting the scope or using `*`."
+        * "Allowed scopes: (User to list common scopes if predefined, e.g., `api`, `ui`, `db`, `auth`)"
+    * **`subject`**:
+        * "The subject contains a succinct description of the change."
+        * "Use the imperative, present tense: 'change' not 'changed' nor 'changes'."
+        * "Don't capitalize the first letter (unless it's a proper noun or a component name that is always capitalized)."
+        * "No dot (`.`) at the end."
+        * "Limit the subject line to (User to specify, e.g., 50 or 72) characters."
+
+**3. Body Format (Optional):**
+    * "Use the body to explain *what* and *why* vs. *how*. The *how* is in the code."
+    * "Wrap the body at (User to specify, e.g., 72 or 100) characters."
+    * "Use multiple paragraphs if necessary."
+    * "Bullet points are okay too, typically using a hyphen or asterisk for the bullet, preceded by a single space, with blank lines in between."
+    * "Motivation for the change and contrast with previous behavior should be explained here."
+
+**4. Footer Format (Optional):**
+    * "The footer should contain information about Breaking Changes and references to issues that this commit Closes, Fixes, or Addresses."
+    * **Breaking Changes:**
+        * "All breaking changes MUST be mentioned in the footer with the words `BREAKING CHANGE:` followed by a space or two newlines. The rest of the commit message is then the description of the change, the justification, and migration notes."
+        * "(User to specify if a `!` after the type/scope also indicates a breaking change, e.g., `feat(api)!: drop support for v1 endpoints`)"
+    * **Referencing Issues:**
+        * "Closed issues should be listed on a separate line in the footer prefixed with keywords like `Closes #`, `Fixes #`, `Resolves #`."
+        * "Example: `Fixes #123, Closes #456`"
+    * "(User to specify any other metadata for the footer, e.g., `Reviewed-by:`, `Signed-off-by:`)"
+
+**5. Language:**
+    * "All commit messages should be written in English." (User to specify if otherwise)
+
+**Example Commit Message (User to provide a complete example they like):**

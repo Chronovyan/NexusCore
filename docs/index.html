@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusCore - AI-First Text Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Brand Colors */
+            --nexus-blue: #2563EB;
+            --sky-blue: #4F86F7;
+            --light-blue: #93C5FD;
+            --dark-blue: #1E40AF;
+            
+            /* Neutrals */
+            --gray-50: #F8FAFC;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-400: #94A3B8;
+            --gray-500: #64748B;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1E293B;
+            --gray-900: #0F172A;
+            
+            /* Accents */
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background-color: var(--gray-50);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--gray-900);
+        }
+        
+        .logo-icon {
+            margin-right: 0.75rem;
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        .logo-text {
+            background: linear-gradient(90deg, var(--nexus-blue), var(--sky-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: var(--nexus-blue);
+            font-weight: 700;
+        }
+        
+        .logo-subtext {
+            color: var(--gray-500);
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+        
+        nav a {
+            color: var(--gray-700);
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        nav a:hover {
+            color: var(--nexus-blue);
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--nexus-blue), var(--sky-blue));
+            color: white;
+            padding: 4rem 0;
+            border-radius: 0.5rem;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: white;
+            font-weight: 800;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .btn {
+            display: inline-block;
+            background: white;
+            color: var(--nexus-blue);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            margin-left: 1rem;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--gray-900);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+        
+        h1 { font-size: 2.25rem; }
+        h2 { font-size: 1.75rem; margin-top: 3rem; }
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.25rem; }
+        
+        p, ul, ol {
+            margin-bottom: 1.25rem;
+            color: var(--gray-700);
+        }
+        
+        a {
+            color: var(--nexus-blue);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        a:hover {
+            color: var(--dark-blue);
+            text-decoration: underline;
+        }
+        
+        pre {
+            background-color: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            overflow: auto;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background-color: var(--gray-100);
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+            color: var(--gray-800);
+        }
+        
+        pre code {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            font-size: inherit;
+            color: inherit;
+        }
+        
+        ul, ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--gray-200);
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            nav {
+                margin-top: 1rem;
+            }
+            
+            nav a {
+                margin: 0 0.75rem;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .content {
+                padding: 1.5rem;
+            }
+        }
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="#" class="logo">
+                <svg class="logo-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                    <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                    <defs>
+                       <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                         <stop offset="0%" style="stop-color:#4F86F7;stop-opacity:1" />
+                         <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                       </linearGradient>
+                    </defs>
+                </svg>
+                <div>
+                    <span class="logo-text">Nexus</span><span class="logo-subtext">CORE</span>
+                </div>
+            </a>
+            <nav>
+                <a href="#documentation">Documentation</a>
+                <a href="#quick-start">Quick Start</a>
+                <a href="#community">Community</a>
+                <a href="https://github.com/Chronovyan/loom" target="_blank">GitHub</a>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <section class="hero">
+            <div class="container">
+                <h1>AI-First Text Editor</h1>
+                <p>Powerful, extensible, and intelligent text editing for developers who demand more from their tools.</p>
+                <div>
+                    <a href="#quick-start" class="btn">Get Started</a>
+                    <a href="https://github.com/Chronovyan/loom" class="btn btn-outline">View on GitHub</a>
+                </div>
+            </div>
+        </section>
+        
+        <main class="content">
+            <h1 id="documentation">NexusCore Documentation</h1>
+            
+            <p>Welcome to the NexusCore documentation. This guide will help you get started with building, using, and contributing to the project.</p>
+
+            <h2>Main Documentation</h2>
+            <ul>
+                <li><a href="project_overview.md">Project Overview</a> - Comprehensive introduction to the project</li>
+                <li><a href="getting_started.md">Getting Started Guide</a> - First-time setup and basic usage</li>
+                <li><a href="troubleshooting.md">Troubleshooting Guide</a> - Common issues and solutions</li>
+            </ul>
+
+            <h2 id="quick-start">Quick Start</h2>
+            <p>Get up and running with NexusCore in minutes with these quick start guides.</p>
+            
+            <h3>Build Commands</h3>
+            <pre><code># Windows (Visual Studio)
+mkdir build_vs && cd build_vs
+cmake -G "Visual Studio 17 2022" -A x64 ..
+cmake --build . --config Release
+
+# Linux/macOS
+mkdir build && cd build
+cmake ..
+make</code></pre>
+
+            <h3>Run Commands</h3>
+            <pre><code># Run the application
+./TextEditor
+
+# Run all tests
+./tests/RunAllTests
+
+# Run specific tests
+./tests/RunAllTests --gtest_filter=OpenAIApiEndpointsTest*</code></pre>
+
+            <h2 id="community">Community & Support</h2>
+            <p>Join our community to get help, share ideas, and contribute to the project.</p>
+            <ul>
+                <li><a href="https://github.com/Chronovyan/loom">GitHub Repository</a> - Source code and issue tracking</li>
+                <li><a href="https://github.com/Chronovyan/loom/discussions">Discussions</a> - Ask questions and share ideas</li>
+                <li><a href="https://github.com/Chronovyan/loom/issues">Issue Tracker</a> - Report bugs and request features</li>
+            </ul>
+        </main>
+        
+        <footer>
+            <div class="container">
+                <p>© 2025 NexusCore. All rights reserved. The Core of Agent Intelligence</p>
+                <p class="mt-2">
+                    <a href="https://github.com/Chronovyan/loom" class="text-sm text-gray-500 hover:text-nexus-blue">GitHub</a>
+                    <span class="mx-2">•</span>
+                    <a href="#" class="text-sm text-gray-500 hover:text-nexus-blue">Documentation</a>
+                    <span class="mx-2">•</span>
+                    <a href="#" class="text-sm text-gray-500 hover:text-nexus-blue">License</a>
+                </p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

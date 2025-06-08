@@ -1,0 +1,65 @@
+{
+  "id": "advanced_prompting",
+  "title": "Advanced Prompting Techniques",
+  "description": "Learn how to craft effective prompts to get the most out of AI code generation and assistance.",
+  "type": 1,
+  "difficulty": 3,
+  "estimatedTime": "20 min",
+  "tags": ["advanced", "prompting", "technique"],
+  "steps": [
+    {
+      "id": "introduction",
+      "title": "Introduction to Advanced Prompting",
+      "description": "The way you structure your prompts greatly influences the quality and relevance of AI responses. This tutorial will teach you advanced techniques to get more precise, useful outputs from the AI.\n\nEffective prompting is a skill that combines clarity, context-setting, and understanding of how AI models interpret instructions.",
+      "required_actions": []
+    },
+    {
+      "id": "context_setting",
+      "title": "Setting Clear Context",
+      "description": "Start your prompts by establishing clear context:\n\n1. Specify the programming language or framework\n2. Describe the project or system architecture\n3. Mention any constraints or requirements\n\nExample: 'I'm working on a React application with TypeScript that uses Redux for state management. I need a component that...'\n\nTry creating a context-rich prompt now.",
+      "required_actions": ["send_context_rich_message"]
+    },
+    {
+      "id": "specific_requirements",
+      "title": "Providing Specific Requirements",
+      "description": "Be specific about what you need:\n\n1. Clearly state the functionality required\n2. Specify input and output formats\n3. Mention error handling needs\n4. Note performance considerations\n\nExample: 'Create a function that accepts an array of integers, filters out negative numbers, sorts the remaining numbers in descending order, and returns a new array. The function should handle empty arrays gracefully.'\n\nTry crafting a prompt with specific requirements now.",
+      "required_actions": ["send_specific_requirements"]
+    },
+    {
+      "id": "iterative_refinement",
+      "title": "Iterative Refinement",
+      "description": "Use follow-up prompts to refine results:\n\n1. Start with a basic request\n2. Review the AI's response\n3. Ask for specific improvements or changes\n4. Repeat until satisfied\n\nExample:\nInitial: 'Create a login form in React'\nRefinement: 'Add validation for the email field'\nFurther refinement: 'Include password strength indicators'\n\nTry an iterative prompting sequence now.",
+      "required_actions": ["send_initial_request", "send_refinement"]
+    },
+    {
+      "id": "role_prompting",
+      "title": "Role-Based Prompting",
+      "description": "Assign a specific role to the AI for specialized responses:\n\n1. Specify the expertise or perspective you want\n2. Frame your request accordingly\n\nExample: 'As a security expert, review this authentication code and highlight potential vulnerabilities.'\n\nOther roles:\n- Performance optimizer\n- UX designer\n- Code reviewer\n- Documentation writer\n\nTry a role-based prompt now.",
+      "required_actions": ["send_role_prompt"]
+    },
+    {
+      "id": "template_usage",
+      "title": "Using Prompt Templates",
+      "description": "AI-First TextEditor supports prompt templates for consistent results:\n\n1. Select 'Settings' > 'AI Model Selection'\n2. Note the model-specific templates available\n3. Use template placeholders in your prompts\n\nExample: Using the code explanation template:\n'[EXPLAIN_CODE] What does this function do?'\n\nTry using a prompt template now.",
+      "required_actions": ["use_prompt_template"]
+    },
+    {
+      "id": "code_examples",
+      "title": "Providing Code Examples",
+      "description": "Include relevant code examples for better context:\n\n1. Show existing code that relates to your request\n2. Indicate where new code should integrate\n3. Point out patterns to follow\n\nExample: 'I have this API call function:\n```\nconst fetchData = async (url) => {\n  const response = await fetch(url);\n  return response.json();\n};\n```\nCreate a similar function that handles errors and includes a timeout feature.'\n\nTry a prompt with code examples now.",
+      "required_actions": ["send_code_example_prompt"]
+    },
+    {
+      "id": "combining_techniques",
+      "title": "Combining Techniques",
+      "description": "For complex tasks, combine multiple prompting techniques:\n\n1. Set clear context\n2. Specify a role\n3. Provide code examples\n4. Use iterative refinement\n\nExample: 'As a performance optimization expert, review this React component that renders a large data table. The current implementation causes lag when scrolling:\n```\n[example code]\n```\nSuggest optimizations that maintain the current functionality but improve rendering speed.'\n\nCreate a prompt that combines at least three techniques.",
+      "required_actions": ["send_combined_techniques_prompt"]
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusion",
+      "description": "Congratulations! You've completed the Advanced Prompting Techniques tutorial.\n\nYou've learned how to:\n- Set clear context\n- Provide specific requirements\n- Use iterative refinement\n- Leverage role-based prompting\n- Use prompt templates\n- Include code examples\n- Combine multiple techniques\n\nWith these skills, you'll be able to get more precise and useful responses from the AI, significantly improving your productivity when using AI-First TextEditor.",
+      "required_actions": []
+    }
+  ]
+} 

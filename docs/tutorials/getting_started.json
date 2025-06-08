@@ -1,0 +1,59 @@
+{
+  "id": "getting_started",
+  "title": "Getting Started with AI-First TextEditor",
+  "description": "Learn the basics of using AI-First TextEditor to generate and manage code projects.",
+  "type": 0,
+  "difficulty": 1,
+  "estimatedTime": "10 min",
+  "tags": ["beginner", "introduction", "basics"],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Welcome to AI-First TextEditor",
+      "description": "Welcome to AI-First TextEditor, an innovative coding environment powered by AI! This tutorial will guide you through the basic features and functionality of the application.\n\nAI-First TextEditor is designed to help you generate code, understand complex projects, and collaborate with AI to build software more efficiently.",
+      "required_actions": []
+    },
+    {
+      "id": "api_key_setup",
+      "title": "Setting Up Your API Key",
+      "description": "To use AI features, you need to set up your OpenAI API key.\n\n1. Click on 'Settings' in the menu bar\n2. Select 'API Key Settings'\n3. Enter your OpenAI API key in the dialog box\n4. Click 'Save'\n\nOnce saved, you'll have access to all AI capabilities.",
+      "required_actions": ["settings_menu_click", "api_key_save"]
+    },
+    {
+      "id": "model_selection",
+      "title": "Selecting an AI Model",
+      "description": "You can choose from different AI models with varying capabilities.\n\n1. Click on 'Settings' in the menu bar\n2. Select 'AI Model Selection'\n3. Choose a provider (e.g., OpenAI)\n4. Select a model from the list\n5. Click 'Apply'\n\nDifferent models have different strengths and token limits.",
+      "required_actions": ["settings_menu_click", "model_selection_dialog"]
+    },
+    {
+      "id": "chat_interface",
+      "title": "Using the Chat Interface",
+      "description": "The chat interface is your primary way to interact with the AI.\n\n1. Type your message in the input field at the bottom of the chat panel\n2. Press Enter or click 'Send'\n3. Wait for the AI to respond\n\nYou can ask questions, request code generation, or give instructions to the AI.",
+      "required_actions": ["send_message"]
+    },
+    {
+      "id": "project_creation",
+      "title": "Creating a New Project",
+      "description": "Let's create a simple project to see how AI-First TextEditor works.\n\n1. Type 'Create a simple Hello World program in Python' in the chat\n2. Press Enter or click 'Send'\n3. The AI will generate the code and add it to your project files\n\nYou can provide more detailed requirements for more complex projects.",
+      "required_actions": ["send_project_request"]
+    },
+    {
+      "id": "file_management",
+      "title": "Managing Project Files",
+      "description": "The left panel displays all files in your project.\n\n1. Click on a file to select it\n2. The file content will be displayed in the editor\n3. You can edit the file directly\n\nAI-First TextEditor tracks changes to your files and can help you understand and modify them.",
+      "required_actions": ["select_file"]
+    },
+    {
+      "id": "ai_assistance",
+      "title": "Getting AI Assistance",
+      "description": "The AI can help you understand and modify code.\n\n1. Select a file from the project panel\n2. Ask a question about the code in the chat\n3. The AI will analyze the file and provide an explanation\n\nYou can ask for explanations, optimizations, bug fixes, or new features.",
+      "required_actions": ["select_file", "send_code_question"]
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusion",
+      "description": "Congratulations! You've completed the Getting Started tutorial for AI-First TextEditor.\n\nYou now know how to:\n- Set up your API key\n- Select AI models\n- Use the chat interface\n- Create projects\n- Manage files\n- Get AI assistance with your code\n\nExplore more tutorials to learn advanced features and techniques!",
+      "required_actions": []
+    }
+  ]
+} 

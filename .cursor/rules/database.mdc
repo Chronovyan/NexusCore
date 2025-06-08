@@ -1,0 +1,74 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+**Global Rule: Database Design & Interaction Principles (Template)**
+
+**Purpose:** To guide the AI in suggesting, generating, and reviewing database schemas, queries, and interaction patterns that promote data integrity, performance, security, and maintainability.
+
+**Instructions for the AI:**
+"When assisting with database design, query writing, or data access layer code, you **must** adhere to the following principles. If the project uses a specific database system (e.g., PostgreSQL, MySQL, SQL Server, Oracle, MongoDB) or ORM with its own conventions, prioritize those where they offer equivalent or better practices."
+
+**1. General Principles:**
+    * "**Data Integrity:** Prioritize the accuracy and consistency of data throughout its lifecycle."
+    * "**Normalization (for Relational Databases):** Strive for a well-normalized schema (e.g., typically up to Third Normal Form - 3NF) to reduce data redundancy and improve data integrity, unless denormalization is consciously chosen for specific performance reasons and its trade-offs are understood."
+    * "**Performance:** Design schemas and queries for efficient data retrieval and modification. (Refer also to 'Performance Optimization Reminders')."
+    * "**Security:** Ensure database interactions and designs consider security implications. (Refer also to 'Security Best Practices')."
+    * "**Clarity & Maintainability:** Schemas, queries, and data access code should be clear, well-documented, and easy to maintain."
+
+**2. Schema Design (Primarily for Relational Databases):**
+    * **Naming Conventions:**
+        * "Tables: (User to specify, e.g., `plural_nouns_using_snake_case`, `PascalCasePluralNouns`)."
+        * "Columns: (User to specify, e.g., `snake_case`, `camelCase`)."
+        * "Primary Keys: (User to specify, e.g., `id` for surrogate keys)."
+        * "Foreign Keys: (User to specify, e.g., `referencing_table_singular_id`, `fk_referencing_table_id`)."
+        * "Indexes: (User to specify, e.g., `idx_table_column`, `ix_column_anothercolumn`)."
+        * "Be consistent with the chosen naming conventions."
+    * **Data Types:** "Choose the most appropriate and specific data type for each column to ensure data integrity and optimize storage/performance (e.g., use `VARCHAR(n)` instead of `TEXT` if max length is known, `INT` vs. `BIGINT`, `TIMESTAMP WITH TIME ZONE` vs. `DATE`)."
+    * **Primary Keys (PKs):** "(User to specify preference, e.g., 'Prefer auto-incrementing integer/bigint surrogate PKs named `id`.' or 'Use natural keys only if they are guaranteed to be unique, immutable, and simple.')"
+    * **Foreign Keys (FKs):** "Always define foreign key constraints to enforce referential integrity between related tables. Specify `ON DELETE` and `ON UPDATE` cascade behaviors (e.g., `RESTRICT`, `CASCADE`, `SET NULL`, `SET DEFAULT`) appropriately."
+    * **Indexes:**
+        * "Create indexes on columns frequently used in `WHERE` clauses, `JOIN` conditions, and `ORDER BY` clauses."
+        * "Consider composite indexes for queries involving multiple columns."
+        * "Avoid over-indexing, as indexes can slow down write operations (inserts, updates, deletes)."
+        * "Regularly review query performance to identify missing or ineffective indexes."
+    * **Constraints:** "Utilize database constraints (e.g., `NOT NULL`, `UNIQUE`, `CHECK`) to enforce data rules at the database level."
+    * **Denormalization:** "Consider denormalization carefully and only for specific, identified performance bottlenecks where the benefits outweigh the risks of data redundancy and potential update anomalies. Document such decisions clearly."
+
+**3. Query Writing (Primarily SQL):**
+    * **Clarity & Readability:** "Write well-formatted, readable SQL queries. Use comments for complex logic."
+    * **Performance:**
+        * "Avoid `SELECT *`; explicitly list the columns required."
+        * "Write SARGable (Search Argument Able) queries to ensure indexes can be used effectively (e.g., avoid functions on indexed columns in `WHERE` clauses)."
+        * "Be mindful of `JOIN` types (INNER, LEFT, RIGHT, FULL) and their performance implications. Ensure `JOIN` conditions are on indexed columns."
+        * "Use `EXPLAIN` or similar query analysis tools to understand query plans for complex queries."
+        * "Consider batching large `INSERT`, `UPDATE`, or `DELETE` operations."
+    * **Security:** "**Strictly avoid SQL injection vulnerabilities. Always use parameterized queries (prepared statements) or well-vetted sanitization/escaping functions when incorporating user input into queries.**"
+    * **Stored Procedures/Functions:** "(User to specify stance, e.g., 'Use stored procedures for complex, reusable database logic that benefits from being close to the data.' or 'Prefer to keep business logic in the application layer.')"
+
+**4. ORM (Object-Relational Mapper) Usage:**
+    * "(User to specify stance and preferences if ORMs are commonly used, e.g., SQLAlchemy, Entity Framework, Hibernate, TypeORM, Prisma)"
+    * **When to Use:** "Leverage ORMs for productivity and to abstract common database interactions, but be prepared to drop to raw SQL for complex queries or performance-critical sections where the ORM generates inefficient queries."
+    * **Efficient Usage:**
+        * "Be mindful of the N+1 query problem; use eager loading (e.g., `JOIN FETCH`, `select_related`, `include`) or explicit loading strategies appropriately."
+        * "Understand lazy loading behavior and its potential performance impact."
+        * "Optimize ORM queries by understanding how they translate to SQL."
+    * **Transaction Management:** "Use the ORM's transaction management capabilities correctly to ensure atomicity."
+
+**5. Transaction Management (General):**
+    * "**ACID Properties:** Ensure operations adhere to Atomicity, Consistency, Isolation, and Durability."
+    * "**Scope:** Keep database transactions as short as possible while encompassing a complete logical unit of work to minimize locking and improve concurrency."
+    * "**Isolation Levels:** Understand and use appropriate transaction isolation levels (e.g., `READ COMMITTED`, `REPEATABLE READ`, `SERIALIZABLE`) based on the needs of the application and the trade-offs between consistency and concurrency. Be aware of phenomena like dirty reads, non-repeatable reads, and phantom reads."
+
+**6. Database Migrations:**
+    * "(User to specify preferences, e.g.:)
+        * 'Always use a database migration tool (e.g., Flyway, Alembic, EF Migrations, Knex.js migrations) to manage schema changes in a version-controlled, repeatable manner.'
+        * 'Write migrations to be reversible whenever possible.'
+        * 'Separate schema migrations from data migrations if the data migration is complex or long-running.'"
+
+**7. Database Security (Specific Reminders):**
+    * "Application database users should have the minimum necessary privileges (Principle of Least Privilege) for the operations they need to perform (e.g., `SELECT`, `INSERT`, `UPDATE`, `DELETE` on specific tables, not `DBA` rights)."
+    * "Avoid storing sensitive data in plain text; consider encryption at rest for highly sensitive fields if appropriate. (Refer to 'Security Best Practices' for broader secret management)."
+
+"When suggesting schema changes or query implementations, explain the rationale based on these principles, especially regarding trade-offs (e.g., normalization vs. performance)."

@@ -1,0 +1,11 @@
+# ninja log v6
+240	9030	7707017003494232	googletest/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.obj	ac58f4aa1433c637
+288	9342	7707017003864248	CMakeFiles/MinimalTest.dir/MinimalTest.cpp.obj	5fad550ddf17d312
+326	11045	7707017005614274	googletest/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.obj	8ae1e8bb2e1f827a
+53	15443	7707017002998373	googletest/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.obj	6ddf623a05cd72d
+19	23950	7707017001092243	googletest/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.obj	2e3bed82a247eeaf
+23975	24317	7707017240605782	lib/gtest.lib	2019b8222409eb83
+24327	24718	7707017244140118	lib/gmock.lib	a80586558fb83436
+24365	24762	7707017244530103	lib/gtest_main.lib	456a48017feef70a
+24730	25092	7707017248165171	lib/gmock_main.lib	4a438e91328f2ecb
+24773	25661	7707017248595172	MinimalTest.exe	63e3428af765163f

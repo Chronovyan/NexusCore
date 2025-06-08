@@ -1,0 +1,111 @@
+name: C++ Smoke Test
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}-build-and-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true  # Stop all jobs if one fails
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug]
+        include:
+          - os: windows-latest
+            compiler: msvc
+            generator: "Visual Studio 17 2022"
+          - os: ubuntu-latest
+            compiler: gcc
+            generator: "Unix Makefiles"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ninja-build libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libglew-dev libglfw3-dev clang-tidy
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -G "${{matrix.generator}}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Run Clang-Tidy (Linux)
+      if: runner.os == 'Linux'
+      working-directory: ${{github.workspace}}
+      run: |
+        echo "Running clang-tidy on critical source files..."
+        find src -name "*.cpp" -not -path "*/external/*" | xargs clang-tidy -p build
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}
+
+    - name: Run Tests
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest -C ${{matrix.build_type}} --output-on-failure --test-dir tests
+
+    - name: Run Critical Tests Only (if full test suite fails)
+      if: failure()
+      working-directory: ${{github.workspace}}/build
+      run: |
+        echo "Running critical tests only..."
+        # Run specific critical tests to ensure basic functionality
+        ${{ runner.os == 'Windows' && 'build\\tests\\Debug\\RunAllTests.exe --gtest_filter=*_Critical*' || './tests/RunAllTests --gtest_filter=*_Critical*' }}
+
+    - name: Generate Test Report
+      if: always()
+      working-directory: ${{github.workspace}}/build
+      run: |
+        echo "Test Summary Report" > test_report.txt
+        echo "===================" >> test_report.txt
+        echo "Date: $(date)" >> test_report.txt
+        echo "Build Type: ${{matrix.build_type}}" >> test_report.txt
+        echo "OS: ${{matrix.os}}" >> test_report.txt
+        ${{ runner.os == 'Windows' && 'dir tests\\*.xml /b' || 'ls -la tests/*.xml' }} || echo "No test result files found"
+        echo "Test run completed"
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.os }}
+        path: |
+          ${{github.workspace}}/build/test_report.txt
+          ${{github.workspace}}/build/tests/*.xml
+        if-no-files-found: warn
+
+  notify:
+    name: Notify on failure
+    needs: build-and-test
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{secrets.MAIL_SERVER}}
+          server_port: 465
+          username: ${{secrets.MAIL_USERNAME}}
+          password: ${{secrets.MAIL_PASSWORD}}
+          subject: CI Build Failed - ${{ github.repository }}
+          from: CI Notification <${{secrets.MAIL_USERNAME}}>
+          to: ${{secrets.NOTIFICATION_EMAIL}}
+          body: |
+            CI workflow has failed!
+            
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_id }}
+            Commit: ${{ github.sha }}
+            
+            See details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} 

@@ -1,0 +1,92 @@
+# Editor and IDE
+.cursor/
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Build directories
+/build*/
+/build_msvc/
+/out/
+/Debug/
+/Release/
+/x64/
+/x86/
+
+# Clean directories
+/clean_*/
+/bin/
+/obj/
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+*.cmake
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.idea/
+*.iml
+
+# Compiled files
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.out
+*.app
+*.pdb
+*.ilk
+*.exp
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+
+# Dependency directories
+vcpkg_installed/
+ThirdParty/
+
+# Test results
+testresults/
+tests/bin/
+tests/build/
+tests/out/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Test results and reports
+/reports/
+
+# Other
+large_generated_file.txt
+*.log 
+.env
+
+# Generated files
+install_manifest.txt
+
+# Visual Studio CMake settings
+CMakeSettings.json
+
+# Testing
+Testing/

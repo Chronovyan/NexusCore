@@ -1,0 +1,10 @@
+{
+  "$schema": "https://cursor.tools/schema/cursor.schema.json",
+  "mdc": {
+    "configPath": ".mdc/config.json"
+  },
+  "rules": {
+    "enabled": true,
+    "useMdc": true
+  }
+}
