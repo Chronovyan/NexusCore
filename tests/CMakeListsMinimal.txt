@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.14)
+project(MinimalTest)
+
+# Find GTest
+find_package(GTest REQUIRED)
+include(GoogleTest)
+
+# Add the minimal test
+add_executable(MinimalTest MinimalDocumentTest.cpp)
+target_link_libraries(MinimalTest PRIVATE GTest::gtest GTest::gtest_main)
+
+gtest_discover_tests(MinimalTest)

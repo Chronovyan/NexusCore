@@ -1,0 +1,10 @@
+^C:\USERS\HYDRAPONY\DEV\AI-FIRST TEXTEDITOR\GTEST_PROJECT\CMAKELISTS.TXT
+setlocal
+C:\Strawberry\c\bin\cmake.exe "-SC:/Users/HydraPony/dev/AI-First TextEditor/gtest_project" "-BC:/Users/HydraPony/dev/AI-First TextEditor/gtest_project/build" --check-stamp-file "C:/Users/HydraPony/dev/AI-First TextEditor/gtest_project/build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

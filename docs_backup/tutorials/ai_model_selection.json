@@ -1,0 +1,65 @@
+{
+  "id": "ai_model_selection",
+  "title": "Choosing the Right AI Model",
+  "description": "Learn how to select and configure the most appropriate AI model for different types of tasks.",
+  "type": 0,
+  "difficulty": 2,
+  "estimatedTime": "15 min",
+  "tags": ["models", "configuration", "intermediate"],
+  "steps": [
+    {
+      "id": "introduction",
+      "title": "Introduction to AI Models",
+      "description": "AI-First TextEditor supports multiple AI models with different capabilities, strengths, and resource requirements. Choosing the right model for your specific task can significantly improve results and efficiency.\n\nIn this tutorial, you'll learn about the different models available, their characteristics, and how to select the most appropriate one for various coding tasks.",
+      "required_actions": []
+    },
+    {
+      "id": "model_types",
+      "title": "Understanding Model Types",
+      "description": "AI-First TextEditor supports several types of models:\n\n1. **Large Language Models (LLMs)**: General-purpose models like GPT-4, Claude, etc.\n2. **Code-specialized Models**: Models fine-tuned specifically for code generation and understanding\n3. **Local Models**: Smaller models that run directly on your machine\n4. **Cloud Models**: More powerful models that run on remote servers\n\nEach type has different strengths, limitations, and use cases.",
+      "required_actions": []
+    },
+    {
+      "id": "accessing_models",
+      "title": "Accessing the Model Selection",
+      "description": "To view and select available models:\n\n1. Click on 'Settings' in the menu bar\n2. Select 'AI Model Selection'\n3. Browse the list of available models\n\nThe dialog shows model details including provider, capabilities, and context window size.\n\nTry opening the Model Selection dialog now.",
+      "required_actions": ["open_model_selection"]
+    },
+    {
+      "id": "model_capabilities",
+      "title": "Understanding Model Capabilities",
+      "description": "Each model has different capabilities indicated in the model details:\n\n- **Code Generation**: Ability to write code from descriptions\n- **Code Understanding**: Ability to analyze and explain existing code\n- **Refactoring**: Ability to improve code structure without changing functionality\n- **Debugging**: Ability to identify and fix errors\n- **Context Window**: How much text the model can consider at once\n\nHover over models in the selection dialog to see their capabilities.",
+      "required_actions": ["view_model_capabilities"]
+    },
+    {
+      "id": "local_vs_cloud",
+      "title": "Local vs. Cloud Models",
+      "description": "Consider these factors when choosing between local and cloud models:\n\n**Local Models**:\n- Run directly on your machine\n- No network latency\n- Greater privacy\n- Limited capabilities\n- Lower resource requirements\n\n**Cloud Models**:\n- Run on remote servers\n- More powerful\n- Require internet connection\n- May have usage costs\n- Better for complex tasks\n\nLocal models are marked with [Local] in the selection dialog.",
+      "required_actions": []
+    },
+    {
+      "id": "selecting_for_tasks",
+      "title": "Selecting Models for Specific Tasks",
+      "description": "Different tasks benefit from different models:\n\n1. **Quick Code Snippets**: Smaller, faster models\n2. **Complex System Design**: Larger models with bigger context windows\n3. **Specialized Domains**: Models fine-tuned for specific languages/frameworks\n4. **Code Explanation**: Models with strong reasoning capabilities\n5. **Iterative Development**: Models that maintain context well\n\nConsider the complexity and specificity of your task when selecting a model.",
+      "required_actions": []
+    },
+    {
+      "id": "changing_models",
+      "title": "Changing Models Mid-Project",
+      "description": "You can change models during a project for different phases:\n\n1. Open the Model Selection dialog\n2. Select a new model\n3. Click 'Apply'\n\nAI-First TextEditor will maintain your project context when possible, but be aware that changing models may reset some conversation context.\n\nTry changing to a different model now.",
+      "required_actions": ["change_model"]
+    },
+    {
+      "id": "provider_specific",
+      "title": "Provider-Specific Features",
+      "description": "Different AI providers offer unique features:\n\n1. **OpenAI**: Strong code generation, various model sizes\n2. **Anthropic**: Good at following complex instructions\n3. **Local Providers**: Privacy-focused, no API costs\n\nSome features in AI-First TextEditor may be optimized for specific providers.\n\nExplore the different provider options in the Model Selection dialog.",
+      "required_actions": ["view_providers"]
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusion",
+      "description": "Congratulations! You've completed the AI Model Selection tutorial.\n\nYou've learned about:\n- Different types of AI models\n- Model capabilities and limitations\n- Local vs. cloud models\n- Selecting models for specific tasks\n- Changing models during a project\n- Provider-specific features\n\nBy selecting the right model for each task, you'll get better results and a more efficient workflow with AI-First TextEditor.",
+      "required_actions": []
+    }
+  ]
+} 

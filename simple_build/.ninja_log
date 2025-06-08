@@ -1,0 +1,1036 @@
+# ninja log v6
+753	13974	7707749562770964	external/glfw/src/CMakeFiles/glfw.dir/init.c.obj	e3ce8ccff669783c
+953	16374	7707749564881019	external/glfw/src/CMakeFiles/glfw.dir/vulkan.c.obj	255b251b83f062f9
+788	16440	7707749563100961	external/glfw/src/CMakeFiles/glfw.dir/input.c.obj	5178e28163f57fe9
+903	16649	7707749564410976	external/glfw/src/CMakeFiles/glfw.dir/platform.c.obj	dcf9fbade829b139
+820	16714	7707749563891012	external/glfw/src/CMakeFiles/glfw.dir/monitor.c.obj	1604c9ecd218de9f
+719	18985	7707749562440971	external/glfw/src/CMakeFiles/glfw.dir/context.c.obj	849bf4742e2764ab
+1053	27991	7707749565781008	external/glfw/src/CMakeFiles/glfw.dir/egl_context.c.obj	cf74e09af0036b89
+1000	28590	7707749565381010	external/glfw/src/CMakeFiles/glfw.dir/window.c.obj	f62f1538fa947ee7
+15343	28845	7707749718599752	external/glfw/src/CMakeFiles/glfw.dir/null_init.c.obj	199b6589020e8690
+1090	31895	7707749584190354	external/glfw/src/CMakeFiles/glfw.dir/osmesa_context.c.obj	3d3bf1040bebb874
+16396	34609	7707749719258987	external/glfw/src/CMakeFiles/glfw.dir/null_monitor.c.obj	2289a1a413d90104
+16592	36681	7707749721379724	external/glfw/src/CMakeFiles/glfw.dir/null_window.c.obj	7ab27a9ebf799f5b
+16675	37048	7707749722014636	external/glfw/src/CMakeFiles/glfw.dir/null_joystick.c.obj	68acb7af0812be73
+16747	39152	7707749743992707	external/glfw/src/CMakeFiles/glfw.dir/win32_module.c.obj	2b2ffb82fa33d723
+24483	41196	7707749834538213	external/glfw/src/CMakeFiles/glfw.dir/win32_time.c.obj	45185eda0f3c51fe
+28556	43079	7707749840764217	external/glfw/src/CMakeFiles/glfw.dir/win32_thread.c.obj	803984e57346aec7
+28605	44226	7707749842964214	external/glfw/src/CMakeFiles/glfw.dir/win32_init.c.obj	94b36eb7e6fa8692
+31832	46118	7707749873770230	external/glfw/src/CMakeFiles/glfw.dir/win32_joystick.c.obj	efbfd1bb08209e5a
+32559	46228	7707749900084842	external/glfw/src/CMakeFiles/glfw.dir/win32_monitor.c.obj	f916ed672fe6829c
+36570	48318	7707749921195234	external/glfw/src/CMakeFiles/glfw.dir/win32_window.c.obj	b01075911bd921b2
+36998	48878	7707749925311571	external/glfw/src/CMakeFiles/glfw.dir/wgl_context.c.obj	fb2773310213c1cd
+193	50717	7707749557110848	CMakeFiles/EditorLib.dir/cmake_pch.hxx.pch	10d8a46f72df636b
+41120	57487	7707749966571141	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/amigaos.c.obj	8f4371dadf2dc9f2
+42555	57565	7707749985456524	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/asyn-ares.c.obj	6d9a1c00cff7a60a
+43111	58101	7707749996937868	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/asyn-thread.c.obj	bbd87fcb6bc22455
+45927	58876	7707750015643184	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/base64.c.obj	83157377df23e207
+48232	62227	7707750037776666	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/bufref.c.obj	512f985e399bfb80
+48781	63613	7707750043625661	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/c-hyper.c.obj	9132b02f8531a926
+48899	65436	7707750061380486	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cf-h1-proxy.c.obj	390c044d00bdbf5f
+37545	68264	7707749946211420	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/altsvc.c.obj	a59f4bef52b699ac
+56970	69443	7707750129485201	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cf-h2-proxy.c.obj	15dc92e99da0bb95
+57512	69508	7707750130485226	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cf-haproxy.c.obj	d51854d6683a12b2
+57893	69597	7707750135787976	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cf-https-connect.c.obj	bed751e31f2a851f
+46181	74492	7707750017093565	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/bufq.c.obj	95c5a24f14fcf4d1
+64846	77979	7707750209045755	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/connect.c.obj	7dacd503c932eab
+69466	78297	7707750249916745	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_addrinfo.c.obj	6c5179dbf5bc0ab0
+69557	78363	7707750250806740	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_des.c.obj	941c3a4a99350775
+58531	79815	7707750143301959	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cf-socket.c.obj	19a557e248234cb9
+60025	83403	7707750176988545	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cfilters.c.obj	3df9dd4345354fb6
+76392	85806	7707750334426285	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_fnmatch.c.obj	ca19681527140125
+63449	86065	7707750190834983	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/conncache.c.obj	c8715aa47dee8379
+78169	87987	7707750337696304	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_get_line.c.obj	3de9faafce07cd74
+78318	88792	7707750338456370	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_gethostname.c.obj	fdd45c9f80a6f1f1
+79729	90839	7707750352876000	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_gssapi.c.obj	54ab3f74ae414a98
+72655	93282	7707750298666765	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_endian.c.obj	cf865b03cf9070cf
+79861	96053	7707750388856907	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_memrchr.c.obj	77c722282357dcb5
+85988	96935	7707750415447179	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_ntlm_core.c.obj	477d740862d1e832
+88032	97655	7707750442659312	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_range.c.obj	dba6f61ba9afb518
+67983	98060	7707750236238939	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/content_encoding.c.obj	719caa26571ce772
+90747	99985	7707750463112646	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_rtmp.c.obj	3129bf135f506ce5
+69134	104532	7707750249116724	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cookie.c.obj	e51d7b2a58a92478
+92451	105233	7707750487328634	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_sasl.c.obj	433b8ee8ba57f158
+95856	105341	7707750515084679	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_sha512_256.c.obj	c37deadea01f87d7
+83434	107165	7707750412551144	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_multibyte.c.obj	68384885168a90a5
+97583	112096	7707750531272642	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_threads.c.obj	25e0bba0b1f5fbdf
+87845	112504	7707750434658891	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_path.c.obj	6dc883e488630b0b
+99855	114005	7707750554640835	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/cw-out.c.obj	5c9b4390d7a4834e
+101696	114080	7707750599994378	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/dict.c.obj	1319006cbc400a04
+105294	115259	7707750608227589	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/dynbuf.c.obj	3ef11a739b6f8924
+104596	119240	7707750606997562	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/doh.c.obj	d39714f897759a57
+107068	121667	7707750626175867	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/dynhds.c.obj	ad14e45562d16467
+96569	122465	7707750524051802	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_sspi.c.obj	c05b1ea3db00a6fc
+97984	123136	7707750535368727	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/curl_trc.c.obj	2773396f41dd7a41
+112271	123671	7707750678089722	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/easygetopt.c.obj	1c580af815816ae2
+109100	123760	7707750675569695	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/easy.c.obj	c7b86e812dfca3f5
+113767	129237	7707750694606951	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/easyoptions.c.obj	20b2ecc8ad55b320
+114032	129306	7707750695606926	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/escape.c.obj	6de49c88194c85c
+115194	130721	7707750707416482	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/file.c.obj	f12aa34d9865b499
+122601	131812	7707750786056231	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/ftp.c.obj	e1e2fd32ae378cb4
+123230	132878	7707750791361557	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/ftplistparser.c.obj	fe4a872679393642
+123698	132959	7707750792392882	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/getenv.c.obj	5cf2402759181fdf
+117210	138453	7707750746632415	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/fileinfo.c.obj	79679b1a38d9a32c
+125350	138552	7707750847103125	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/getinfo.c.obj	1c4ea1f4583a1aab
+129259	139875	7707750847916521	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/gopher.c.obj	496702ed49a77d0f
+129918	141162	7707750862018747	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hash.c.obj	ef73102a5bfbf512
+121711	142214	7707750779326052	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/formdata.c.obj	1d873ab3aed720c8
+132795	145826	7707750883490974	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hmac.c.obj	50919a9b4b17767a
+132901	145902	7707750884357403	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hostasyn.c.obj	29b2b2c073d62581
+138513	148128	7707750940392083	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hostip4.c.obj	eb0004d8451ad0a7
+139732	149176	7707750953085735	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hostip6.c.obj	f018571762e27788
+141089	150530	7707750966378959	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hostsyn.c.obj	df21ea6795911020
+121580	150616	7707750771467797	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/fopen.c.obj	d8d417f7eb3f1478
+131740	154996	7707750872858471	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/headers.c.obj	58db5473718169b
+148046	156591	7707751035985349	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http2.c.obj	7eea45191ac77b01
+136609	157200	7707750939226842	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hostip.c.obj	ece6e245d98ada8c
+141606	160993	7707750976732684	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/hsts.c.obj	2470fa59f4835896
+145856	163277	7707751013848386	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http1.c.obj	6f9e5f82dac892f9
+142735	166068	7707751012825157	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http.c.obj	9c3abdfd738f7b16
+150577	168134	7707751061020827	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_digest.c.obj	8d48f60be01e93e4
+149960	168969	7707751060020799	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_chunks.c.obj	d1e3b67186fe5ed0
+157411	169920	7707751164619819	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/idn.c.obj	c42d8551789c892c
+153415	170021	7707751104712402	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_negotiate.c.obj	464a1bc2900cbc54
+155466	172404	7707751120554843	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_ntlm.c.obj	ba91172883b5ce77
+156670	173327	7707751122091483	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_proxy.c.obj	fb81a65c50a8c77e
+148183	173444	7707751046478813	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/http_aws_sigv4.c.obj	5ec7accf200570bb
+168632	179278	7707751244223025	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/inet_pton.c.obj	45bf61ea2ee14f2c
+168992	180814	7707751253942516	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/krb5.c.obj	a873f22af5093345
+169974	180899	7707751255012537	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/ldap.c.obj	bede354315b00f8b
+161063	180986	7707751187259091	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/if2ip.c.obj	a31573aa34ea1dcc
+172302	181622	7707751278643882	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/llist.c.obj	1bd16e90a97e6f72
+172473	186175	7707751287906209	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/macos.c.obj	c835c6a97d9f5f63
+165331	188807	7707751215218624	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/imap.c.obj	c54f7e5e682e3121
+173390	188884	7707751289287976	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/md4.c.obj	d31e1c688544ad37
+166127	189569	7707751236050359	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/inet_ntop.c.obj	358c59d28374ed39
+176092	191576	7707751347386685	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/md5.c.obj	7d30ee6f49b709e3
+180763	191955	7707751362918657	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/memdebug.c.obj	17e517798851cb37
+180945	192036	7707751364724673	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/mprintf.c.obj	ebb2d949345f3006
+181008	196717	7707751371067508	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/mqtt.c.obj	97053f0fa939499f
+188745	197418	7707751442832474	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/netrc.c.obj	f6dfc5fddaa0c200
+188844	199049	7707751443702052	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/nonblock.c.obj	25ec8cbe93356c6d
+180838	199142	7707751363738008	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/mime.c.obj	703b87cf17bfb53b
+185754	201008	7707751415603399	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/multi.c.obj	dc389f26ca23d90b
+189330	202665	7707751450525355	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/noproxy.c.obj	8e4e5864e34bfab7
+191484	203589	7707751470397954	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/openldap.c.obj	9156c9855ae8d602
+191876	203659	7707751474342299	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/parsedate.c.obj	7a4ec0e903cbd3ff
+191989	205867	7707751475219957	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/pingpong.c.obj	2f967a6342f6ed8b
+195331	206479	7707751521897712	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/pop3.c.obj	2f6c359d95fcf33c
+197299	206578	7707751528657142	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/progress.c.obj	14b5670eec07ce00
+198980	210195	7707751545239533	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/psl.c.obj	1ea5bbd925de41b3
+199103	210453	7707751546284683	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/rand.c.obj	15704def2c4ff9d5
+200375	210540	7707751564818565	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/rename.c.obj	df944906fddf858c
+202688	213552	7707751590602006	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/rtsp.c.obj	892cf18a317f54aa
+201030	213621	7707751581409849	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/request.c.obj	b3b66886e99c89b9
+203612	214305	7707751591473053	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/select.c.obj	fd0405cc80dfc6ca
+206536	214390	7707751620639502	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/sha256.c.obj	a2c4c9ee6b8693d9
+203756	217108	7707751613379553	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/sendf.c.obj	e874c5ce0cb272c0
+206399	217196	7707751619539102	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/setopt.c.obj	f9f3a3b516b1a264
+210255	217309	7707751659242671	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/slist.c.obj	4018d8bb1ad0e977
+210501	220799	7707751660262702	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/smb.c.obj	38220b8d73caf63d
+208613	220892	7707751656615212	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/share.c.obj	a325b48402b0d473
+210616	221889	7707751690304189	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/smtp.c.obj	8edcde9afd507a6f
+213582	221974	7707751691095292	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/socketpair.c.obj	cf0be7be9a03c8e1
+214342	225333	7707751698777754	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/socks_gssapi.c.obj	e7f91a8474b6eb84
+217262	225419	7707751727973785	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/splay.c.obj	32992dc331b229f6
+217149	226494	7707751726832660	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/speedcheck.c.obj	1544bf2c479b7787
+215903	227407	7707751725835498	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/socks_sspi.c.obj	1e818d506aa34146
+214240	228942	7707751697747736	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/socks.c.obj	2c975f1f56d6afd1
+220834	229699	7707751763786611	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/strdup.c.obj	ef5a6b24c78f49a8
+219060	231358	7707751762684703	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/strcase.c.obj	bbb157be417a408b
+221930	231591	7707751774596533	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/strtok.c.obj	a19739dd4afc3b2b
+224098	231706	7707751808066163	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/strtoofft.c.obj	fafe97c71b42fe37
+221817	233494	7707751773556437	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/strerror.c.obj	11ccb8147b11e0fd
+226448	234350	7707751819775904	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/telnet.c.obj	587e5a2b8ce27911
+227318	235982	7707751828795683	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/tftp.c.obj	4d5d7a4d1b67b236
+225373	236049	7707751809062972	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/system_win32.c.obj	79b08e7e296e781d
+227472	239834	7707751844236686	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/timediff.c.obj	cbf8b71a546555a2
+228993	239899	7707751851650624	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/timeval.c.obj	8c27b99a21ddeab
+230860	239988	7707751868308928	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/transfer.c.obj	3adc6c38c698820
+234012	241718	7707751898325347	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/version_win32.c.obj	6c5609163a20387b
+233382	243704	7707751889534973	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/version.c.obj	79ec0dcbbbe4d6fa
+231509	244032	7707751870618352	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/url.c.obj	8d315e4545a9f6e5
+231644	244110	7707751871939305	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/urlapi.c.obj	b0f19bc9e7889e39
+235477	248576	7707751914538403	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/warnless.c.obj	4fe0fbb5a1177abf
+236013	249128	7707751915368383	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/ws.c.obj	ac7196e6ab8f6ada
+243628	250327	7707751991801646	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/gsasl.c.obj	bcbaef1e9a61203b
+243911	250412	7707751995001715	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/krb5_gssapi.c.obj	69afc25131aa65bd
+237785	250858	7707751953062122	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/cleartext.c.obj	b1884d5c97ee5a18
+239947	250934	7707751954762903	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/digest.c.obj	436216f94a848c3c
+239856	251022	7707751953857036	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/cram.c.obj	5bc7053aac1aea70
+246222	256930	7707752040570664	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/ntlm.c.obj	bb370ff9ed7fb24b
+248726	257086	7707752046053226	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/ntlm_sspi.c.obj	e8146c45388e88e3
+241636	257780	7707751971759717	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/digest_sspi.c.obj	dd3d18e7a980d4b3
+250226	258921	7707752058145523	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/oauth2.c.obj	54a60f1a4b8720aa
+250366	258983	7707752058975528	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/spnego_gssapi.c.obj	2f011a3949900c85
+250716	259568	7707752063249046	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/spnego_sspi.c.obj	dd9211ae2c487a89
+250981	263078	7707752065082431	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/bearssl.c.obj	6b32aee6200bca70
+244068	263696	7707751995971758	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/krb5_sspi.c.obj	cbd15ca9626825f
+253282	263797	7707752124124806	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/cipher_suite.c.obj	34b0df3c2f017dd0
+257017	263894	7707752125648559	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/gtls.c.obj	d4b77e97b8a6ffef
+257844	265862	7707752143908499	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/keylog.c.obj	21dd41139c2ee608
+258942	266980	7707752144721741	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/mbedtls.c.obj	4dff089646dc8a38
+259487	267080	7707752150485814	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/mbedtls_threadlock.c.obj	e9855c0b72a9889d
+250894	268025	7707752064219085	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vauth/vauth.c.obj	e59ba31d3428dca5
+263543	272935	7707752191045932	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/rustls.c.obj	b77eaca869309493
+264080	272998	7707752213350136	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/sectransp.c.obj	f21908ec39238ce1
+257255	273107	7707752132625817	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/hostcheck.c.obj	aad64d407e422b49
+267035	274958	7707752225671264	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/wolfssl.c.obj	3ba5b77c6228555c
+261712	275026	7707752185357801	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/openssl.c.obj	9ef5cfd856bc11e4
+263851	276829	7707752193831585	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/schannel_verify.c.obj	3fd16be2ae45c9ea
+266696	279715	7707752224222431	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/vtls.c.obj	dbb9632daf318f60
+267138	279972	7707752234581186	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/x509asn1.c.obj	6e3674e073eaa002
+272956	280439	7707752284841221	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/curl_ngtcp2.c.obj	aad372fbc39898ce
+270546	280496	7707752284141224	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/curl_msh3.c.obj	f06037b07f521a81
+273062	282051	7707752285941268	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/curl_osslq.c.obj	246bf7219ddb3b7e
+263755	282735	7707752192851531	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vtls/schannel.c.obj	7df13db1c1ba5a1d
+274795	286512	7707752304324211	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/curl_quiche.c.obj	cf6fe7b8f4cd9537
+274978	286579	7707752305128195	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/vquic.c.obj	c4fd85176a9b2da4
+276726	289144	7707752323139817	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vquic/vquic-tls.c.obj	5d3a378301e1058d
+278889	292119	7707752351981246	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vssh/libssh.c.obj	ce2767c067101f9a
+280231	298616	7707752359216908	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vssh/wolfssh.c.obj	6c8be6b3ce35aa1e
+279753	298680	7707752354575037	_deps/curl-build/lib/CMakeFiles/libcurl_object.dir/vssh/libssh2.c.obj	ca23f229dbd3f579
+289037	301306	7707752446206899	CMakeFiles/imgui_lib.dir/external/imgui/backends/imgui_impl_glfw.cpp.obj	ff45e179d58d9c7f
+291875	301419	7707752475996949	CMakeFiles/imgui_lib.dir/external/imgui/backends/imgui_impl_opengl3.cpp.obj	1177976adad6ed98
+282081	303613	7707752382208162	CMakeFiles/imgui_lib.dir/external/imgui/imgui_draw.cpp.obj	9f6a8e232dfd5562
+283184	315058	7707752419961959	CMakeFiles/imgui_lib.dir/external/imgui/imgui_tables.cpp.obj	1c72170b7f8eec45
+286540	318205	7707752420732010	CMakeFiles/imgui_lib.dir/external/imgui/imgui_widgets.cpp.obj	b9eb520d4b6e2c52
+300504	318370	7707752567976667	CMakeFiles/EditorLib.dir/src/EditorCommands.cpp.obj	27bbdcefe589e1c0
+301375	318467	7707752569111280	CMakeFiles/EditorLib.dir/src/ModernEditorCommands.cpp.obj	686700b5463da8a2
+281978	323004	7707752375392452	CMakeFiles/imgui_lib.dir/external/imgui/imgui.cpp.obj	96a088e6d87d8ca4
+298649	327277	7707752541731766	CMakeFiles/EditorLib.dir/src/TextBuffer.cpp.obj	bad30eda06eeff59
+298546	327650	7707752540951773	CMakeFiles/EditorLib.dir/src/Editor.cpp.obj	1112b4ea619466bb
+280460	327975	7707752359886929	external/googletest/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.obj	7f8edd66a4b54a2a
+302327	328456	7707752590876056	CMakeFiles/EditorLib.dir/src/SyntaxHighlighter.cpp.obj	79c1a6c6458d250e
+328008	331927	7707752871681647	_deps/curl-build/docs/libcurl/opts/CURLSHOPT_UNLOCKFUNC.3	d95f9fbc20498d9f
+328008	331927	7707752871681647	_deps/curl-build/docs/libcurl/opts/CURLSHOPT_UNSHARE.3	d95f9fbc20498d9f
+328008	331927	7707752871681647	_deps/curl-build/docs/libcurl/opts/CURLSHOPT_USERDATA.3	d95f9fbc20498d9f
+328008	331927	7707752871681647	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLSHOPT_UNLOCKFUNC.3	d95f9fbc20498d9f
+328008	331927	7707752871681647	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLSHOPT_UNSHARE.3	d95f9fbc20498d9f
+328008	331927	7707752871681647	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLSHOPT_USERDATA.3	d95f9fbc20498d9f
+326906	332673	7707752827395982	external/glfw/src/glfw3.lib	e8b7cbebc2bb9dfd
+318238	334550	7707752738177647	CMakeFiles/EditorLib.dir/src/di/Injector.cpp.obj	81ee514840d77f2c
+318428	339116	7707752739554459	CMakeFiles/EditorLib.dir/src/di/ModuleManager.cpp.obj	f6a4b509b3d893dd
+328499	343049	7707752840246927	_deps/curl-build/lib/libcurl-d.lib	d4c6fbd265892ba
+331975	343872	7707752875044738	external/cpr/cpr/CMakeFiles/cpr.dir/accept_encoding.cpp.obj	868ee0d9e42aea61
+318131	350505	7707752736821969	CMakeFiles/EditorLib.dir/src/EditorError.cpp.obj	3e5e72ef6f98040b
+343721	351309	7707752993609182	external/cpr/cpr/CMakeFiles/cpr.dir/cert_info.cpp.obj	1563063f3adabaec
+334493	352602	7707752900333425	external/cpr/cpr/CMakeFiles/cpr.dir/async.cpp.obj	77cdc240554f854a
+311114	355641	7707752704632226	CMakeFiles/EditorLib.dir/src/SyntaxHighlightingManager.cpp.obj	66fa1a3267eb4c6f
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_ACTIVESOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_APPCONNECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_APPCONNECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CAINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CAPATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CERTINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONDITION_UNMET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONNECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONNECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONN_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_TYPE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_COOKIELIST.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_EFFECTIVE_METHOD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_EFFECTIVE_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_FILETIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_FILETIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_FTP_ENTRY_PATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_HEADER_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTP_CONNECTCODE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTP_VERSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTPAUTH_AVAIL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_LASTSOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_LOCAL_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_LOCAL_PORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_NAMELOOKUP_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_NAMELOOKUP_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_NUM_CONNECTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_OS_ERRNO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PRETRANSFER_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PRETRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_POSTTRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIMARY_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIMARY_PORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIVATE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXY_ERROR.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXY_SSL_VERIFYRESULT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXYAUTH_AVAIL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_QUEUE_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_COUNT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REFERER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_REQUEST_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RESPONSE_CODE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RETRY_AFTER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_CLIENT_CSEQ.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_CSEQ_RECV.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_SERVER_CSEQ.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_SESSION_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SCHEME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SSL_ENGINES.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_SSL_VERIFYRESULT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_STARTTRANSFER_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_STARTTRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_TLS_SESSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_TLS_SSL_PTR.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_TOTAL_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_TOTAL_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_USED_PROXY.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLINFO_XFER_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_CHUNK_LENGTH_PENALTY_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_CONTENT_LENGTH_PENALTY_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_CONCURRENT_STREAMS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_HOST_CONNECTIONS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_PIPELINE_LENGTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_TOTAL_CONNECTIONS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAXCONNECTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING_SERVER_BL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING_SITE_BL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_PUSHDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_PUSHFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_SOCKETDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_SOCKETFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_TIMERDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLMOPT_TIMERFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ABSTRACT_UNIX_SOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ACCEPT_ENCODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ACCEPTTIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ADDRESS_SCOPE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ALTSVC.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ALTSVC_CTRL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_APPEND.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_AUTOREFERER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_AWS_SIGV4.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_BUFFERSIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CAINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CAINFO_BLOB.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CAPATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CA_CACHE_TIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CERTINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_BGN_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_DATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_END_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CLOSESOCKETDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CLOSESOCKETFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECT_ONLY.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECT_TO.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECTTIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECTTIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_FROM_NETWORK_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_FROM_UTF8_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_TO_NETWORK_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIEFILE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIEJAR.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIELIST.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIESESSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_COPYPOSTFIELDS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CRLF.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CRLFILE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CURLU.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_CUSTOMREQUEST.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DEBUGDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DEBUGFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DEFAULT_PROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DIRLISTONLY.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DISALLOW_USERNAME_IN_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_CACHE_TIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_INTERFACE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_LOCAL_IP4.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_LOCAL_IP6.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_SERVERS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_SHUFFLE_ADDRESSES.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_USE_GLOBAL_CACHE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYHOST.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYPEER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYSTATUS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ECH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_EGDSOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ERRORBUFFER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_EXPECT_100_TIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FAILONERROR.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FILETIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FNMATCH_DATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FNMATCH_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FOLLOWLOCATION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FORBID_REUSE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FRESH_CONNECT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_ACCOUNT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_ALTERNATIVE_TO_USER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_CREATE_MISSING_DIRS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_FILEMETHOD.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_SKIP_PASV_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_SSL_CCC.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_EPRT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_EPSV.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_PRET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTPPORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_FTPSSLAUTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_GSSAPI_DELEGATION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPROXYPROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPROXY_CLIENT_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADERDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADERFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADEROPT.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTS_CTRL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSREADDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSREADFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSWRITEDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSWRITEFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP09_ALLOWED.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP200ALIASES.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_CONTENT_DECODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_TRANSFER_DECODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_VERSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPAUTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPGET.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPHEADER.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPPOST.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPPROXYTUNNEL.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_IGNORE_CONTENT_LENGTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_INFILESIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_INFILESIZE_LARGE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERFACE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERLEAVEDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERLEAVEFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_IOCTLDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_IOCTLFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_IPRESOLVE.3	b2edf91d35052df7
+327312	355731	7707753097921733	_deps/curl-build/docs/libcurl/opts/CURLOPT_ISSUERCERT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_ACTIVESOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_APPCONNECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_APPCONNECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CAINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CAPATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CERTINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONDITION_UNMET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONNECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONNECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONN_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_LENGTH_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_CONTENT_TYPE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_COOKIELIST.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_EFFECTIVE_METHOD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_EFFECTIVE_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_FILETIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_FILETIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_FTP_ENTRY_PATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_HEADER_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTP_CONNECTCODE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTP_VERSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_HTTPAUTH_AVAIL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_LASTSOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_LOCAL_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_LOCAL_PORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_NAMELOOKUP_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_NAMELOOKUP_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_NUM_CONNECTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_OS_ERRNO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PRETRANSFER_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PRETRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_POSTTRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIMARY_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIMARY_PORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PRIVATE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXY_ERROR.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXY_SSL_VERIFYRESULT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_PROXYAUTH_AVAIL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_QUEUE_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_COUNT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REDIRECT_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REFERER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_REQUEST_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RESPONSE_CODE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RETRY_AFTER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_CLIENT_CSEQ.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_CSEQ_RECV.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_SERVER_CSEQ.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_RTSP_SESSION_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SCHEME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SIZE_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_DOWNLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_DOWNLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_UPLOAD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SPEED_UPLOAD_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SSL_ENGINES.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_SSL_VERIFYRESULT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_STARTTRANSFER_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_STARTTRANSFER_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_TLS_SESSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_TLS_SSL_PTR.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_TOTAL_TIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_TOTAL_TIME_T.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_USED_PROXY.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLINFO_XFER_ID.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_CHUNK_LENGTH_PENALTY_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_CONTENT_LENGTH_PENALTY_SIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_CONCURRENT_STREAMS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_HOST_CONNECTIONS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_PIPELINE_LENGTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAX_TOTAL_CONNECTIONS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_MAXCONNECTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING_SERVER_BL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_PIPELINING_SITE_BL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_PUSHDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_PUSHFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_SOCKETDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_SOCKETFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_TIMERDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLMOPT_TIMERFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ABSTRACT_UNIX_SOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ACCEPT_ENCODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ACCEPTTIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ADDRESS_SCOPE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ALTSVC.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ALTSVC_CTRL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_APPEND.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_AUTOREFERER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_AWS_SIGV4.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_BUFFERSIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CAINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CAINFO_BLOB.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CAPATH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CA_CACHE_TIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CERTINFO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_BGN_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_DATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CHUNK_END_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CLOSESOCKETDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CLOSESOCKETFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECT_ONLY.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECT_TO.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECTTIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONNECTTIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_FROM_NETWORK_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_FROM_UTF8_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CONV_TO_NETWORK_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIEFILE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIEJAR.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIELIST.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COOKIESESSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_COPYPOSTFIELDS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CRLF.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CRLFILE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CURLU.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_CUSTOMREQUEST.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DEBUGDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DEBUGFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DEFAULT_PROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DIRLISTONLY.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DISALLOW_USERNAME_IN_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_CACHE_TIMEOUT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_INTERFACE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_LOCAL_IP4.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_LOCAL_IP6.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_SERVERS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_SHUFFLE_ADDRESSES.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DNS_USE_GLOBAL_CACHE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYHOST.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYPEER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_SSL_VERIFYSTATUS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_DOH_URL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ECH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_EGDSOCKET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ERRORBUFFER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_EXPECT_100_TIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FAILONERROR.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FILETIME.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FNMATCH_DATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FNMATCH_FUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FOLLOWLOCATION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FORBID_REUSE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FRESH_CONNECT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_ACCOUNT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_ALTERNATIVE_TO_USER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_CREATE_MISSING_DIRS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_FILEMETHOD.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_SKIP_PASV_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_SSL_CCC.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_EPRT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_EPSV.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTP_USE_PRET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTPPORT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_FTPSSLAUTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_GSSAPI_DELEGATION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPROXYPROTOCOL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HAPROXY_CLIENT_IP.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADERDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADERFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HEADEROPT.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTS.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTS_CTRL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSREADDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSREADFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSWRITEDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HSTSWRITEFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP09_ALLOWED.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP200ALIASES.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_CONTENT_DECODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_TRANSFER_DECODING.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTP_VERSION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPAUTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPGET.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPHEADER.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPPOST.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_HTTPPROXYTUNNEL.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_IGNORE_CONTENT_LENGTH.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_INFILESIZE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_INFILESIZE_LARGE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERFACE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERLEAVEDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_INTERLEAVEFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_IOCTLDATA.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_IOCTLFUNCTION.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_IPRESOLVE.3	b2edf91d35052df7
+327312	355731	7707753097921733	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ISSUERCERT.3	b2edf91d35052df7
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_ISSUERCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_KEEP_SENDING_ON_ERROR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_KEYPASSWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_KRBLEVEL.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_LOCALPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_LOCALPORTRANGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_LOGIN_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_LOW_SPEED_LIMIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_LOW_SPEED_TIME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_FROM.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_RCPT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_RCPT_ALLOWFAILS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAX_RECV_SPEED_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAX_SEND_SPEED_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXAGE_CONN.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXCONNECTS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXFILESIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXFILESIZE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXLIFETIME_CONN.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXREDIRS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MIME_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_MIMEPOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NETRC.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NETRC_FILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NEW_DIRECTORY_PERMS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NEW_FILE_PERMS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NOBODY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NOPROGRESS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NOPROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_NOSIGNAL.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_OPENSOCKETDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_OPENSOCKETFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PATH_AS_IS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PINNEDPUBLICKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PIPEWAIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDSIZE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTQUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTREDIR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PRE_PROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PREQUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PREREQDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PREREQFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PRIVATE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROGRESSDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROGRESSFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROTOCOLS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROTOCOLS_STR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAINFO.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAINFO_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAPATH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CRLFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_ISSUERCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_ISSUERCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_KEYPASSWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_PINNEDPUBLICKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SERVICE_NAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_CIPHER_LIST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_VERIFYHOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_VERIFYPEER.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERTTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEY_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLVERSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLS13_CIPHERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_TYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TRANSFER_MODE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYAUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYHEADER.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYPASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYUSERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYUSERPWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_PUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_QUICK_EXIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_QUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RANDOM_FILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RANGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_READDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_READFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_REDIR_PROTOCOLS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_REDIR_PROTOCOLS_STR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_REFERER.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_REQUEST_TARGET.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVER_START_DATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVER_START_FUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RESUME_FROM.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RESUME_FROM_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_CLIENT_CSEQ.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_REQUEST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_SERVER_CSEQ.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_SESSION_ID.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_STREAM_URI.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_TRANSPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SASL_AUTHZID.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SASL_IR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SEEKDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SEEKFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVER_RESPONSE_TIMEOUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVER_RESPONSE_TIMEOUT_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVICE_NAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SHARE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKOPTDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKOPTFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_GSSAPI_NEC.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_GSSAPI_SERVICE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_AUTH_TYPES.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_COMPRESSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOSTKEYDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOSTKEYFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOST_PUBLIC_KEY_MD5.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOST_PUBLIC_KEY_SHA256.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KEYDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KEYFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KNOWNHOSTS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_PRIVATE_KEYFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_PUBLIC_KEYFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CIPHER_LIST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CTX_DATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CTX_FUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_EC_CURVES.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_ENABLE_ALPN.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_ENABLE_NPN.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_FALSESTART.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_SESSIONID_CACHE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYHOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYPEER.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYSTATUS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERTTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLENGINE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLENGINE_DEFAULT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEY_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLVERSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_STDERR.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_DEPENDS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_DEPENDS_E.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_WEIGHT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_SUPPRESS_CONNECT_HEADERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_FASTOPEN.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPALIVE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPIDLE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPINTVL.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPCNT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TELNETOPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TFTP_BLKSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TFTP_NO_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMECONDITION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEOUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEOUT_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEVALUE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEVALUE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TLS13_CIPHERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_TYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TRAILERDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TRAILERFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TRANSFER_ENCODING.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_TRANSFERTEXT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_UNIX_SOCKET_PATH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_UNRESTRICTED_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_UPKEEP_INTERVAL_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_UPLOAD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_UPLOAD_BUFFERSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_URL.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_USE_SSL.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_USERAGENT.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_USERPWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_VERBOSE.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_WILDCARDMATCH.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_WRITEDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_WRITEFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_WS_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_XFERINFODATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_XFERINFOFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLOPT_XOAUTH2_BEARER.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLSHOPT_LOCKFUNC.3	d3481cc4006b1101
+327688	358861	7707753109344923	_deps/curl-build/docs/libcurl/opts/CURLSHOPT_SHARE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_ISSUERCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_KEEP_SENDING_ON_ERROR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_KEYPASSWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_KRBLEVEL.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_LOCALPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_LOCALPORTRANGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_LOGIN_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_LOW_SPEED_LIMIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_LOW_SPEED_TIME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_FROM.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_RCPT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAIL_RCPT_ALLOWFAILS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAX_RECV_SPEED_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAX_SEND_SPEED_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXAGE_CONN.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXCONNECTS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXFILESIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXFILESIZE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXLIFETIME_CONN.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MAXREDIRS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MIME_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_MIMEPOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NETRC.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NETRC_FILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NEW_DIRECTORY_PERMS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NEW_FILE_PERMS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NOBODY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NOPROGRESS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NOPROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_NOSIGNAL.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_OPENSOCKETDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_OPENSOCKETFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PATH_AS_IS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PINNEDPUBLICKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PIPEWAIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTFIELDSIZE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTQUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_POSTREDIR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PRE_PROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PREQUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PREREQDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PREREQFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PRIVATE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROGRESSDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROGRESSFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROTOCOLS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROTOCOLS_STR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAINFO.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAINFO_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CAPATH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_CRLFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_ISSUERCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_ISSUERCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_KEYPASSWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_PINNEDPUBLICKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SERVICE_NAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_CIPHER_LIST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_VERIFYHOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSL_VERIFYPEER.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLCERTTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEY_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLKEYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_SSLVERSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLS13_CIPHERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_TYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TLSAUTH_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXY_TRANSFER_MODE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYAUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYHEADER.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYPASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYUSERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PROXYUSERPWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_PUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_QUICK_EXIT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_QUOTE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RANDOM_FILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RANGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_READDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_READFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_REDIR_PROTOCOLS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_REDIR_PROTOCOLS_STR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_REFERER.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_REQUEST_TARGET.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVER_START_DATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RESOLVER_START_FUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RESUME_FROM.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RESUME_FROM_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_CLIENT_CSEQ.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_REQUEST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_SERVER_CSEQ.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_SESSION_ID.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_STREAM_URI.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_RTSP_TRANSPORT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SASL_AUTHZID.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SASL_IR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SEEKDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SEEKFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVER_RESPONSE_TIMEOUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVER_RESPONSE_TIMEOUT_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SERVICE_NAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SHARE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKOPTDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKOPTFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_GSSAPI_NEC.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SOCKS5_GSSAPI_SERVICE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_AUTH_TYPES.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_COMPRESSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOSTKEYDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOSTKEYFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOST_PUBLIC_KEY_MD5.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_HOST_PUBLIC_KEY_SHA256.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KEYDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KEYFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_KNOWNHOSTS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_PRIVATE_KEYFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSH_PUBLIC_KEYFILE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CIPHER_LIST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CTX_DATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_CTX_FUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_EC_CURVES.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_ENABLE_ALPN.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_ENABLE_NPN.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_FALSESTART.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_SESSIONID_CACHE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYHOST.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYPEER.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSL_VERIFYSTATUS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERT_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLCERTTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLENGINE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLENGINE_DEFAULT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEY_BLOB.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLKEYTYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SSLVERSION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_STDERR.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_DEPENDS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_DEPENDS_E.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_STREAM_WEIGHT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_SUPPRESS_CONNECT_HEADERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_FASTOPEN.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPALIVE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPIDLE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPINTVL.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_KEEPCNT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TELNETOPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TFTP_BLKSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TFTP_NO_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMECONDITION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEOUT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEOUT_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEVALUE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TIMEVALUE_LARGE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TLS13_CIPHERS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_PASSWORD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_TYPE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TLSAUTH_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TRAILERDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TRAILERFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TRANSFER_ENCODING.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_TRANSFERTEXT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_UNIX_SOCKET_PATH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_UNRESTRICTED_AUTH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_UPKEEP_INTERVAL_MS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_UPLOAD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_UPLOAD_BUFFERSIZE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_URL.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_USE_SSL.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_USERAGENT.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_USERNAME.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_USERPWD.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_VERBOSE.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_WILDCARDMATCH.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_WRITEDATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_WRITEFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_WS_OPTIONS.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_XFERINFODATA.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_XFERINFOFUNCTION.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLOPT_XOAUTH2_BEARER.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLSHOPT_LOCKFUNC.3	d3481cc4006b1101
+327688	358861	7707753109344923	C:/Users/HydraPony/dev/AI-First TextEditor/simple_build/_deps/curl-build/docs/libcurl/opts/CURLSHOPT_SHARE.3	d3481cc4006b1101
+337479	362554	7707752945537807	external/cpr/cpr/CMakeFiles/cpr.dir/auth.cpp.obj	558fd7a6deb71fb9
+342508	368438	7707752985108336	external/cpr/cpr/CMakeFiles/cpr.dir/callback.cpp.obj	829b76b8d33fe986
+358473	368504	7707753143346809	external/cpr/cpr/CMakeFiles/cpr.dir/file.cpp.obj	78e24faad0fc8820
+351245	369929	7707753067985011	external/cpr/cpr/CMakeFiles/cpr.dir/cprtypes.cpp.obj	4f725e466bfc9b8a
+352530	369987	7707753080575112	external/cpr/cpr/CMakeFiles/cpr.dir/curl_container.cpp.obj	4ea5ed661caa143
+345959	372219	7707753059834671	external/cpr/cpr/CMakeFiles/cpr.dir/cookies.cpp.obj	8a6375ca1254a0e0
+355520	373243	7707753111214750	external/cpr/cpr/CMakeFiles/cpr.dir/curlholder.cpp.obj	b7f5e15153520fe7
+355698	375318	7707753112234775	external/cpr/cpr/CMakeFiles/cpr.dir/error.cpp.obj	938a8dc6f270097b
+360183	377874	7707753180008015	external/cpr/cpr/CMakeFiles/cpr.dir/multipart.cpp.obj	c5f1a388e079853b
+369480	377942	7707753254117528	external/cpr/cpr/CMakeFiles/cpr.dir/proxies.cpp.obj	d11971690a258ad2
+374291	386861	7707753307803925	external/cpr/cpr/CMakeFiles/cpr.dir/timeout.cpp.obj	b259dff22fd86afc
+368468	387092	7707753239954808	external/cpr/cpr/CMakeFiles/cpr.dir/payload.cpp.obj	ae9c4005f58e7c28
+377731	387143	7707753333573767	external/cpr/cpr/CMakeFiles/cpr.dir/unix_socket.cpp.obj	b27a9cc6ecf32bbc
+366686	387224	7707753239186796	external/cpr/cpr/CMakeFiles/cpr.dir/parameters.cpp.obj	1ead46d0c6c4082a
+369948	389165	7707753254777573	external/cpr/cpr/CMakeFiles/cpr.dir/proxyauth.cpp.obj	16dce90dd8496f4b
+372238	390488	7707753287088829	external/cpr/cpr/CMakeFiles/cpr.dir/threadpool.cpp.obj	7ec3c6172cce409d
+377901	398231	7707753334338400	external/cpr/cpr/CMakeFiles/cpr.dir/util.cpp.obj	32f3d2975350b953
+382163	400788	7707753380056422	external/cpr/cpr/CMakeFiles/cpr.dir/response.cpp.obj	6146cebb64a690fd
+372087	406535	7707753277072415	external/cpr/cpr/CMakeFiles/cpr.dir/session.cpp.obj	8db619cd4c20df68

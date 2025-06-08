@@ -1,0 +1,38 @@
+# Project definition with version and metadata
+project(AITextEditor
+    VERSION 1.0.0
+    DESCRIPTION "AI-First Text Editor with Advanced Code Intelligence"
+    HOMEPAGE_URL "https://github.com/yourusername/ai-text-editor"
+    LANGUAGES CXX C
+)
+
+# Set project structure
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Set output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Set default build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+# Add subdirectories
+add_subdirectory(external)
+add_subdirectory(src)
+add_subdirectory(tests)
+
+# Installation
+install(DIRECTORY include/ DESTINATION include)
+install(TARGETS AITextEditor DESTINATION bin)

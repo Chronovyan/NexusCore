@@ -1,0 +1,43 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Find required dependencies
+find_dependency(OpenGL REQUIRED)
+find_dependency(Threads REQUIRED)
+
+# Find optional dependencies
+find_dependency(glfw3 QUIET)
+find_dependency(nlohmann_json QUIET)
+find_dependency(cpr QUIET)
+
+# Include the exports file to make the IMPORTED targets available
+include("${CMAKE_CURRENT_LIST_DIR}/EditorLibTargets.cmake")
+
+# This will make the library available as TextEditor::EditorLib
+check_required_components(EditorLib)
+
+# Set include directories for the installed package
+get_target_property(EditorLib_INCLUDE_DIRS TextEditor::EditorLib INTERFACE_INCLUDE_DIRECTORIES)
+if(NOT EditorLib_INCLUDE_DIRS)
+    set(EditorLib_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/../../../include")
+    set_target_properties(TextEditor::EditorLib PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${EditorLib_INCLUDE_DIRS}"
+    )
+endif()
+
+# Set variables for find_package()
+set(EditorLib_FOUND TRUE)
+set(EditorLib_INCLUDE_DIRS ${EditorLib_INCLUDE_DIRS} CACHE PATH "Include directories for EditorLib")
+set(EditorLib_LIBRARIES TextEditor::EditorLib CACHE STRING "Libraries for EditorLib")
+
+# Handle the QUIET and REQUIRED arguments and set EditorLib_FOUND
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(EditorLib
+    FOUND_VAR EditorLib_FOUND
+    REQUIRED_VARS EditorLib_LIBRARIES EditorLib_INCLUDE_DIRS
+    VERSION_VAR EditorLib_VERSION
+)
+
+# Mark the variables as advanced
+mark_as_advanced(EditorLib_INCLUDE_DIRS EditorLib_LIBRARIES)

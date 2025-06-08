@@ -1,0 +1,10 @@
+^C:\USERS\HYDRAPONY\DEV\AI-FIRST TEXTEDITOR\TESTS\BUILD_SIMPLE_TEST\CMAKEFILES\978168859EB15E6F8F07CE862A865F9B\GENERATE.STAMP.RULE
+setlocal
+C:\Strawberry\c\bin\cmake.exe "-SC:/Users/HydraPony/dev/AI-First TextEditor/tests" "-BC:/Users/HydraPony/dev/AI-First TextEditor/tests/build_simple_test" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/HydraPony/dev/AI-First TextEditor/tests/build_simple_test/TextEditorTests.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

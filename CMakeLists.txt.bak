@@ -1,0 +1,1940 @@
+cmake_minimum_required(VERSION 3.21)
+
+# Project definition with version and metadata
+project(AITextEditor
+    VERSION 1.0.0
+    DESCRIPTION "AI-First Text Editor with Advanced Code Intelligence"
+    HOMEPAGE_URL "https://github.com/yourusername/ai-text-editor"
+    LANGUAGES CXX C
+)
+
+# Set project structure
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Enable ccache if available
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
+# C++ standard and compiler settings
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Build type configuration
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type (Debug/Release/RelWithDebInfo)" FORCE)
+    message(STATUS "Build type not specified, defaulting to ${CMAKE_BUILD_TYPE}")
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+
+# Compiler warnings and options
+include(CheckCXXCompilerFlag)
+
+# Common compiler flags
+set(COMMON_WARNING_FLAGS
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Werror
+    -Wconversion
+    -Wshadow
+    -Wnon-virtual-dtor
+    -Wold-style-cast
+    -Wcast-align
+    -Wunused
+    -Woverloaded-virtual
+    -Wformat=2
+    -Wno-unused-parameter
+)
+
+# MSVC specific flags
+if(MSVC)
+    add_compile_options(
+        /W4     # Warning level 4
+        /WX     # Warnings as errors
+        /permissive-  # Standards conformance mode
+        /Zc:__cplusplus  # Enable __cplusplus macro
+        /Zc:inline     # Remove unreferenced functions and data
+        /Zc:throwingNew  # Make new throw by default
+        /bigobj         # Increase object file sections limit
+    )
+    add_definitions(
+        -D_CRT_SECURE_NO_WARNINGS
+        -D_CRT_NONSTDC_NO_WARNINGS
+        -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+    )
+else()
+    # GCC/Clang common flags
+    add_compile_options(
+        ${COMMON_WARNING_FLAGS}
+        -fvisibility=hidden
+        -fvisibility-inlines-hidden
+    )
+    
+    # Clang specific flags
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(
+            -Weverything
+            -Wno-c++98-compat
+            -Wno-c++98-compat-pedantic
+            -Wno-padded
+            -Wno-exit-time-destructors
+            -Wno-global-constructors
+            -Wno-gnu-zero-variadic-macro-arguments
+        )
+    # GCC specific flags
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(
+            -Wduplicated-cond
+            -Wduplicated-branches
+            -Wlogical-op
+            -Wnull-dereference
+            -Wuseless-cast
+            -Wmissing-include-dirs
+            -Wno-psabi  # Ignore ABI warnings
+        )
+    endif()
+    
+    # Enable LTO if available
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT LTO_AVAILABLE OUTPUT error)
+    if(LTO_AVAILABLE)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "Link Time Optimization (LTO) enabled")
+    else()
+        message(STATUS "Link Time Optimization (LTO) not available: ${error}")
+    endif()
+endif()
+
+# Optimization flags based on build type
+if(MSVC)
+    add_compile_options(
+        $<$<CONFIG:Debug>:/Od /Z7 /RTC1>
+        $<$<CONFIG:Release>:/O2 /Ob2 /DNDEBUG /GL>
+        $<$<CONFIG:RelWithDebInfo>:/O2 /Ob1 /Zi /DNDEBUG>
+        $<$<CONFIG:MinSizeRel>:/O1 /Ob1 /DNDEBUG>
+    )
+    
+    # Linker flags
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+else()
+    add_compile_options(
+        $<$<CONFIG:Debug>:-g -O0 -fno-omit-frame-pointer -fsanitize=address,undefined>
+        $<$<CONFIG:Release>:-O3 -DNDEBUG -march=native -flto=auto -fno-fat-lto-objects>
+        $<$<CONFIG:RelWithDebInfo>:-O2 -g -DNDEBUG -march=native -fno-omit-frame-pointer>
+        $<$<CONFIG:MinSizeRel>:-Os -DNDEBUG -march=native>
+    )
+    
+    # Linker flags
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=gold -Wl,--gc-sections")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold -Wl,--gc-sections")
+    
+    # Enable sanitizers in debug mode
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all")
+    endif()
+endif()
+
+# Enable position independent code
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Enable interprocedural optimization for release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+endif()
+
+# Set output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Create output directories
+file(MAKE_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+
+# Find and configure vcpkg if available
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+    message(STATUS "Using vcpkg from: $ENV{VCPKG_ROOT}")
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+    message(STATUS "Using vcpkg from project directory")
+endif()
+
+# Add cmake_modules to the module path
+list(APPEND CMAKE_MODULE_PATH 
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+)
+
+# Include project dependencies
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/Dependencies.cmake")
+    include(Dependencies)
+else()
+    message(STATUS "Dependencies.cmake not found in cmake_modules directory, using built-in dependencies")
+    
+    # Set up GLFW
+    include(FetchContent)
+    
+    # Download and build GLFW
+    FetchContent_Declare(
+        glfw
+        URL https://github.com/glfw/glfw/releases/download/3.3.8/glfw-3.3.8.zip
+    )
+    
+    # Set GLFW options before fetching
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+    
+    # Fetch GLFW
+    FetchContent_GetProperties(glfw)
+    if(NOT glfw_POPULATED)
+        FetchContent_Populate(glfw)
+        add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Download and build GLEW
+    FetchContent_Declare(
+        glew
+        URL https://github.com/Perlmint/glew-cmake/releases/download/glew-2.2.0/glew-2.2.0-win32-x64.zip
+    )
+    
+    # Set GLEW paths
+    set(GLEW_INCLUDE_DIRS "${glew_SOURCE_DIR}/include")
+    if(WIN32)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(GLEW_LIBRARIES "${glew_SOURCE_DIR}/lib/Release/x64/glew32s.lib")
+            set(GLEW_DLL "${glew_SOURCE_DIR}/bin/Release/x64/glew32.dll")
+        else()
+            set(GLEW_LIBRARIES "${glew_SOURCE_DIR}/lib/Release/Win32/glew32s.lib")
+            set(GLEW_DLL "${glew_SOURCE_DIR}/bin/Release/Win32/glew32.dll")
+        endif()
+        add_definitions(-DGLEW_STATIC)
+    else()
+        set(GLEW_LIBRARIES "${glew_SOURCE_DIR}/lib/libGLEW.a")
+    endif()
+    
+    include_directories(${GLEW_INCLUDE_DIRS})
+    
+    # Make GLEW available to other parts of the project
+    add_library(glew_imported UNKNOWN IMPORTED)
+    set_target_properties(glew_imported PROPERTIES
+        IMPORTED_LOCATION ${GLEW_LIBRARIES}
+        INTERFACE_INCLUDE_DIRECTORIES ${GLEW_INCLUDE_DIRS}
+    )
+    
+    # Copy GLEW DLL to output directory for Windows
+    if(WIN32 AND GLEW_DLL)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${GLEW_DLL}"
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endif()
+    
+    # Set up zlib for use with other dependencies
+    find_package(ZLIB)
+    if(NOT ZLIB_FOUND)
+        message(STATUS "Using bundled zlib")
+        set(ZLIB_ROOT ${CMAKE_BINARY_DIR}/_deps/zlib-src)
+        set(ZLIB_INCLUDE_DIRS ${ZLIB_ROOT} ${ZLIB_ROOT}/include)
+        set(ZLIB_LIBRARIES zlibstatic)
+        
+        # Download and build zlib
+        FetchContent_Declare(
+            zlib
+            URL https://zlib.net/zlib-1.2.13.tar.gz
+        )
+        
+        # Set zlib options
+        set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        
+        # Fetch zlib
+        FetchContent_GetProperties(zlib)
+        if(NOT zlib_POPULATED)
+            FetchContent_Populate(zlib)
+            add_subdirectory(${zlib_SOURCE_DIR} ${zlib_BINARY_DIR} EXCLUDE_FROM_ALL)
+        endif()
+    else()
+        message(STATUS "Using system zlib")
+    endif()
+    
+    # Make zlib available to other parts of the project
+    if(NOT TARGET zlib)
+        add_library(zlib ALIAS zlibstatic)
+    endif()
+    
+    # Set up OpenGL
+    find_package(OpenGL REQUIRED)
+    
+    # Set up GLM
+    FetchContent_Declare(
+        glm
+        URL https://github.com/g-truc/glm/releases/download/0.9.9.8/glm-0.9.9.8.zip
+    )
+    
+    # Set GLM options
+    set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+    
+    # Fetch GLM
+    FetchContent_GetProperties(glm)
+    if(NOT glm_POPULATED)
+        FetchContent_Populate(glm)
+        add_subdirectory(${glm_SOURCE_DIR} ${glm_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Set up stb
+    FetchContent_Declare(
+        stb
+        URL https://github.com/nothings/stb/archive/master.zip
+    )
+    
+    # Fetch stb
+    FetchContent_GetProperties(stb)
+    if(NOT stb_POPULATED)
+        FetchContent_Populate(stb)
+        add_library(stb INTERFACE)
+        target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+    endif()
+    
+    # Set up nlohmann_json
+    include(FetchContent)
+    FetchContent_Declare(
+        nlohmann_json
+        URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
+    )
+    
+    # Fetch nlohmann_json
+    FetchContent_GetProperties(nlohmann_json)
+    if(NOT nlohmann_json_POPULATED)
+        FetchContent_Populate(nlohmann_json)
+        add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Set up cpr (C++ Requests)
+    FetchContent_Declare(
+        cpr
+        URL https://github.com/libcpr/cpr/archive/refs/tags/1.10.4.zip
+    )
+    
+    # Set cpr options
+    set(CPR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(CPR_BUILD_TESTS_SSL OFF CACHE BOOL "" FORCE)
+    set(CPR_FORCE_OPENSSL_BACKEND ON CACHE BOOL "" FORCE)
+    
+    # Fetch cpr
+    FetchContent_GetProperties(cpr)
+    if(NOT cpr_POPULATED)
+        FetchContent_Populate(cpr)
+        add_subdirectory(${cpr_SOURCE_DIR} ${cpr_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Set up Google Test
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    )
+    
+    # Set Google Test options
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
+    set(BUILD_GTEST ON CACHE BOOL "" FORCE)
+    
+    # Fetch Google Test
+    FetchContent_GetProperties(googletest)
+    if(NOT googletest_POPULATED)
+        FetchContent_Populate(googletest)
+        add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Set up ImGui
+    FetchContent_Declare(
+        imgui
+        URL https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.zip
+    )
+    
+    # Fetch ImGui
+    FetchContent_GetProperties(imgui)
+    if(NOT imgui_POPULATED)
+        FetchContent_Populate(imgui)
+        
+        # Create ImGui library
+        set(IMGUI_SOURCES
+            ${imgui_SOURCE_DIR}/imgui.cpp
+            ${imgui_SOURCE_DIR}/imgui_demo.cpp
+            ${imgui_SOURCE_DIR}/imgui_draw.cpp
+            ${imgui_SOURCE_DIR}/imgui_tables.cpp
+            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+            ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+        )
+        
+        add_library(imgui_lib STATIC ${IMGUI_SOURCES})
+        target_include_directories(imgui_lib PUBLIC
+            ${imgui_SOURCE_DIR}
+            ${imgui_SOURCE_DIR}/backends
+        )
+        target_link_libraries(imgui_lib PUBLIC glfw ${OPENGL_LIBRARIES} glew_imported)
+        target_compile_definitions(imgui_lib PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    endif()
+    
+    # Make dependencies available to other parts of the project
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    
+    # Set up include directories
+    include_directories(
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${GLEW_INCLUDE_DIRS}
+        ${GLM_INCLUDE_DIRS}
+        ${IMGUI_INCLUDE_DIRS}
+    )
+    
+    # Set up link libraries
+    set(COMMON_LIBS
+        imgui_lib
+        glfw
+        ${OPENGL_LIBRARIES}
+        glew_imported
+        glm::glm
+        stb
+        nlohmann_json::nlohmann_json
+        cpr::cpr
+        Threads::Threads
+        zlib
+    )
+    
+    # Set up compiler definitions
+    add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
+    
+    if(WIN32)
+        add_definitions(-D_WIN32_WINNT=0x0601)
+    endif()
+    
+    message(STATUS "Using built-in dependencies")
+endif()
+
+# Set default installation directories
+include(GNUInstallDirs)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Create output directories
+file(MAKE_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+# Find required packages
+find_package(Threads REQUIRED)
+
+# Add dependencies using FetchContent as a fallback
+include(FetchContent)
+
+# Google Test
+if(BUILD_TESTING)
+    message(STATUS "Configuring Google Test...")
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GMOCK OFF CACHE BOOL "" FORCE)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.14.0
+    )
+    
+    FetchContent_GetProperties(googletest)
+    if(NOT googletest_POPULATED)
+        FetchContent_Populate(googletest)
+        add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+    
+    # Enable testing
+    enable_testing()
+    include(GoogleTest)
+    include(CTest)
+    
+    # Add a custom target for running tests
+    add_custom_target(check
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running tests..."
+    )
+    
+    # Add a target to generate code coverage reports
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT MSVC)
+        find_program(LCOV_PATH lcov)
+        find_program(GENHTML_PATH genhtml)
+        
+        if(LCOV_PATH AND GENHTML_PATH)
+            add_custom_target(coverage
+                COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+                COMMAND ${LCOV_PATH} --capture --directory . --output-file coverage.info
+                COMMAND ${LCOV_PATH} --remove coverage.info '/usr/*' '*/tests/*' '*/external/*' --output-file coverage.info
+                COMMAND ${GENHTML_PATH} coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMENT "Generating coverage report..."
+            )
+        endif()
+    endif()
+endif()
+
+# ============================================================================
+# Project Configuration
+# ============================================================================
+
+# Add compiler definitions based on build configuration
+if(MSVC)
+    add_compile_definitions(
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+        _CRT_SECURE_NO_WARNINGS
+        _SCL_SECURE_NO_WARNINGS
+    )
+    
+    # Disable min/max macros in Windows headers
+    add_compile_options(/DNOMINMAX /DWIN32_LEAN_AND_MEAN)
+    
+    # Enable parallel builds
+    add_compile_options(/MP)
+    
+    # Enable PDB generation
+    foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG_UPPER)
+        set(CMAKE_PDB_OUTPUT_DIRECTORY_${OUTPUTCONFIG_UPPER} ${CMAKE_BINARY_DIR}/bin)
+    endforeach()
+    
+    set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    set(CMAKE_PDB_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    
+    # Enable debug info in release builds
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+    
+    # Set runtime library
+    if(MSVC)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+else()
+    # Unix-like specific settings
+    add_compile_options(-fPIC)
+    
+    # Enable colored diagnostics if supported
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-fdiagnostics-color=always)
+    endif()
+    
+    # Enable stack protection
+    if(NOT APPLE)
+        add_compile_options(-fstack-protector-strong)
+    endif()
+    
+    # Enable link-time optimization for release builds
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT result OUTPUT output)
+        if(result)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        endif()
+    endif()
+    
+    # Enable RPATH on Unix systems
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    
+    # Set runtime library
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# ============================================================================
+# Project Source Files
+# ============================================================================
+
+# Create the export directory if it doesn't exist
+set(EXPORT_DIR "${CMAKE_BINARY_DIR}/cmake")
+file(MAKE_DIRECTORY ${EXPORT_DIR})
+
+# Add source subdirectories
+add_subdirectory(src)
+
+# Add tests directory if testing is enabled
+if(BUILD_TESTING)
+    enable_testing()
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt)
+        add_subdirectory(tests)
+    endif()
+endif()
+
+# Add examples if requested and the directory exists
+option(BUILD_EXAMPLES "Build example applications" OFF)
+if(BUILD_EXAMPLES AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt)
+    add_subdirectory(examples)
+elseif(BUILD_EXAMPLES)
+    message(STATUS "Skipping examples - CMakeLists.txt not found in examples directory")
+endif()
+
+# ============================================================================
+# Installation
+# ============================================================================
+
+# Create the build tree config file directory
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+
+# Set the config file path for find_package()
+set(EditorLib_DIR "${CMAKE_CURRENT_BINARY_DIR}/cmake" CACHE PATH "Path to EditorLib build directory")
+
+# Add the build tree to the module path
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+
+# Only install AITextEditor target if it exists
+if(TARGET AITextEditor)
+    # Install the main application
+    install(TARGETS AITextEditor
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+    
+    # Install headers
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+        install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            FILES_MATCHING PATTERN "*.h*"
+        )
+    endif()
+endif()
+
+# Generate and install pkg-config file
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
+    @ONLY
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
+    DESTINATION lib/pkgconfig
+)
+
+# ============================================================================
+# CPack Configuration
+# ============================================================================
+
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "AI-First Text Editor with Advanced Code Intelligence")
+set(CPACK_PACKAGE_VENDOR "Your Organization")
+set(CPACK_PACKAGE_CONTACT "your.email@example.com")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/yourusername/ai-text-editor")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+# Set package generators
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP;NSIS")
+    set(CPACK_NSIS_MODIFY_PATH ON)
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MENU_LINKS
+        "bin/${PROJECT_NAME}.exe" "${PROJECT_NAME}"
+    )
+elseif(APPLE)
+    set(CPACK_GENERATOR "ZIP;DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "${PROJECT_NAME}")
+else()
+    set(CPACK_GENERATOR "ZIP;DEB;RPM")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "editors")
+    set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+    set(CPACK_RPM_PACKAGE_GROUP "Editors")
+    set(CPACK_RPM_PACKAGE_REQUIRES "libgtk-3-0, libc6")
+endif()
+
+include(CPack)
+
+# ============================================================================
+# Summary
+# ============================================================================
+
+message(STATUS "")
+message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION} Configuration Summary:")
+message(STATUS "------------------------------------------------------------")
+message(STATUS "Build type:        ${CMAKE_BUILD_TYPE}")
+message(STATUS "Install prefix:    ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Compiler:          ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "C++ standard:      ${CMAKE_CXX_STANDARD}")
+message(STATUS "Build tests:       ${BUILD_TESTING}")
+message(STATUS "Build examples:    ${BUILD_EXAMPLES}")
+message(STATUS "Package generators: ${CPACK_GENERATOR}")
+message(STATUS "------------------------------------------------------------")
+
+# Add optimization flags for MSVC in Release mode
+if(MSVC AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+    add_compile_options(/O2 /Ob2 /Oi /GL)
+    add_link_options(/LTCG /OPT:REF /OPT:ICF)
+endif()
+
+# Enable LTO for release builds
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
+# Package configuration
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+set(INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
+set(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
+
+# Dependencies configuration
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
+set(GLFW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
+set(JSON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/json)
+set(CPR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/cpr)
+set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/googletest)
+
+# Find required system packages
+find_package(OpenGL REQUIRED)
+find_package(Threads REQUIRED)
+
+# Platform-specific settings
+if(WIN32)
+    set(PLATFORM_LIBS comdlg32 shlwapi)
+    add_definitions(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS)
+elseif(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+    set(PLATFORM_LIBS X11 Xrandr Xi Xcursor Xinerama Xxf86vm rt m dl pthread)
+elseif(APPLE)
+    find_library(COCOA_LIBRARY Cocoa REQUIRED)
+    find_library(IOKIT_LIBRARY IOKit REQUIRED)
+    find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+    set(PLATFORM_LIBS ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREFOUNDATION_LIBRARY})
+endif()
+
+# --- GLFW (required for ImGui) ---
+option(GLFW_BUILD_EXAMPLES OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_BUILD_DOCS OFF)
+option(GLFW_INSTALL OFF)
+add_subdirectory(${GLFW_DIR})
+
+# --- CPR (C++ Requests) for HTTP ---
+set(CPR_BUILD_TESTS OFF CACHE INTERNAL "Build CPR tests")
+set(CPR_BUILD_TESTS_SSL OFF CACHE INTERNAL "Build CPR SSL tests")
+set(CPR_ENABLE_CERTIFICATE_OPTIMIZATION OFF CACHE INTERNAL "Enable certificate optimization (CPR)")
+set(CPR_FORCE_USE_SYSTEM_CURL OFF CACHE INTERNAL "Use system curl instead of built-in")
+add_subdirectory(${CPR_DIR})
+
+# Disable unsafe buffer usage warning for CPR (third-party library)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    get_target_property(CPR_INCLUDE_DIRS cpr INCLUDE_DIRECTORIES)
+    target_compile_options(cpr PRIVATE -Wno-unsafe-buffer-usage)
+endif()
+
+# --- nlohmann/json for JSON parsing ---
+add_subdirectory(${JSON_DIR})
+
+# --- Code Coverage Configuration ---
+option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
+
+if(ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        # Add required flags for gcov
+        add_compile_options(--coverage -O0 -g)
+        add_link_options(--coverage)
+        
+        # Find lcov/genhtml
+        find_program(LCOV_PATH lcov)
+        find_program(GENHTML_PATH genhtml)
+        
+        if(LCOV_PATH AND GENHTML_PATH)
+            # Add coverage target
+            add_custom_target(coverage
+                # Reset counters
+                COMMAND ${LCOV_PATH} --directory . --zerocounters
+                # Run tests
+                COMMAND $<TARGET_FILE:basic_test>
+                # Capture lcov data
+                COMMAND ${LCOV_PATH} --directory . --capture --output-file coverage.info
+                # Remove system and external files from coverage
+                COMMAND ${LCOV_PATH} --remove coverage.info '*/external/*' '*/tests/*' '*/usr/*' --output-file coverage.info
+                # Generate HTML report
+                COMMAND ${GENHTML_PATH} coverage.info --output-directory coverage_report
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMENT "Generating code coverage report..."
+            )
+        endif()
+    endif()
+endif()
+
+# --- GoogleTest Configuration ---
+# Enable testing
+enable_testing()
+
+# Add test executable
+add_executable(basic_test tests/basic_test.cpp)
+target_link_libraries(basic_test PRIVATE gtest_main)
+
+# Add test
+add_test(NAME basic_test COMMAND basic_test)
+
+
+# Test Editor Executable
+add_executable(test_editor
+    tests/SimpleEditorTest.cpp
+)
+
+target_include_directories(test_editor PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${IMGUI_DIR}
+    ${GLFW_DIR}/include
+    ${CPR_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_editor PRIVATE
+    imgui
+    glfw
+    ${GLFW_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+)
+
+if(WIN32)
+    set(WIN_LIBS comdlg32 shlwapi)
+    target_link_libraries(test_editor PRIVATE
+        imgui
+        glfw
+        ${GLFW_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${WIN_LIBS}
+    )
+    target_link_libraries(test_editor PRIVATE opengl32 gdi32)
+elseif(UNIX AND NOT APPLE)
+    target_link_libraries(test_editor PRIVATE pthread dl X11)
+elseif(APPLE)
+    find_library(COCOA_LIBRARY Cocoa)
+    find_library(IOKIT_LIBRARY IOKit)
+    find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+    target_link_libraries(test_editor PRIVATE
+        ${COCOA_LIBRARY}
+        ${IOKIT_LIBRARY}
+        ${COREFOUNDATION_LIBRARY}
+    )
+elseif(WIN32)
+    target_link_libraries(test_editor PRIVATE opengl32 gdi32)
+endif()
+
+# Configure GoogleTest - always include it regardless of BUILD_TESTS
+# --- ImGui Library ---
+if(NOT TARGET imgui_lib)
+    set(IMGUI_SOURCES
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+    
+    # Create the main library
+    add_library(imgui_lib STATIC ${IMGUI_SOURCES})
+    
+    # Create an interface library for imgui
+    add_library(imgui_interface INTERFACE)
+    
+    # Link the interface to the actual library
+    target_link_libraries(imgui_interface
+        INTERFACE
+            $<BUILD_INTERFACE:imgui_lib>
+            $<INSTALL_INTERFACE:imgui_lib>
+    )
+    
+    # Set include directories
+    target_include_directories(imgui_interface
+        INTERFACE
+            $<BUILD_INTERFACE:${IMGUI_DIR}>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+    
+    # Add GLFW dependency if available
+    if(TARGET glfw::glfw)
+        target_link_libraries(imgui_interface
+            INTERFACE
+                glfw::glfw
+        )
+    elseif(TARGET glfw)
+        # Fallback to non-namespaced target
+        target_link_libraries(imgui_interface
+            INTERFACE
+                glfw
+        )
+    endif()
+    
+    # Add OpenGL dependency
+    target_link_libraries(imgui_interface
+        INTERFACE
+            OpenGL::GL
+    )
+    
+    # Create a namespace alias for imgui_interface if not already created
+    if(NOT TARGET imgui_lib::imgui_interface)
+        add_library(imgui_lib::imgui_interface ALIAS imgui_interface)
+    endif()
+    
+    # Create a namespace alias for imgui_lib if not already created
+    if(NOT TARGET imgui_lib::imgui_lib)
+        if(TARGET imgui_lib)
+            add_library(imgui_lib::imgui_lib ALIAS imgui_lib)
+        endif()
+    endif()
+    
+    # Install the interface target
+    install(TARGETS imgui_interface
+        EXPORT imgui_libTargets
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    
+    # Install the library with EXPORT
+    install(TARGETS imgui_lib
+        EXPORT imgui_libTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    
+    # Export the target for build tree if not already exported
+    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/imgui_libTargets.cmake")
+        export(TARGETS imgui_lib imgui_interface
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/imgui_libTargets.cmake"
+            NAMESPACE imgui_lib::
+        )
+    endif()
+    
+    # Install the export set
+    install(EXPORT imgui_libTargets
+        FILE imgui_libTargets.cmake
+        NAMESPACE imgui_lib::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+    )
+    
+    # Install headers
+    install(FILES 
+        ${IMGUI_DIR}/imgui.h
+        ${IMGUI_DIR}/imconfig.h
+        ${IMGUI_DIR}/imgui_internal.h
+        ${IMGUI_DIR}/imstb_rectpack.h
+        ${IMGUI_DIR}/imstb_textedit.h
+        ${IMGUI_DIR}/imstb_truetype.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/imgui
+    )
+    
+    # Create a config file for imgui_lib
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/imgui_libConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+        PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+    )
+    
+    # Create a version file
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+    
+    # Install the config files
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+    )
+    
+    # Set compile definitions
+    target_compile_definitions(imgui_lib PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    
+    # Link dependencies
+    target_link_libraries(imgui_lib 
+        PRIVATE 
+            glfw::glfw  # Use the exported target
+            OpenGL::GL
+    )
+    
+    # Set compile options
+    if(MSVC)
+        target_compile_options(imgui_lib PRIVATE /W4 /WX)
+    else()
+        target_compile_options(imgui_lib PRIVATE -Wall -Wextra -Werror)
+    endif()
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cmake/imgui_libConfig.cmake.in"
+        "@PACKAGE_INIT@\n"
+        "\n"
+        "include(CMakeFindDependencyMacro)\n"
+        "\n"
+        "# Find required dependencies\n"
+        "find_dependency(OpenGL REQUIRED)\n"
+        "find_dependency(Threads REQUIRED)\n"
+        "\n"
+        "# Find optional dependencies\n"
+        "find_dependency(glfw3 QUIET)\n"
+        "\n"
+        "# Include the exports file to make the IMPORTED targets available\n"
+        "include(\"\${CMAKE_CURRENT_LIST_DIR}/imgui_libTargets.cmake\")\n"
+        "\n"
+        "# This will make the library available as imgui_lib::imgui_interface\n"
+        "check_required_components(imgui_lib)\n"
+        "\n"
+        "# Set include directories for the installed package\n"
+        "get_target_property(IMGUI_INCLUDE_DIRS imgui_lib::imgui_interface INTERFACE_INCLUDE_DIRECTORIES)\n"
+        "set(IMGUI_LIBRARIES imgui_lib::imgui_interface)\n"
+        "set(IMGUI_FOUND TRUE)\n"
+    )
+    
+    # Only install and export if this is the main project
+    if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+        # Configure the package config file
+        configure_package_config_file(
+            ${CMAKE_CURRENT_BINARY_DIR}/cmake/imgui_libConfig.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfig.cmake
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+        )
+        
+        # Create a version file
+        write_basic_package_version_file(
+            ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfigVersion.cmake
+            VERSION ${PROJECT_VERSION}
+            COMPATIBILITY SameMajorVersion
+        )
+        
+        # Install the config files
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfig.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/imgui_libConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+        )
+        
+        # Install the library and export set in one go to avoid duplicates
+        install(TARGETS imgui_lib imgui_interface
+            EXPORT imgui_libTargets
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+        
+        # Install the export set for installed package
+        install(EXPORT imgui_libTargets
+            FILE imgui_libTargets.cmake
+            NAMESPACE imgui_lib::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imgui_lib
+        )
+        
+        # Install headers
+        install(DIRECTORY ${IMGUI_DIR}/ ${IMGUI_DIR}/backends/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/imgui
+            FILES_MATCHING 
+                PATTERN "*.h" 
+                PATTERN "*.hpp"
+                PATTERN "*.inl"
+                PATTERN "*.cpp" EXCLUDE
+        )
+    endif()
+    
+    # Export the target for build tree
+    export(TARGETS imgui_lib imgui_interface
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/imgui_libTargets.cmake"
+        NAMESPACE imgui_lib::
+    )
+endif()
+
+# GLFW configuration
+if(NOT TARGET glfw::glfw)
+    # Check if GLFW is already defined but not in the glfw:: namespace
+    if(TARGET glfw)
+        if(NOT TARGET glfw::glfw)
+            add_library(glfw::glfw ALIAS glfw)
+        endif()
+    else()
+        # Add GLFW as a subdirectory
+        add_subdirectory(${GLFW_DIR} ${CMAKE_BINARY_DIR}/glfw EXCLUDE_FROM_ALL)
+        
+        # Create a namespace alias for glfw
+        if(TARGET glfw AND NOT TARGET glfw::glfw)
+            add_library(glfw::glfw ALIAS glfw)
+        endif()
+    endif()
+    
+    # Only proceed if we have the glfw target
+    if(TARGET glfw)
+        # Set include directories
+        target_include_directories(glfw
+            PUBLIC
+                $<BUILD_INTERFACE:${GLFW_DIR}/include>
+                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        )
+        
+        # Set compile options
+        if(MSVC)
+            target_compile_options(glfw PRIVATE /W4 /WX)
+        else()
+            target_compile_options(glfw PRIVATE -Wall -Wextra -Werror)
+        endif()
+        
+        # Only install if we're the ones who created the target
+        if(NOT TARGET glfw::glfw_BEFORE_THIS)
+            # Install the library
+            install(TARGETS glfw
+                EXPORT glfwTargets
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            )
+            
+            # Install the export set
+            install(EXPORT glfwTargets
+                FILE glfwTargets.cmake
+                NAMESPACE glfw::
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/glfw
+            )
+            
+            # Install headers
+            install(DIRECTORY ${GLFW_DIR}/include/GLFW/
+                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/GLFW
+            )
+            
+            # Create a config file for find_package()
+            file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/glfwConfig.cmake"
+                "include(\"${CMAKE_CURRENT_BINARY_DIR}/glfwTargets.cmake\")\n"
+                "set(GLFW_INCLUDE_DIRS \"${GLFW_DIR}/include\")\n"
+                "set(GLFW_LIBRARIES glfw::glfw)\n"
+                "set(GLFW_FOUND TRUE)\n"
+            )
+            
+            # Install the config file
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/glfwConfig.cmake"
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/glfw
+            )
+            
+            # Create a version file
+            write_basic_package_version_file(
+                "${CMAKE_CURRENT_BINARY_DIR}/glfwConfigVersion.cmake"
+                VERSION "3.3.8"
+                COMPATIBILITY SameMajorVersion
+            )
+            
+            # Install the version file
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/glfwConfigVersion.cmake"
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/glfw
+            )
+            
+            # Export the target for build tree if not already exported
+            if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/glfwTargets.cmake")
+                export(TARGETS glfw
+                    FILE "${CMAKE_CURRENT_BINARY_DIR}/glfwTargets.cmake"
+                    NAMESPACE glfw::
+                )
+            endif()
+        endif()
+    endif()
+    
+    # Make sure the original glfw target is not exported multiple times
+    set_target_properties(glfw PROPERTIES 
+        EXCLUDE_FROM_ALL TRUE
+        EXCLUDE_FROM_DEFAULT_BUILD TRUE
+    )
+    
+    # Create an imported target for glfw
+    add_library(glfw_imported INTERFACE IMPORTED)
+    target_link_libraries(glfw_imported INTERFACE glfw::glfw)
+    add_library(glfw::glfw_imported ALIAS glfw_imported)
+endif()
+
+# nlohmann_json configuration
+if(NOT TARGET nlohmann_json::nlohmann_json)
+    # Create an interface library for nlohmann_json
+    add_library(nlohmann_json::nlohmann_json INTERFACE)
+    target_include_directories(nlohmann_json::nlohmann_json 
+        INTERFACE 
+            $<BUILD_INTERFACE:${JSON_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+    
+    # Only export and install if this is the main project
+    if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+        # Create a config file
+        configure_package_config_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/nlohmann_jsonConfig.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/nlohmann_jsonConfig.cmake
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlohmann_json
+        )
+        
+        # Create a version file
+        write_basic_package_version_file(
+            ${CMAKE_CURRENT_BINARY_DIR}/nlohmann_jsonConfigVersion.cmake
+            VERSION "3.11.2"
+            COMPATIBILITY SameMajorVersion
+        )
+        
+        # Install the config files
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/nlohmann_jsonConfig.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/nlohmann_jsonConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlohmann_json
+        )
+        
+        # Install the target and export set
+        install(TARGETS nlohmann_json::nlohmann_json
+            EXPORT nlohmann_jsonTargets
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+        
+        # Install the export set
+        install(EXPORT nlohmann_jsonTargets
+            FILE nlohmann_jsonTargets.cmake
+            NAMESPACE nlohmann_json::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlohmann_json
+        )
+        
+        # Install headers
+        install(DIRECTORY ${JSON_DIR}/include/nlohmann/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nlohmann
+        )
+    endif()
+    
+    # Export the target for build tree
+    export(TARGETS nlohmann_json::nlohmann_json
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/nlohmann_jsonTargets.cmake"
+        NAMESPACE nlohmann_json::
+    )
+endif()
+
+# CPR configuration
+if(NOT TARGET cpr::cpr)
+    # Create an interface library for cpr
+    add_library(cpr::cpr INTERFACE)
+    target_include_directories(cpr::cpr 
+        INTERFACE 
+            $<BUILD_INTERFACE:${CPR_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+    
+    # Link dependencies
+    target_link_libraries(cpr::cpr 
+        INTERFACE 
+            CURL::libcurl
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            ZLIB::ZLIB
+    )
+    
+    # Only install if this is the main project
+    if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+        # Create a config file for cpr
+        configure_package_config_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/cprConfig.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/cprConfig.cmake
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cpr
+        )
+        
+        # Create a version file
+        write_basic_package_version_file(
+            ${CMAKE_CURRENT_BINARY_DIR}/cprConfigVersion.cmake
+            VERSION "1.10.0"
+            COMPATIBILITY SameMajorVersion
+        )
+        
+        # Install the config files
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/cprConfig.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/cprConfigVersion.cmake
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cpr
+        )
+        
+        # Export the target
+        install(TARGETS cpr::cpr
+            EXPORT cprTargets
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+        
+        # Install the export set
+        install(EXPORT cprTargets
+            FILE cprTargets.cmake
+            NAMESPACE cpr::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cpr
+        )
+        
+        # Install headers
+        install(DIRECTORY ${CPR_DIR}/include/cpr/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cpr
+        )
+    endif()
+    
+    # Export the target for build tree
+    export(TARGETS cpr::cpr
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/cprTargets.cmake"
+        NAMESPACE cpr::
+    )
+endif()
+
+# Find OpenGL for ImGui backend
+find_package(OpenGL REQUIRED)
+target_link_libraries(imgui_lib PRIVATE OpenGL::GL)
+
+# GLEW configuration
+if(NOT TARGET GLEW::GLEW)
+    # Find GLEW package first
+    find_package(GLEW QUIET)
+    
+    if(GLEW_FOUND)
+        message(STATUS "Found GLEW: ${GLEW_INCLUDE_DIRS}")
+        
+        # Create an interface imported target for GLEW
+        add_library(GLEW::GLEW INTERFACE IMPORTED)
+        
+        # Set include directories and link libraries
+        target_include_directories(GLEW::GLEW INTERFACE ${GLEW_INCLUDE_DIRS})
+        target_link_libraries(GLEW::GLEW INTERFACE ${GLEW_LIBRARIES})
+        
+        # Set up properties for the imported target
+        set_target_properties(GLEW::GLEW PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${GLEW_INCLUDE_DIRS}"
+        )
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include/GL/glew.h")
+        message(STATUS "Using GLEW from external directory")
+        
+        # Set include and library paths
+        set(GLEW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include")
+        if(WIN32)
+            set(GLEW_LIBRARY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/Debug/x64/glew32d.lib")
+            set(GLEW_LIBRARY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/Release/x64/glew32.lib")
+        else()
+            set(GLEW_LIBRARY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/libGLEWd.a")
+            set(GLEW_LIBRARY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/lib/libGLEW.a")
+        endif()
+        
+        # Create imported library
+        add_library(GLEW::GLEW UNKNOWN IMPORTED)
+        
+        # Set target properties for debug and release
+        set_target_properties(GLEW::GLEW PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${GLEW_INCLUDE_DIR}"
+        )
+        
+        if(EXISTS "${GLEW_LIBRARY_DEBUG}")
+            set_property(TARGET GLEW::GLEW APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS DEBUG
+            )
+            set_target_properties(GLEW::GLEW PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "C"
+                IMPORTED_LOCATION_DEBUG "${GLEW_LIBRARY_DEBUG}"
+            )
+        endif()
+        
+        if(EXISTS "${GLEW_LIBRARY_RELEASE}")
+            set_property(TARGET GLEW::GLEW APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS RELEASE
+            )
+            set_target_properties(GLEW::GLEW PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "C"
+                IMPORTED_LOCATION_RELEASE "${GLEW_LIBRARY_RELEASE}"
+            )
+        endif()
+        
+        # Export GLEW target if this is the main project
+        if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+            # Create a config file for GLEW
+            configure_package_config_file(
+                ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GLEWConfig.cmake.in
+                ${CMAKE_CURRENT_BINARY_DIR}/GLEWConfig.cmake
+                INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/GLEW
+            )
+            
+            # Create a version file
+            write_basic_package_version_file(
+                ${CMAKE_CURRENT_BINARY_DIR}/GLEWConfigVersion.cmake
+                VERSION "2.1.0"
+                COMPATIBILITY SameMajorVersion
+            )
+            
+            # Create an export set for build tree
+            export(EXPORT GLEWTargets
+                FILE "${CMAKE_CURRENT_BINARY_DIR}/GLEWTargets.cmake"
+                NAMESPACE GLEW::
+            )
+            
+            # Install the library
+            install(TARGETS GLEW::GLEW
+                EXPORT GLEWTargets
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            )
+            
+            # Install headers
+            install(DIRECTORY ${GLEW_INCLUDE_DIR}/
+                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+                FILES_MATCHING PATTERN "*.h"
+            )
+            
+            # Install the export set
+            install(EXPORT GLEWTargets
+                FILE GLEWTargets.cmake
+                NAMESPACE GLEW::
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/GLEW
+            )
+            
+            # Install the config files
+            install(FILES
+                ${CMAKE_CURRENT_BINARY_DIR}/GLEWConfig.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/GLEWConfigVersion.cmake
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/GLEW
+            )
+            
+            # Add the build directory to the module path for find_package
+            set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_BINARY_DIR})
+        endif()
+        
+        # Create a GLEWConfig.cmake for the build tree
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/GLEWConfig.cmake"
+            "include(\"${CMAKE_CURRENT_BINARY_DIR}/GLEWTargets.cmake\")\n"
+            "set(GLEW_FOUND TRUE)\n"
+            "set(GLEW_INCLUDE_DIRS \"${GLEW_INCLUDE_DIR}\")\n"
+            "set(GLEW_LIBRARIES GLEW::GLEW)\n"
+        )
+    else()
+        message(WARNING "GLEW not found. Some targets may fail to build.")
+    endif()
+endif()
+
+# --- Editor Library (EditorLib) ---
+# Define source files for the editor library
+set(EDITOR_LIB_SOURCES
+    # Core editor components
+    src/Editor.cpp
+    src/EditorCommands.cpp
+    src/EditorError.cpp
+    src/MultiCursor.cpp
+    src/SyntaxHighlighter.cpp
+    src/SyntaxHighlightingManager.cpp
+    src/TextBuffer.cpp
+    
+    # Threading and concurrency
+    src/EditorCoreThreadPool.cpp
+    src/ThreadPool.cpp
+    
+    # Text buffer implementations
+    src/ThreadSafeTextBuffer.cpp
+    src/ThreadSafeVirtualizedTextBuffer.cpp
+    src/VirtualizedTextBuffer.cpp
+    
+    # Logging and utilities
+    src/Logger.cpp
+    
+    # AI and collaboration
+    src/AIManager.cpp
+    src/AIProviderFactory.cpp
+    src/OpenAIProvider.cpp
+    src/OpenAI_API_Client.cpp
+    src/ProjectKnowledgeBase.cpp
+    
+    # Editor services
+    src/EditorServices.cpp
+    src/WorkspaceManager.cpp
+    
+    # Language support
+    src/BaseLanguageParser.cpp
+    src/CStyleLanguageParser.cpp
+    src/LanguageDetector.cpp
+    
+    # Editor applications (if needed)
+    # src/EditorDemo.cpp
+    # src/EditorDemoApp.cpp
+    # src/EditorDemoWindow.cpp
+    # src/EnhancedEditorDemo.cpp
+    # src/EnhancedEditorWindow.cpp
+    # src/SimpleEditorDemo.cpp
+    # src/SimpleEditorWindow.cpp
+)
+
+# Create the library
+if(NOT TARGET EditorLib)
+    # Create the main library
+    add_library(EditorLib STATIC
+        ${EDITOR_LIB_SOURCES}
+    )
+
+    # Set the output name to match the target name
+    set_target_properties(EditorLib PROPERTIES
+        OUTPUT_NAME EditorLib
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+
+    # Set include directories with proper generator expressions
+    target_include_directories(EditorLib
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        PRIVATE
+            # Only add src directory to the include path for the build
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    )
+    
+    # Link dependencies - this will handle include directories transitively
+    target_link_libraries(EditorLib PRIVATE
+        imgui_lib::imgui_interface
+        glfw::glfw
+        nlohmann_json::nlohmann_json
+        cpr::cpr
+        GLEW::GLEW
+        OpenGL::GL
+        Threads::Threads
+    )
+    
+    # Set compiler options
+    if(MSVC)
+        target_compile_options(EditorLib PRIVATE /W4 /WX)
+    else()
+        target_compile_options(EditorLib PRIVATE -Wall -Wextra -Werror)
+    endif()
+    
+    # Add compile definitions
+    target_compile_definitions(EditorLib PRIVATE
+        IMGUI_IMPL_OPENGL_LOADER_GLEW
+    )
+    
+    # Set C++ standard and properties
+    target_compile_features(EditorLib PUBLIC cxx_std_20)
+    set_target_properties(EditorLib PROPERTIES
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+        POSITION_INDEPENDENT_CODE ON
+    )
+    
+    # Create export header for DLL exports on Windows
+    include(GenerateExportHeader)
+    
+    # Create the include directory if it doesn't exist
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/EditorLib)
+    
+    # Generate the export header
+    generate_export_header(EditorLib
+        BASE_NAME EditorLib
+        EXPORT_MACRO_NAME EditorLib_EXPORT
+        EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/EditorLib/EditorLib_Export.h
+    )
+    
+    # Include the generated export header in the build
+    target_include_directories(EditorLib
+        PUBLIC 
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+    
+    # Only export and install if this is the main project
+    if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+        # Configure package file
+        configure_package_config_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EditorLibConfig.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/EditorLibConfig.cmake
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EditorLib
+        )
+        
+        # Create a version file with compatibility settings
+        include(CMakePackageConfigHelpers)
+        write_basic_package_version_file(
+            "${CMAKE_CURRENT_BINARY_DIR}/EditorLibConfigVersion.cmake"
+            VERSION ${PROJECT_VERSION}
+            COMPATIBILITY SameMajorVersion
+            ARCH_INDEPENDENT
+        )
+        
+        # Export the target for build tree
+        export(TARGETS EditorLib
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/EditorLibTargets.cmake"
+            NAMESPACE EditorLib::
+        )
+        
+        # Define install components if needed
+        set(EditorLib_COMPONENT runtime)
+        
+        # Install the library with proper component and export
+        install(TARGETS EditorLib
+            EXPORT EditorLibTargets
+            RUNTIME 
+                DESTINATION ${CMAKE_INSTALL_BINDIR}
+                COMPONENT ${EditorLib_COMPONENT}
+            LIBRARY 
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                COMPONENT ${EditorLib_COMPONENT}
+                NAMELINK_COMPONENT ${EditorLib_COMPONENT}
+            ARCHIVE 
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                COMPONENT ${EditorLib_COMPONENT}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+        
+        # Install headers with proper component
+        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            COMPONENT ${EditorLib_COMPONENT}
+            FILES_MATCHING 
+                PATTERN "*.h" 
+                PATTERN "*.hpp"
+        )
+        
+        # Install the export header with proper component
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/EditorLib/EditorLib_Export.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/EditorLib
+            COMPONENT ${EditorLib_COMPONENT}
+        )
+        
+        # Install the export set with proper namespace and compatibility
+        install(EXPORT EditorLibTargets
+            FILE EditorLibTargets.cmake
+            NAMESPACE EditorLib::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/EditorLib
+            COMPONENT ${EditorLib_COMPONENT}
+        )
+        
+        # Create a package configuration file for find_package()
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/EditorLibConfig.cmake.in"
+            "@PACKAGE_INIT@\n\n"
+            "include(CMakeFindDependencyMacro)\n"
+            "\n"
+            "# Find dependencies (with REQUIRED if needed)\n"
+            "find_dependency(Threads)\n"
+            "find_dependency(OpenGL)\n"
+            "find_dependency(imgui_lib CONFIG)\n"
+            "find_dependency(glfw CONFIG)\n"
+            "find_dependency(nlohmann_json CONFIG)\n"
+            "find_dependency(cpr CONFIG)\n"
+            "\n"
+            "# Include the targets file\n"
+            "include(\"${CMAKE_CURRENT_LIST_DIR}/EditorLibTargets.cmake\")\n"
+            "\n"
+            "# Verify components if any\n"
+            "check_required_components(EditorLib)\n"
+        )
+        
+        # Configure the package config file with proper paths
+        include(CMakePackageConfigHelpers)
+        configure_package_config_file(
+            "${CMAKE_CURRENT_BINARY_DIR}/EditorLibConfig.cmake.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/EditorLibConfig.cmake"
+            INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/EditorLib"
+            NO_CHECK_REQUIRED_COMPONENTS_MACRO
+        )
+        
+        # Install the config files
+        install(FILES
+
+# --- AI-First TextEditor Executable ---
+add_executable(AITextEditor
+    src/main.cpp
+    src/AITextEditorApp.cpp
+    src/UIModel.h
+    src/OpenAI_API_Client.cpp
+    src/OpenAI_API_Client.h
+    src/IOpenAI_API_Client.h
+    src/OpenAI_API_Client_types.h
+    src/MockOpenAI_API_Client.cpp
+    src/MockOpenAI_API_Client.h
+    src/AIAgentOrchestrator.cpp
+    src/AIAgentOrchestrator.h
+    src/WorkspaceManager.cpp
+    src/WorkspaceManager.h
+    src/EditorDemoWindow.cpp
+    src/EditorDemoWindow.h
+    ${AITEXTEDITOR_SOURCES}
+)
+
+# Set output directory for the executable
+set_target_properties(AITextEditor PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin
+)
+
+# Set include directories for AITextEditor
+target_include_directories(AITextEditor PRIVATE
+    ${IMGUI_DIR}            # For imgui.h
+    ${IMGUI_DIR}/backends   # For imgui_impl_glfw.h, imgui_impl_opengl3.h
+    src                     # To find its own headers
+    ${JSON_DIR}/include     # For nlohmann/json.hpp
+    ${CPR_DIR}/include      # For CPR
+)
+
+# Link against EditorLib and its dependencies
+target_link_libraries(AITextEditor PRIVATE 
+    EditorLib::EditorLib    # Use the exported target
+    imgui_lib::imgui_lib    # Use the exported target
+    glfw                    # GLFW window/input handling
+    OpenGL::GL              # OpenGL
+    nlohmann_json::nlohmann_json  # JSON parsing
+    cpr::cpr                # HTTP client
+    Threads::Threads        # Threading support
+)
+
+# Link GLEW if found
+if(GLEW_FOUND)
+    target_include_directories(AITextEditor PRIVATE ${GLEW_INCLUDE_DIRS})
+    target_link_libraries(AITextEditor PRIVATE ${GLEW_LIBRARIES})
+    
+    # On Windows, copy GLEW DLL to the output directory
+    if(WIN32)
+        add_custom_command(TARGET AITextEditor POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/bin/Release/x64/glew32.dll"
+            $<TARGET_FILE_DIR:AITextEditor>
+            COMMENT "Copying GLEW DLL to output directory"
+        )
+    endif()
+endif()
+
+# On Windows, set the WIN32_EXECUTABLE property to false to create a console application
+if(WIN32)
+    set_target_properties(AITextEditor PROPERTIES
+        WIN32_EXECUTABLE FALSE
+    )
+endif()
+
+# Install the executable
+install(TARGETS AITextEditor
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# --- Editor Demo Application ---
+add_executable(EditorDemoApp
+    src/EditorDemoApp.cpp
+    src/EditorDemoWindow.cpp
+    src/EditorDemoWindow.h
+)
+
+target_include_directories(EditorDemoApp PRIVATE
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    src
+    ${JSON_DIR}/include
+    ${CPR_DIR}/include
+)
+
+if(GLEW_FOUND)
+    target_include_directories(EditorDemoApp PRIVATE ${GLEW_INCLUDE_DIRS})
+    target_link_libraries(EditorDemoApp PRIVATE ${GLEW_LIBRARIES})
+    
+    # On Windows, copy GLEW DLL for EditorDemoApp
+    if(WIN32)
+        add_custom_command(TARGET EditorDemoApp POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/bin/Release/x64/glew32.dll"
+            $<TARGET_FILE_DIR:EditorDemoApp>
+            COMMENT "Copying GLEW DLL for EditorDemoApp"
+        )
+    endif()
+endif()
+
+target_link_libraries(EditorDemoApp PRIVATE 
+    EditorLib::EditorLib
+    imgui_lib::imgui_lib
+    glfw
+    OpenGL::GL
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# --- OpenAI API Client Test Executable ---
+add_executable(OpenAIClientTest
+    src/OpenAIClientTest.cpp
+    src/OpenAI_API_Client.cpp
+    src/OpenAI_API_Client.h
+    src/IOpenAI_API_Client.h
+    src/OpenAI_API_Client_types.h
+    src/EditorError.cpp
+    src/EditorErrorGlobals.cpp
+    src/MockOpenAI_API_Client.cpp
+    src/MockOpenAI_API_Client.h
+)
+
+# Set include directories for OpenAIClientTest
+target_include_directories(OpenAIClientTest PRIVATE
+    src
+    ${JSON_DIR}/include
+    ${CPR_DIR}/include
+)
+
+target_link_libraries(OpenAIClientTest PRIVATE 
+    EditorLib::EditorLib  # Use exported target
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# --- DI Framework Test Executable ---
+add_executable(DIFrameworkTest
+    tests/DependencyInjectionTest.cpp
+)
+
+target_include_directories(DIFrameworkTest PRIVATE
+    src
+)
+
+target_link_libraries(DIFrameworkTest PRIVATE 
+    EditorLib::EditorLib  # Use exported target
+    gtest
+    gtest_main
+)
+
+# --- DI Test Executable ---
+add_executable(di_test
+    src/di/di_test.cpp
+)
+
+target_include_directories(di_test PRIVATE
+    src
+    ${JSON_DIR}/include
+    ${CPR_DIR}/include
+)
+
+target_link_libraries(di_test PRIVATE 
+    EditorLib::EditorLib  # Use exported target
+    cpr::cpr
+    nlohmann_json::nlohmann_json
+)
+
+# Add GLEW DLL copy for test executables on Windows
+if(WIN32 AND GLEW_FOUND)
+    foreach(test_target OpenAIClientTest DIFrameworkTest di_test)
+        if(TARGET ${test_target})
+            add_custom_command(TARGET ${test_target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/external/glew/bin/Release/x64/glew32.dll"
+                $<TARGET_FILE_DIR:${test_target}>
+                COMMENT "Copying GLEW DLL for ${test_target}"
+            )
+        endif()
+    endforeach()
+endif()
+
+# Link against pthreads if on a POSIX system
+if(UNIX AND NOT APPLE)
+    find_package(Threads REQUIRED)
+    target_link_libraries(EditorLib PRIVATE Threads::Threads) # Changed to PRIVATE since it's an implementation detail
+endif()
+
+# Configure TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework
+message(STATUS "Configured TextEditor project with EditorLib, ImGui, GoogleTest, and DI Framework.")
+
+# Set includes for the EditorLib target
+target_include_directories(EditorLib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glfw/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/json/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glew/include
+)
+
+# Enable unity builds for faster compilation
+set(CMAKE_UNITY_BUILD ON)
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 10) # Adjust based on your project size
+
+# Option to build tests (OFF by default for faster builds)
+option(BUILD_TESTS "Build the tests" OFF)
+
+# Set discovery mode to PRE_TEST to avoid _NOT_BUILT issues
+set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
+
+# Only build additional tests if the option is enabled
+if(BUILD_TESTS)
+  # Enable testing
+  enable_testing()
+  # The add_subdirectory(tests) command will now find and process tests/CMakeLists.txt
+  # which should define its own targets (e.g., runTests) and link them against GTest::gtest etc.
+  add_subdirectory(tests) 
+endif()
+
+# Add the DI Framework test to the test suite regardless of BUILD_TESTS
+enable_testing()
+add_test(NAME DIFrameworkTest COMMAND DIFrameworkTest)
+
+# The standalone DI test project is included conditionally
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/di/CMakeLists.txt AND NOT TARGET di)
+  add_subdirectory(src/di)
+endif()
+
+# Add the EditorDemo executable target
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/EditorDemo.cpp)
+    add_executable(EditorDemo
+        src/EditorDemo.cpp
+        src/EditorDemoWindow.cpp
+        src/EditorDemoWindow.h
+    )
+
+    target_include_directories(EditorDemo PRIVATE 
+        ${CMAKE_SOURCE_DIR}/external/imgui
+        ${CMAKE_SOURCE_DIR}/external/imgui/backends
+        ${CMAKE_SOURCE_DIR}/src
+        ${JSON_DIR}/include
+        ${CPR_DIR}/include
+    )
+
+    if(GLEW_FOUND)
+        target_include_directories(EditorDemo PRIVATE ${GLEW_INCLUDE_DIRS})
+        target_link_libraries(EditorDemo PRIVATE ${GLEW_LIBRARIES})
+    endif()
+
+    target_link_libraries(EditorDemo PRIVATE 
+        EditorLib::EditorLib
+        imgui_lib::imgui_lib
+        glfw
+        OpenGL::GL
+    )
+    
+    # Set output directory for the demo
+    set_target_properties(EditorDemo PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+    
+    # Install the demo executable
+    install(TARGETS EditorDemo
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    
+    # Platform-specific linking
+    if(WIN32)
+        target_link_libraries(EditorDemo PRIVATE opengl32)
+    endif()
+endif() 
