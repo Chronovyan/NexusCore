@@ -1,0 +1,30 @@
+# Build directories
+build/
+build_new/
+
+# Compiled files
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.pch
+*.res
+*.dll
+*.lib
+*.exp
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.sln.docstates
+*.sln.ide
+*.sln.ide/
+*.vcxproj*
+*.filters
+*.user
+*.dir/
+*.tlog/
+*.lastbuildstate
+*.recipe
