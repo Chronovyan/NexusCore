@@ -1,53 +1,39 @@
-title: AI-First TextEditor
-description: Documentation for AI-First TextEditor
-theme: jekyll-theme-cayman
-show_downloads: true
+# Site settings
+title: NexusCore
+description: Documentation for NexusCore - AI-First Text Editor
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://chronovyan.github.io" # the base hostname & protocol for your site
+
+# Build settings
 markdown: kramdown
-
-# Exclude from processing.
-# The following items will not be processed, by default. Create a custom list
-# to override the default setting.
-# exclude:
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules
-#   - vendor
-
-# Plugins (optional)
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
 
-# Optional: If you're using a theme, you might want to specify it
-# theme: jekyll-theme-minimal
+# Theme settings
+theme: jekyll-theme-minimal
 
-# Optional: If you want to use a custom domain
-url: "https://texteditor.chronovyan.com"  # your custom domain
-baseurl: "" # leave this as empty string if using a custom domain
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
 
-# Optional: If you want to use a different markdown processor
-markdown: kramdown
+# Kramdown configuration
 kramdown:
   input: GFM
   hard_wrap: false
   syntax_highlighter: rouge
 
-# Optional: If you want to enable Google Analytics
-google_analytics: UA-XXXXXXXX-X  # Replace with your Google Analytics ID
-
-# Optional: If you want to add a logo or favicon
-# logo: /assets/images/logo.png
-# favicon: /assets/images/favicon.ico
-
-# Optional: If you want to customize the navigation
-# nav:
-#   - Home: /index.md
-#   - About: /about.md
-#   - Blog: /blog/
-
-# Optional: If you want to add social media links
-# social:
-#   - name: GitHub
-#     url: https://github.com/yourusername
+# Navigation
+nav:
+  - Home: /index.md
+  - Getting Started: /guides/getting-started.md
+  - Features: /features/index.md
+  - Development: /development/index.md
+  - Testing: /testing/index.md
+  - Project: /project/README.md
 #   - name: Twitter
 #     url: https://twitter.com/yourusername
