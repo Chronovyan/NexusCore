@@ -50,7 +50,10 @@ jobs:
         # Builds the static site to the './_site' directory
         run: |
           cd docs
+          # Install the gems specified in Gemfile
+          bundle config path vendor/bundle
           bundle install
+          # Build the site
           bundle exec jekyll build --baseurl "${{ github.base_ref == 'gh-pages' && '' || '/NexusCore' }}" --destination ../_site
       
       - name: Upload artifact
