@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusCore Brand Kit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Primary Colors */
+            --nexus-blue: #2563EB;
+            --sky-blue: #4F86F7;
+            --light-blue: #93C5FD;
+            --dark-blue: #1E40AF;
+            
+            /* Neutrals */
+            --gray-50: #F8FAFC;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-300: #CBD5E1;
+            --gray-400: #94A3B8;
+            --gray-500: #64748B;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1E293B;
+            --gray-900: #0F172A;
+            
+            /* Accents */
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, var(--nexus-blue), var(--sky-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: var(--nexus-blue);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--nexus-blue), var(--sky-blue));
+        }
+        
+        .logo-container {
+            transition: all 0.3s ease;
+        }
+        
+        .logo-container:hover {
+            transform: translateY(-4px);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .color-swatch {
+            width: 100%;
+            height: 100px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: transform 0.2s ease;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.02);
+        }
+        
+        .logo-variant {
+            transition: all 0.3s ease;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-variant:hover {
+            border-color: var(--sky-blue);
+            background: var(--gray-50);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <svg class="h-8 w-8" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                            <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                            <defs>
+                               <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                 <stop offset="0%" style="stop-color:#4F86F7;stop-opacity:1" />
+                                 <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                               </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="ml-2 text-xl font-bold text-gray-900">NexusCore</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="gradient-bg text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">NexusCore Brand Kit</h1>
+            <p class="text-xl text-blue-100 max-w-3xl mx-auto">Guidelines and assets for representing the NexusCore brand</p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Logo Section -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Logo</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <!-- Primary Logo -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Primary Logo</h3>
+                    <div class="logo-variant bg-white">
+                        <div class="text-center">
+                            <div class="flex items-center justify-center space-x-3">
+                                <svg class="h-12 w-12" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                    <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                    <defs>
+                                       <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                         <stop offset="0%" style="stop-color:#4F86F7;stop-opacity:1" />
+                                         <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                                       </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div>
+                                    <div class="text-2xl font-bold gradient-text">NEXUS</div>
+                                    <div class="text-2xl font-normal text-gray-600">CORE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <p>Primary logo with wordmark. Use this version when space allows.</p>
+                        <div class="mt-2 flex space-x-2">
+                            <a href="#" class="text-blue-600 hover:text-blue-800">SVG</a>
+                            <span>•</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">PNG</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stacked Logo -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Stacked Logo</h3>
+                    <div class="logo-variant bg-white">
+                        <div class="text-center">
+                            <svg class="h-16 w-16 mx-auto mb-2" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                <defs>
+                                   <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                     <stop offset="0%" style="stop-color:#4F86F7;stop-opacity:1" />
+                                     <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                                   </linearGradient>
+                                </defs>
+                            </svg>
+                            <div>
+                                <div class="text-xl font-bold gradient-text">NEXUS</div>
+                                <div class="text-xl font-normal text-gray-600">CORE</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600">
+                        <p>Stacked version for square spaces. Use when horizontal space is limited.</p>
+                        <div class="mt-2 flex space-x-2">
+                            <a href="#" class="text-blue-600 hover:text-blue-800">SVG</a>
+                            <span>•</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">PNG</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logo Variations -->
+            <h3 class="text-xl font-semibold text-gray-900 mb-6">Logo Variations</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Full Color -->
+                <div class="card p-6">
+                    <h4 class="font-medium text-gray-900 mb-3">Full Color</h4>
+                    <div class="logo-variant bg-white p-4">
+                        <svg class="h-12 w-12 mx-auto" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                            <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500">
+                        <div class="flex justify-between">
+                            <span>Primary</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">Download</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Black -->
+                <div class="card p-6">
+                    <h4 class="font-medium text-gray-900 mb-3">Black</h4>
+                    <div class="logo-variant bg-white p-4">
+                        <svg class="h-12 w-12 mx-auto" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+                            <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500">
+                        <div class="flex justify-between">
+                            <span>For light backgrounds</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">Download</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- White -->
+                <div class="card p-6">
+                    <h4 class="font-medium text-gray-900 mb-3">White</h4>
+                    <div class="logo-variant bg-gray-800 p-4">
+                        <svg class="h-12 w-12 mx-auto" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                            <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="white" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500">
+                        <div class="flex justify-between">
+                            <span>For dark backgrounds</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">Download</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Monochrome -->
+                <div class="card p-6">
+                    <h4 class="font-medium text-gray-900 mb-3">Monochrome</h4>
+                    <div class="logo-variant bg-white p-4">
+                        <svg class="h-12 w-12 mx-auto" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="#6B7280" stroke-width="6" stroke-linecap="round"/>
+                            <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="#6B7280" stroke-width="6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500">
+                        <div class="flex justify-between">
+                            <span>Single color</span>
+                            <a href="#" class="text-blue-600 hover:text-blue-800">Download</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Color Palette -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Color Palette</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                <div>
+                    <div class="color-swatch bg-[#2563EB]"></div>
+                    <div class="text-sm">
+                        <div class="font-medium">Nexus Blue</div>
+                        <div class="text-gray-600">#2563EB</div>
+                        <div class="text-xs text-gray-500">RGB(37, 99, 235)</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="color-swatch bg-[#4F86F7]"></div>
+                    <div class="text-sm">
+                        <div class="font-medium">Sky Blue</div>
+                        <div class="text-gray-600">#4F86F7</div>
+                        <div class="text-xs text-gray-500">RGB(79, 134, 247)</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="color-swatch bg-[#93C5FD]"></div>
+                    <div class="text-sm">
+                        <div class="font-medium">Light Blue</div>
+                        <div class="text-gray-600">#93C5FD</div>
+                        <div class="text-xs text-gray-500">RGB(147, 197, 253)</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="color-swatch bg-[#1E40AF]"></div>
+                    <div class="text-sm">
+                        <div class="font-medium">Dark Blue</div>
+                        <div class="text-gray-600">#1E40AF</div>
+                        <div class="text-xs text-gray-500">RGB(30, 64, 175)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Neutral Colors -->
+            <h3 class="text-xl font-semibold text-gray-900 mb-6">Neutral Colors</h3>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                    <div class="h-12 rounded bg-gray-50 border border-gray-100"></div>
+                    <div class="text-xs mt-1">Gray 50</div>
+                    <div class="text-xs text-gray-500">#F8FAFC</div>
+                </div>
+                <div>
+                    <div class="h-12 rounded bg-gray-100 border border-gray-200"></div>
+                    <div class="text-xs mt-1">Gray 100</div>
+                    <div class="text-xs text-gray-500">#F1F5F9</div>
+                </div>
+                <div>
+                    <div class="h-12 rounded bg-gray-200 border border-gray-300"></div>
+                    <div class="text-xs mt-1">Gray 200</div>
+                    <div class="text-xs text-gray-500">#E2E8F0</div>
+                </div>
+                <div>
+                    <div class="h-12 rounded bg-gray-300 border border-gray-400"></div>
+                    <div class="text-xs mt-1">Gray 300</div>
+                    <div class="text-xs text-gray-500">#CBD5E1</div>
+                </div>
+                <div>
+                    <div class="h-12 rounded bg-gray-600 border border-gray-700"></div>
+                    <div class="text-xs mt-1 text-white">Gray 600</div>
+                    <div class="text-xs text-gray-300">#475569</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Typography -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Typography</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Font Family</h3>
+                    <div class="space-y-2">
+                        <div class="p-4 bg-white rounded-lg border border-gray-200">
+                            <div class="text-sm text-gray-500">Primary Font</div>
+                            <div class="text-xl font-sans">Inter (Sans-serif)</div>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg border border-gray-200">
+                            <div class="text-sm text-gray-500">System UI Fallback</div>
+                            <div class="text-lg font-sans">-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Type Scale</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-4xl font-bold text-gray-900">Heading 1</div>
+                            <div class="text-sm text-gray-500">48px / 3rem • Bold • -1 tracking</div>
+                        </div>
+                        <div>
+                            <div class="text-3xl font-bold text-gray-900">Heading 2</div>
+                            <div class="text-sm text-gray-500">36px / 2.25rem • Bold • -0.5 tracking</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-semibold text-gray-900">Heading 3</div>
+                            <div class="text-sm text-gray-500">30px / 1.875rem • Semibold • Normal</div>
+                        </div>
+                        <div>
+                            <div class="text-xl font-semibold text-gray-900">Heading 4</div>
+                            <div class="text-sm text-gray-500">24px / 1.5rem • Semibold • Normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Usage Guidelines -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Usage Guidelines</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Clear Space</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-4">
+                        <div class="relative h-32 flex items-center justify-center">
+                            <div class="absolute inset-0 border-2 border-dashed border-gray-300 rounded-lg"></div>
+                            <div class="relative z-10 p-6 bg-white rounded-lg shadow-sm">
+                                <svg class="h-12 w-12 mx-auto" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                    <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                    <defs>
+                                       <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                         <stop offset="0%" style="stop-color:#4F86F7;stop-opacity:1" />
+                                         <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                                       </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">Maintain minimum clear space around the logo equal to the height of the 'N' in the wordmark.</p>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Minimum Size</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-4 flex items-center justify-center">
+                        <div class="text-center">
+                            <svg class="h-8 w-8 mx-auto mb-2" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 52C12 52 42 52 42 32C42 12 12 12 12 12" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                                <path d="M52 12C52 12 22 12 22 32C22 52 52 52 52 52" stroke="url(#grad1)" stroke-width="6" stroke-linecap="round"/>
+                            </svg>
+                            <div class="text-xs font-medium">24px minimum</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">The logo should never appear smaller than 24px in digital media or 0.5" in print.</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Download Section -->
+        <section class="bg-blue-50 rounded-xl p-8 text-center">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Download Brand Assets</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto mb-6">Get the complete set of NexusCore brand assets including logos, color palettes, and design templates.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Download Brand Kit (ZIP)
+                </a>
+                <a href="#" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    View Brand Guidelines (PDF)
+                </a>
+            </div>
+        </section>
+    </div>
+    
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="md:flex md:items-center md:justify-between">
+                <div class="flex justify-center md:order-2 space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-gray-500">
+                        <span class="sr-only">Twitter</span>
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                        </svg>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-gray-500">
+                        <span class="sr-only">GitHub</span>
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.699 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.146 20.115 22 16.379 22 11.983 22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+                <div class="mt-8 md:mt-0 md:order-1">
+                    <p class="text-center text-base text-gray-400">
+                        &copy; 2025 NexusCore. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

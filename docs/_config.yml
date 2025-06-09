@@ -1,0 +1,39 @@
+# Site settings
+title: NexusCore
+description: Documentation for NexusCore - AI-First Text Editor
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://chronovyan.github.io" # the base hostname & protocol for your site
+
+# Build settings
+markdown: kramdown
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Theme settings
+theme: jekyll-theme-minimal
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+
+# Kramdown configuration
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# Navigation
+nav:
+  - Home: /index.md
+  - Getting Started: /guides/getting-started.md
+  - Features: /features/index.md
+  - Development: /development/index.md
+  - Testing: /testing/index.md
+  - Project: /project/README.md
+#   - name: Twitter
+#     url: https://twitter.com/yourusername
